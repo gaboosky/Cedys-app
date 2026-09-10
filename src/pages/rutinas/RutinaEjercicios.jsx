@@ -23,9 +23,9 @@ export default function RutinaEjercicios() {
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
       <button
         onClick={() => navigate(`/rutinas/${rutinaId}/semanas/${semanaId}`)}
-        className="flex items-center gap-1 text-white/50 text-sm mb-6"
+        className="flex items-center gap-1 text-white/40 text-sm mb-6 hover:text-white/70 transition-colors"
       >
-        <ArrowLeft size={16} /> Volver a días
+        <ArrowLeft size={15} /> Volver a días
       </button>
 
       {ejercicios === null && (
@@ -38,17 +38,17 @@ export default function RutinaEjercicios() {
           if (items.length === 0) return null;
           return (
             <div key={key} className="mb-8">
-              <p className="font-display text-2xl text-cyan-brand mb-3">
+              <p className="text-cyan-brand text-xs font-semibold tracking-[0.15em] uppercase mb-3">
                 {label}
               </p>
               <div className="flex flex-col gap-2">
                 {items.map((ej) => (
                   <div
                     key={ej.id}
-                    className="bg-white/5 border border-white/10 rounded-xl p-4"
+                    className="bg-white/[0.04] border border-white/10 rounded-2xl p-4"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-white font-medium text-sm">
+                      <p className="text-white font-semibold text-base leading-snug">
                         {ej.ejercicio}
                       </p>
                       {ej.referencia_url && (
@@ -56,13 +56,13 @@ export default function RutinaEjercicios() {
                           href={ej.referencia_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-cyan-brand shrink-0"
+                          className="text-cyan-brand shrink-0 transition-transform active:scale-90"
                         >
-                          <ExternalLink size={14} />
+                          <ExternalLink size={16} />
                         </a>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
                       {ej.series && <Dato label="Series" valor={ej.series} />}
                       {ej.repeticiones && (
                         <Dato label="Reps" valor={ej.repeticiones} />
@@ -78,7 +78,7 @@ export default function RutinaEjercicios() {
                       )}
                     </div>
                     {ej.notas && (
-                      <p className="text-white/40 text-xs mt-2 italic">
+                      <p className="text-white/70 text-sm mt-2.5 italic">
                         {ej.notas}
                       </p>
                     )}
@@ -94,8 +94,8 @@ export default function RutinaEjercicios() {
 
 function Dato({ label, valor }) {
   return (
-    <span className="text-white/50 text-xs">
-      <span className="text-white/30">{label}:</span> {valor}
+    <span className="text-white/85 text-sm font-medium">
+      <span className="text-white/55 font-normal">{label}:</span> {valor}
     </span>
   );
 }

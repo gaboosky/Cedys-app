@@ -12,9 +12,10 @@ export function AuthProvider({ children }) {
   const [planes, setPlanes] = useState({});
   const [reservas, setReservas] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [logoUrl, setLogoUrl] = useState(
-    () => localStorage.getItem('ceds_logo') || null
-  );
+  const [logoUrl, setLogoUrl] = useState(null);
+  const [vistaComo, setVistaComo] = useState(null);
+  const [horasAnticipacion, setHorasAnticipacion] = useState(4);
+  const [diasRenovacion, setDiasRenovacion] = useState(30);
   const [noticias, setNoticias] = useState([]);
   const [fotosGym, setFotosGym] = useState([]);
   const [rutinas, setRutinas] = useState([]);
@@ -22,10 +23,12 @@ export function AuthProvider({ children }) {
   const [horariosCancelados, setHorariosCancelados] = useState([]);
   const [congelaciones, setCongelaciones] = useState([]);
   const [notificaciones, setNotificaciones] = useState([]);
+  const [listaEspera, setListaEspera] = useState([]);
 
   useEffect(() => {
     iniciar();
   }, []);
+
   useEffect(() => {
     if (!usuarioActual) return;
 
@@ -134,6 +137,8 @@ export function AuthProvider({ children }) {
       resHorariosCancelados,
       resCongelaciones,
       resNotificaciones,
+      resConfigApp,
+      resListaEspera,
     ] = await Promise.all([
       supabase.from('usuarios').select('*'),
       supabase.from('horarios').select('*'),
@@ -158,6 +163,15 @@ export function AuthProvider({ children }) {
         .from('notificaciones')
         .select('*')
         .order('creado_en', { ascending: false }),
+      supabase
+        .from('configuracion_app')
+        .select('*')
+        .eq('id', 'global')
+        .single(),
+      supabase
+        .from('lista_espera')
+        .select('*')
+        .order('creado_en', { ascending: true }),
     ]);
     if (resNoticias.data) setNoticias(resNoticias.data);
     if (resFotos.data) setFotosGym(resFotos.data);
@@ -167,6 +181,12 @@ export function AuthProvider({ children }) {
       setHorariosCancelados(resHorariosCancelados.data);
     if (resCongelaciones.data) setCongelaciones(resCongelaciones.data);
     if (resNotificaciones.data) setNotificaciones(resNotificaciones.data);
+    if (resConfigApp.data) {
+      setLogoUrl(resConfigApp.data.logo_url);
+      setHorasAnticipacion(resConfigApp.data.horas_anticipacion ?? 4);
+      setDiasRenovacion(resConfigApp.data.dias_renovacion ?? 30);
+    }
+    if (resListaEspera.data) setListaEspera(resListaEspera.data);
 
     if (resUsuarios.data) setUsuarios(resUsuarios.data);
     if (resHorarios.data) setHorarios(resHorarios.data);
@@ -193,9 +213,20 @@ export function AuthProvider({ children }) {
     return encontrado;
   }
 
-  function actualizarLogo(dataUrl) {
-    localStorage.setItem('ceds_logo', dataUrl);
+  async function actualizarLogo(dataUrl) {
+    await supabase
+      .from('configuracion_app')
+      .update({ logo_url: dataUrl })
+      .eq('id', 'global');
     setLogoUrl(dataUrl);
+  }
+
+  async function actualizarPoliticas(datos) {
+    await supabase.from('configuracion_app').update(datos).eq('id', 'global');
+    if (datos.horas_anticipacion !== undefined)
+      setHorasAnticipacion(datos.horas_anticipacion);
+    if (datos.dias_renovacion !== undefined)
+      setDiasRenovacion(datos.dias_renovacion);
   }
 
   async function login(correo, password) {
@@ -229,6 +260,7 @@ export function AuthProvider({ children }) {
   async function logout() {
     await supabase.auth.signOut();
     setUsuarioActual(null);
+    setVistaComo(null);
   }
 
   async function solicitarRecuperacion(correo) {
@@ -243,6 +275,17 @@ export function AuthProvider({ children }) {
       mensaje:
         'Si ese correo existe, te enviamos un link para restablecer tu contraseña.',
     };
+  }
+
+  // El admin también es coach y usuario en la vida real. Esto le permite
+  // "verse a sí mismo" como coach o usuario sin cambiar su rol real en la base de datos.
+  const rolEfectivo =
+    usuarioActual?.rol === 'head_coach'
+      ? vistaComo || 'head_coach'
+      : usuarioActual?.rol;
+
+  function cambiarVista(nuevaVista) {
+    setVistaComo(nuevaVista);
   }
 
   function sesionesRestantes(usuario) {
@@ -264,7 +307,7 @@ export function AuthProvider({ children }) {
     const horario = horarios.find((h) => h.id === horarioId);
     if (!horario) return { ok: false, mensaje: 'Horario no encontrado.' };
 
-    if (reservaBloqueada(fecha, horario.hora)) {
+    if (reservaBloqueada(fecha, horario.hora, horasAnticipacion)) {
       return {
         ok: false,
         mensaje:
@@ -342,7 +385,7 @@ export function AuthProvider({ children }) {
 
     const horario = horarios.find((h) => h.id === reserva.horario_id);
     const tardia = horario
-      ? esCancelacionTardia(reserva.fecha, horario.hora)
+      ? esCancelacionTardia(reserva.fecha, horario.hora, horasAnticipacion)
       : false;
 
     await supabase
@@ -365,7 +408,67 @@ export function AuthProvider({ children }) {
       syncUsuario({ ...usuarioActual, sesiones_usadas: nuevasSesiones });
     }
 
+    if (horario) {
+      await avisarPrimeroEnListaEspera(horario.id, reserva.fecha);
+    }
+
     return { tardia };
+  }
+
+  // --- Lista de espera ---
+
+  function estaEnListaEspera(horarioId, fecha) {
+    return listaEspera.some(
+      (l) =>
+        l.horario_id === horarioId &&
+        l.fecha === fecha &&
+        l.usuario_id === usuarioActual.id
+    );
+  }
+
+  function listaEsperaDe(horarioId, fecha) {
+    return listaEspera.filter(
+      (l) => l.horario_id === horarioId && l.fecha === fecha
+    );
+  }
+
+  async function anotarseListaEspera(horarioId, fecha) {
+    const { data, error } = await supabase
+      .from('lista_espera')
+      .insert({ horario_id: horarioId, fecha, usuario_id: usuarioActual.id })
+      .select()
+      .single();
+    if (error)
+      return { ok: false, mensaje: 'No se pudo anotar en la lista de espera.' };
+    setListaEspera((prev) => [...prev, data]);
+    return {
+      ok: true,
+      mensaje:
+        'Quedaste en la lista de espera. Te avisaremos si se libera un cupo.',
+    };
+  }
+
+  async function quitarseListaEspera(entradaId) {
+    await supabase.from('lista_espera').delete().eq('id', entradaId);
+    setListaEspera((prev) => prev.filter((l) => l.id !== entradaId));
+  }
+
+  async function avisarPrimeroEnListaEspera(horarioId, fecha) {
+    const enEspera = listaEspera
+      .filter((l) => l.horario_id === horarioId && l.fecha === fecha)
+      .sort((a, b) => new Date(a.creado_en) - new Date(b.creado_en));
+    const primero = enEspera[0];
+    if (!primero) return;
+
+    const horario = horarios.find((h) => h.id === horarioId);
+    await crearNotificacion(
+      primero.usuario_id,
+      `¡Se liberó un cupo en la clase de las ${
+        horario?.hora || ''
+      } del ${fecha}! Entra a reservar antes de que se ocupe.`
+    );
+    await supabase.from('lista_espera').delete().eq('id', primero.id);
+    setListaEspera((prev) => prev.filter((l) => l.id !== primero.id));
   }
 
   // --- Registro público de nuevos usuarios ---
@@ -445,6 +548,11 @@ export function AuthProvider({ children }) {
       .select()
       .single();
     if (!error) setNotificaciones((prev) => [data, ...prev]);
+
+    // Además del aviso dentro de la app, intenta mandar la notificación push real
+    supabase.functions
+      .invoke('enviar-push', { body: { usuario_id: usuarioId, mensaje } })
+      .catch(() => {});
   }
 
   async function marcarNotificacionLeida(notificacionId) {
@@ -672,6 +780,7 @@ export function AuthProvider({ children }) {
       .filter((ur) => ur.rutina)
       .sort((a, b) => b.fecha_asignacion.localeCompare(a.fecha_asignacion));
   }
+
   async function obtenerProgreso(usuarioId) {
     const { data } = await supabase
       .from('progreso')
@@ -695,6 +804,7 @@ export function AuthProvider({ children }) {
   async function eliminarProgreso(id) {
     await supabase.from('progreso').delete().eq('id', id);
   }
+
   async function obtenerSemanas(rutinaId) {
     const { data } = await supabase
       .from('rutina_semanas')
@@ -766,6 +876,7 @@ export function AuthProvider({ children }) {
     await supabase.from('fotos_gym').delete().eq('id', fotoId);
     setFotosGym((prev) => prev.filter((f) => f.id !== fotoId));
   }
+
   async function confirmarRenovacion(usuarioId) {
     const hoy = new Date().toISOString().slice(0, 10);
     await supabase
@@ -784,6 +895,7 @@ export function AuthProvider({ children }) {
       'Tu plan fue renovado. ¡Ya tienes tus sesiones disponibles de nuevo!'
     );
   }
+
   async function asignarPlan(usuarioId, planId) {
     await supabase
       .from('usuarios')
@@ -810,6 +922,39 @@ export function AuthProvider({ children }) {
       .select()
       .single();
     if (!error) setUsuarios((prev) => [...prev, data]);
+  }
+
+  async function crearCoachConPassword(datos, password) {
+    const clienteTemporal = crearClienteTemporal();
+    const { data: authData, error: errorAuth } =
+      await clienteTemporal.auth.signUp({
+        email: datos.correo.trim(),
+        password,
+      });
+
+    if (errorAuth)
+      return {
+        ok: false,
+        mensaje: 'Error al crear la cuenta: ' + errorAuth.message,
+      };
+
+    const { data, error } = await supabase
+      .from('usuarios')
+      .insert({
+        ...datos,
+        auth_user_id: authData.user.id,
+        rol: 'coach',
+        estado: 'activo',
+        sesiones_usadas: 0,
+      })
+      .select()
+      .single();
+
+    if (error)
+      return { ok: false, mensaje: 'Error al registrar: ' + error.message };
+
+    setUsuarios((prev) => [...prev, data]);
+    return { ok: true, mensaje: 'Coach creado correctamente.' };
   }
 
   async function crearUsuarioConPassword(datos, password) {
@@ -842,7 +987,7 @@ export function AuthProvider({ children }) {
       return { ok: false, mensaje: 'Error al registrar: ' + error.message };
 
     setUsuarios((prev) => [...prev, data]);
-    return { ok: true, mensaje: 'Uario creado correctamente.' };
+    return { ok: true, mensaje: 'Usuario creado correctamente.' };
   }
 
   async function editarClase(horarioId, datos) {
@@ -982,6 +1127,7 @@ export function AuthProvider({ children }) {
         confirmarRenovacion,
         crearUsuario,
         crearUsuarioConPassword,
+        crearCoachConPassword,
         crearClase,
         eliminarClase,
         editarClase,
@@ -1015,6 +1161,16 @@ export function AuthProvider({ children }) {
         eliminarProgreso,
         logoUrl,
         actualizarLogo,
+        rolEfectivo,
+        cambiarVista,
+        horasAnticipacion,
+        diasRenovacion,
+        actualizarPoliticas,
+        listaEspera,
+        estaEnListaEspera,
+        listaEsperaDe,
+        anotarseListaEspera,
+        quitarseListaEspera,
         registrarUsuario,
         aprobarUsuario,
         rechazarUsuario,

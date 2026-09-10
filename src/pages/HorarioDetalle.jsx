@@ -9,6 +9,7 @@ import {
   Users,
   Check,
   AlertCircle,
+  Bell,
 } from 'lucide-react';
 
 export default function HorarioDetalle() {
@@ -22,6 +23,11 @@ export default function HorarioDetalle() {
     reservarClase,
     horarioEstaCancelado,
     mensajeCancelacionDe,
+    horasAnticipacion,
+    estaEnListaEspera,
+    anotarseListaEspera,
+    quitarseListaEspera,
+    listaEsperaDe,
   } = useAuth();
   const [mensaje, setMensaje] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -57,7 +63,10 @@ export default function HorarioDetalle() {
   const cuposDisponibles = Math.max(0, horario.cupo_max - inscritos.length);
   const cancelada = horarioEstaCancelado(horarioId, fecha);
   const mensajeCancelacion = mensajeCancelacionDe(horarioId, fecha);
-  const bloqueada = reservaBloqueada(fecha, horario.hora) || cancelada;
+  const bloqueada =
+    reservaBloqueada(fecha, horario.hora, horasAnticipacion) || cancelada;
+  const enListaEspera = estaEnListaEspera(horarioId, fecha);
+  const totalEnEspera = listaEsperaDe(horarioId, fecha).length;
 
   const fechaObj = new Date(fecha + 'T00:00:00');
   const diaSemana = fechaObj.toLocaleDateString('es-CL', { weekday: 'long' });
@@ -72,6 +81,14 @@ export default function HorarioDetalle() {
     setEnviando(false);
     setMensaje(resultado);
     setTimeout(() => setMensaje(null), 3000);
+  }
+
+  async function handleListaEspera() {
+    setEnviando(true);
+    const resultado = await anotarseListaEspera(horarioId, fecha);
+    setEnviando(false);
+    setMensaje(resultado);
+    setTimeout(() => setMensaje(null), 4000);
   }
 
   return (
@@ -93,6 +110,7 @@ export default function HorarioDetalle() {
         Revisa los detalles antes de reservar
       </p>
 
+      {/* Tarjeta hero */}
       <div className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-6 mb-4 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-cyan-brand" />
         <div className="flex items-center gap-1.5 text-white/40 text-xs uppercase tracking-widest mb-3">
@@ -108,6 +126,7 @@ export default function HorarioDetalle() {
         <p className="text-white/50 text-sm mt-2 capitalize">{fechaCorta}</p>
       </div>
 
+      {/* Info secundaria */}
       <div className="grid grid-cols-2 gap-3 mb-8">
         <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4">
           <User size={16} className="text-cyan-brand/70 mb-2" />
@@ -186,21 +205,32 @@ export default function HorarioDetalle() {
           Ya no se puede reservar este horario (falta menos de 4 horas para que
           empiece)
         </div>
+      ) : lleno ? (
+        enListaEspera ? (
+          <div className="w-full flex items-center justify-center gap-2 bg-yellow-400/10 border border-yellow-400/30 text-yellow-200 rounded-2xl py-4 font-medium">
+            <Bell size={18} /> Estás en la lista de espera
+          </div>
+        ) : (
+          <button
+            onClick={handleListaEspera}
+            disabled={enviando}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 font-bold text-base tracking-wide transition-all active:scale-[0.98] bg-yellow-400/15 border border-yellow-400/30 text-yellow-200 disabled:opacity-50"
+          >
+            <Bell size={18} />
+            {enviando
+              ? 'Anotando...'
+              : `Anotarme en lista de espera${
+                  totalEnEspera > 0 ? ` (${totalEnEspera})` : ''
+                }`}
+          </button>
+        )
       ) : (
         <button
           onClick={handleReservar}
-          disabled={lleno || enviando}
-          className={`w-full rounded-2xl py-4 font-bold text-base tracking-wide transition-all active:scale-[0.98] ${
-            lleno || enviando
-              ? 'bg-white/5 text-white/30 cursor-not-allowed'
-              : 'bg-cyan-brand text-ink hover:bg-cyan-brandLight'
-          }`}
+          disabled={enviando}
+          className="w-full rounded-2xl py-4 font-bold text-base tracking-wide transition-all active:scale-[0.98] bg-cyan-brand text-ink hover:bg-cyan-brandLight"
         >
-          {lleno
-            ? 'Sin cupos disponibles'
-            : enviando
-            ? 'Reservando...'
-            : '✓ CONFIRMAR RESERVA'}
+          {enviando ? 'Reservando...' : '✓ CONFIRMAR RESERVA'}
         </button>
       )}
     </div>

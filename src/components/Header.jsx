@@ -1,9 +1,18 @@
 import { useState } from 'react';
-import { useLocation, useNavigate, NavLink } from 'react-router-dom';
-import { Menu, X, User, Bell, MoreHorizontal } from 'lucide-react';
+import { useLocation, NavLink } from 'react-router-dom';
+import {
+  Menu,
+  X,
+  User,
+  Bell,
+  Users,
+  Settings,
+  Dumbbell,
+  FileBarChart,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { TABS_USUARIO, TABS_COACH, TABS_ADMIN } from './BottomNav';
-import { LOGO_CEDS } from '../assets/logo';
+import { LOGO_CEDS_WORDMARK } from '../assets/logoWordmark';
+import { LOGO_CEDS_CIRCULO } from '../assets/logoCirculo';
 
 const TITULOS = {
   '/perfil': 'Mi Perfil',
@@ -17,8 +26,9 @@ const TITULOS = {
   '/planes': 'Planes',
   '/coaches': 'Coaches',
   '/configuracion': 'Configuración',
+  '/reportes': 'Reportes',
+  '/privacidad': 'Política de Privacidad',
   '/mas': 'Más',
-  '/planilla': 'Planilla / Histórico',
   '/general': 'General',
   '/mi-rutina': 'Mi Rutina',
   '/progreso': 'Progreso',
@@ -57,39 +67,35 @@ export default function Header() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [notifAbiertas, setNotifAbiertas] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
   const {
     usuarioActual,
     logout,
     logoUrl,
     notificaciones,
     marcarNotificacionLeida,
+    rolEfectivo,
+    cambiarVista,
   } = useAuth();
 
   const esDetalleHorario = location.pathname.startsWith('/horarios/');
+  const esRutina = location.pathname.startsWith('/rutinas/');
+
   const titulo = esDetalleHorario
     ? 'Detalle del horario'
+    : esRutina
+    ? 'Mi Rutina'
     : TITULOS[location.pathname] || 'CED&S';
+
   const subtitulo = esDetalleHorario
     ? 'Revisa el detalle antes de reservar'
+    : esRutina
+    ? 'Tu plan de entrenamiento'
     : SUBTITULOS[location.pathname];
-
-  const tabs =
-    usuarioActual.rol === 'head_coach'
-      ? TABS_ADMIN
-      : usuarioActual.rol === 'coach'
-      ? TABS_COACH
-      : TABS_USUARIO;
 
   const misNotificaciones = notificaciones.filter(
     (n) => n.usuario_id === usuarioActual.id
   );
   const noLeidas = misNotificaciones.filter((n) => !n.leida).length;
-
-  function irA(to) {
-    setMenuAbierto(false);
-    navigate(to);
-  }
 
   function toggleNotificaciones() {
     setNotifAbiertas(!notifAbiertas);
@@ -98,23 +104,23 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-40">
-        <div className="bg-gradient-to-b from-cyan-brand to-cyan-brandDark pb-16">
-          <div className="flex items-center justify-between px-4 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+        <div className="bg-cyan-brandDark">
+          <div className="flex items-center justify-between px-3 pt-[calc(0.625rem+env(safe-area-inset-top))] pb-14">
             <button
               onClick={() => setMenuAbierto(true)}
-              className="text-ink/80 p-1.5 rounded-full hover:bg-black/5 transition-colors"
+              className="text-ink/80 p-2 rounded-lg hover:bg-black/10 active:scale-90 transition-all"
               aria-label="Abrir menú"
             >
-              <Menu size={22} />
+              <Menu size={21} />
             </button>
             <button
               onClick={toggleNotificaciones}
-              className="relative text-ink/80 p-1.5 rounded-full hover:bg-black/5 transition-colors"
+              className="relative text-ink/80 p-2 rounded-lg hover:bg-black/10 active:scale-90 transition-all"
               aria-label="Notificaciones"
             >
-              <Bell size={20} />
+              <Bell size={19} />
               {noLeidas > 0 && (
-                <span className="absolute top-0.5 right-0.5 bg-ink text-cyan-brand text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                <span className="absolute top-1 right-1 bg-ink text-cyan-brand text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
                   {noLeidas > 9 ? '9+' : noLeidas}
                 </span>
               )}
@@ -122,23 +128,23 @@ export default function Header() {
           </div>
         </div>
 
-        <div className="bg-ink">
-          <div className="relative flex justify-center -mt-16">
-            <div className="w-28 h-28 rounded-full bg-white border-2 border-cyan-brand shadow-lg flex items-center justify-center overflow-hidden p-3">
+        <div className="bg-ink border-b border-white/10">
+          <div className="relative flex justify-center -mt-14">
+            <div className="w-20 h-20 rounded-full bg-white border-[3px] border-cyan-brand shadow-lg flex items-center justify-center overflow-hidden p-2">
               <img
-                src={logoUrl || LOGO_CEDS}
+                src={logoUrl || LOGO_CEDS_CIRCULO}
                 alt="CED&S"
                 className="w-full h-full object-contain"
               />
             </div>
           </div>
 
-          <div className="pt-3 pb-5 px-6 text-center">
-            <p className="font-display text-2xl text-white tracking-wide">
+          <div className="pt-2 pb-5 px-6 text-center">
+            <p className="font-display text-2xl text-white leading-none">
               {titulo}
             </p>
             {subtitulo && (
-              <p className="text-white/40 text-xs mt-1">{subtitulo}</p>
+              <p className="text-white/40 text-sm mt-1.5">{subtitulo}</p>
             )}
           </div>
         </div>
@@ -191,7 +197,7 @@ export default function Header() {
           <div className="w-72 bg-ink h-full border-r border-white/10 p-5 flex flex-col overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <img
-                src={logoUrl || LOGO_CEDS}
+                src={logoUrl || LOGO_CEDS_WORDMARK}
                 alt="CED&S"
                 className="h-10 object-contain"
               />
@@ -205,7 +211,32 @@ export default function Header() {
             </div>
 
             <p className="text-white/40 text-xs mb-1">Sesión iniciada como</p>
-            <p className="text-white text-sm mb-6">{usuarioActual.nombre}</p>
+            <p className="text-white text-sm mb-4">{usuarioActual.nombre}</p>
+
+            {usuarioActual.rol === 'head_coach' && (
+              <div className="mb-6">
+                <p className="text-white/40 text-xs mb-1.5">Verme como</p>
+                <div className="flex bg-white/[0.04] border border-white/10 rounded-lg p-1">
+                  {[
+                    { valor: 'head_coach', label: 'Admin' },
+                    { valor: 'coach', label: 'Coach' },
+                    { valor: 'usuario', label: 'Usuario' },
+                  ].map((opcion) => (
+                    <button
+                      key={opcion.valor}
+                      onClick={() => cambiarVista(opcion.valor)}
+                      className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                        rolEfectivo === opcion.valor
+                          ? 'bg-cyan-brand text-ink'
+                          : 'text-white/50'
+                      }`}
+                    >
+                      {opcion.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <nav className="flex flex-col gap-1 flex-1">
               <NavLink
@@ -222,10 +253,10 @@ export default function Header() {
                 <User size={18} />
                 Mi Perfil
               </NavLink>
-              {tabs.map(({ to, label, icon: Icon }) => (
+
+              {usuarioActual.rol === 'coach' && (
                 <NavLink
-                  key={to}
-                  to={to}
+                  to="/mi-rutina"
                   onClick={() => setMenuAbierto(false)}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
@@ -235,28 +266,56 @@ export default function Header() {
                     }`
                   }
                 >
-                  <Icon size={18} />
-                  {label}
+                  <Dumbbell size={18} />
+                  Rutina
                 </NavLink>
-              ))}
-
-              {usuarioActual.rol !== 'head_coach' && (
-                <button
-                  onClick={() => irA('/planilla')}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/5 text-left"
-                >
-                  Planilla / Histórico
-                </button>
               )}
 
               {usuarioActual.rol === 'head_coach' && (
-                <button
-                  onClick={() => irA('/mas')}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/5 text-left"
-                >
-                  <MoreHorizontal size={18} />
-                  Más
-                </button>
+                <>
+                  <NavLink
+                    to="/coaches"
+                    onClick={() => setMenuAbierto(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'text-white/70 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <Users size={18} />
+                    Coach
+                  </NavLink>
+                  <NavLink
+                    to="/configuracion"
+                    onClick={() => setMenuAbierto(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'text-white/70 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <Settings size={18} />
+                    Configuración
+                  </NavLink>
+                  <NavLink
+                    to="/reportes"
+                    onClick={() => setMenuAbierto(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'text-white/70 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <FileBarChart size={18} />
+                    Reportes
+                  </NavLink>
+                </>
               )}
             </nav>
 

@@ -68,14 +68,13 @@ export default function Planes() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <div className="flex items-center justify-between mb-6">
-        <p className="font-display text-3xl text-white">Planes</p>
+      <div className="flex justify-end mb-6">
         <button
           onClick={() => {
             setMostrarNuevo(!mostrarNuevo);
             setEditando(null);
           }}
-          className="flex items-center gap-1 bg-cyan-brand text-ink text-sm font-semibold px-3 py-2 rounded-lg"
+          className="flex items-center gap-1 bg-cyan-brand text-ink text-sm font-semibold px-3 py-2 rounded-lg transition-transform active:scale-95"
         >
           <Plus size={16} /> Nuevo
         </button>
@@ -84,7 +83,7 @@ export default function Planes() {
       {mostrarNuevo && (
         <form
           onSubmit={handleCrear}
-          className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4 flex flex-col gap-2"
+          className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 mb-4 flex flex-col gap-2"
         >
           <div>
             <label className="text-white/40 text-xs mb-1 block">
@@ -143,7 +142,7 @@ export default function Planes() {
           <button
             type="submit"
             disabled={creando}
-            className="bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm disabled:opacity-50"
+            className="bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm disabled:opacity-50 transition-transform active:scale-[0.98]"
           >
             {creando ? 'Creando...' : 'Crear plan'}
           </button>
@@ -154,7 +153,7 @@ export default function Planes() {
         {Object.values(planes).map((p) => (
           <div
             key={p.id}
-            className="bg-white/5 border border-white/10 rounded-xl p-4"
+            className="bg-white/[0.04] border border-white/10 rounded-2xl p-4"
           >
             {editando === p.id ? (
               <div className="flex flex-col gap-2">
@@ -194,13 +193,13 @@ export default function Planes() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => guardar(p.id)}
-                    className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm"
+                    className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm transition-transform active:scale-[0.98]"
                   >
                     Guardar
                   </button>
                   <button
                     onClick={() => setEditando(null)}
-                    className="flex-1 bg-white/10 text-white rounded-lg py-2 text-sm"
+                    className="flex-1 bg-white/10 text-white rounded-lg py-2 text-sm transition-transform active:scale-[0.98]"
                   >
                     Cancelar
                   </button>
@@ -220,7 +219,7 @@ export default function Planes() {
                 </div>
                 <button
                   onClick={() => abrirEdicion(p)}
-                  className="text-cyan-brand text-sm font-medium"
+                  className="text-cyan-brand text-sm font-medium transition-transform active:scale-95"
                 >
                   Editar
                 </button>

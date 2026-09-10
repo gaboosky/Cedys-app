@@ -6,9 +6,20 @@ import {
   ChevronUp,
   ChevronRight,
   Dumbbell,
-  Plus,
   Upload,
+  Cake,
+  Scale,
 } from 'lucide-react';
+
+function calcularEdad(fechaNacimiento) {
+  if (!fechaNacimiento) return null;
+  const hoy = new Date();
+  const nacimiento = new Date(fechaNacimiento);
+  let edad = hoy.getFullYear() - nacimiento.getFullYear();
+  const m = hoy.getMonth() - nacimiento.getMonth();
+  if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) edad--;
+  return edad;
+}
 
 export default function Alumnos() {
   const navigate = useNavigate();
@@ -17,18 +28,16 @@ export default function Alumnos() {
     horarios,
     usuarios,
     reservas,
-    rutinas,
     crearRutina,
     importarContenidoRutina,
     asignarRutina,
     rutinaActivaDe,
     historialRutinasDe,
+    obtenerProgreso,
   } = useAuth();
 
   const [abierto, setAbierto] = useState(null);
-  const [seleccion, setSeleccion] = useState({});
-  const [modo, setModo] = useState('seleccionar');
-  const [nuevaRutinaNombre, setNuevaRutinaNombre] = useState('');
+  const [pesoPorAlumno, setPesoPorAlumno] = useState({});
   const [importForm, setImportForm] = useState({
     nombre: '',
     link: '',
@@ -52,22 +61,6 @@ export default function Alumnos() {
   const alumnos = alumnosIds
     .map((id) => usuarios.find((u) => u.id === id))
     .filter(Boolean);
-
-  async function handleAsignar(usuarioId) {
-    const rutinaId = seleccion[usuarioId];
-    if (!rutinaId) return;
-    await asignarRutina(usuarioId, rutinaId);
-  }
-
-  async function handleCrearYAsignar(usuarioId) {
-    if (!nuevaRutinaNombre.trim()) return;
-    const nueva = await crearRutina(nuevaRutinaNombre.trim());
-    if (nueva) {
-      await asignarRutina(usuarioId, nueva.id);
-    }
-    setNuevaRutinaNombre('');
-    setModo('seleccionar');
-  }
 
   async function handleImportarYAsignar(usuarioId) {
     if (!importForm.nombre.trim() || !importForm.archivo) {
@@ -103,10 +96,7 @@ export default function Alumnos() {
         } semana(s).`,
       });
       setImportForm({ nombre: '', link: '', archivo: null });
-      setTimeout(() => {
-        setModo('seleccionar');
-        setImportMensaje(null);
-      }, 1500);
+      setTimeout(() => setImportMensaje(null), 1500);
     } catch (err) {
       setImportMensaje({
         ok: false,
@@ -114,6 +104,18 @@ export default function Alumnos() {
       });
     }
     setImportando(false);
+  }
+
+  async function toggleAbierto(alumnoId) {
+    const yaAbierto = abierto === alumnoId;
+    setAbierto(yaAbierto ? null : alumnoId);
+    if (!yaAbierto && pesoPorAlumno[alumnoId] === undefined) {
+      const datos = await obtenerProgreso(alumnoId);
+      setPesoPorAlumno((prev) => ({
+        ...prev,
+        [alumnoId]: datos?.[0]?.peso_kg ?? null,
+      }));
+    }
   }
 
   function formatearFecha(fecha) {
@@ -127,7 +129,10 @@ export default function Alumnos() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <p className="font-display text-3xl text-white mb-6">Alumnos</p>
+      <p className="font-display text-3xl text-white leading-tight">Alumnos</p>
+      <p className="text-white/40 text-xs mt-1 mb-6">
+        Gestiona rutinas de tus alumnos
+      </p>
 
       {alumnos.length === 0 && (
         <p className="text-white/40 text-sm">
@@ -144,10 +149,10 @@ export default function Alumnos() {
           return (
             <div
               key={a.id}
-              className="bg-white/5 border border-white/10 rounded-xl overflow-hidden"
+              className="bg-white/[0.04] border border-white/10 rounded-2xl overflow-hidden"
             >
               <button
-                onClick={() => setAbierto(abiertoAqui ? null : a.id)}
+                onClick={() => toggleAbierto(a.id)}
                 className="w-full flex items-center justify-between p-4"
               >
                 <div className="flex items-center gap-3">
@@ -174,6 +179,29 @@ export default function Alumnos() {
 
               {abiertoAqui && (
                 <div className="border-t border-white/10 p-4 flex flex-col gap-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3">
+                      <div className="flex items-center gap-1.5 text-white/40 text-[10px] uppercase tracking-wide mb-1">
+                        <Cake size={12} /> Edad
+                      </div>
+                      <p className="text-white font-display text-lg leading-none">
+                        {calcularEdad(a.fecha_nacimiento) !== null
+                          ? `${calcularEdad(a.fecha_nacimiento)} años`
+                          : '—'}
+                      </p>
+                    </div>
+                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3">
+                      <div className="flex items-center gap-1.5 text-white/40 text-[10px] uppercase tracking-wide mb-1">
+                        <Scale size={12} /> Peso actual
+                      </div>
+                      <p className="text-white font-display text-lg leading-none">
+                        {pesoPorAlumno[a.id]
+                          ? `${pesoPorAlumno[a.id]} kg`
+                          : '—'}
+                      </p>
+                    </div>
+                  </div>
+
                   <div>
                     <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
                       Rutina actual
@@ -181,7 +209,7 @@ export default function Alumnos() {
                     {rutinaActiva ? (
                       <button
                         onClick={() => navigate(`/rutinas/${rutinaActiva.id}`)}
-                        className="w-full flex items-center gap-2 bg-cyan-brand/10 border border-cyan-brand/30 rounded-lg px-3 py-2"
+                        className="w-full flex items-center gap-2 bg-cyan-brand/10 border border-cyan-brand/30 rounded-xl px-3 py-2.5 transition-transform active:scale-[0.98]"
                       >
                         <Dumbbell size={16} className="text-cyan-brand" />
                         <div className="text-left flex-1">
@@ -207,140 +235,68 @@ export default function Alumnos() {
 
                   <div>
                     <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
-                      Asignar rutina
+                      Importar rutina desde Excel
                     </p>
 
-                    {modo === 'seleccionar' && (
-                      <div className="flex gap-2">
-                        <select
-                          value={seleccion[a.id] || ''}
-                          onChange={(e) =>
-                            setSeleccion({
-                              ...seleccion,
-                              [a.id]: e.target.value,
-                            })
-                          }
-                          className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none"
-                        >
-                          <option value="">Selecciona una rutina</option>
-                          {rutinas.map((r) => (
-                            <option key={r.id} value={r.id}>
-                              {r.nombre}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => handleAsignar(a.id)}
-                          className="bg-cyan-brand text-ink font-semibold rounded-lg px-4 text-sm"
-                        >
-                          Asignar
-                        </button>
-                      </div>
-                    )}
-
-                    {modo === 'nueva' && (
-                      <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 bg-black/20 border border-white/10 rounded-xl p-3">
+                      <input
+                        value={importForm.nombre}
+                        onChange={(e) =>
+                          setImportForm({
+                            ...importForm,
+                            nombre: e.target.value,
+                          })
+                        }
+                        placeholder="Nombre de la rutina"
+                        className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
+                      />
+                      <input
+                        value={importForm.link}
+                        onChange={(e) =>
+                          setImportForm({ ...importForm, link: e.target.value })
+                        }
+                        placeholder="Link de Google Sheets (opcional, solo referencia)"
+                        className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
+                      />
+                      <p className="text-white/40 text-xs -mt-1">
+                        El link es solo una referencia visual. El contenido de
+                        la rutina siempre se carga desde el archivo Excel de
+                        abajo.
+                      </p>
+                      <label className="flex items-center justify-center gap-2 bg-white/5 border border-dashed border-white/20 rounded-lg py-3 text-sm text-white/60 cursor-pointer">
+                        <Upload size={15} />
+                        {importForm.archivo
+                          ? importForm.archivo.name
+                          : 'Elegir archivo Excel (.xlsx)'}
                         <input
-                          value={nuevaRutinaNombre}
-                          onChange={(e) => setNuevaRutinaNombre(e.target.value)}
-                          placeholder="Nombre de la nueva rutina"
-                          className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none"
-                        />
-                        <button
-                          onClick={() => handleCrearYAsignar(a.id)}
-                          className="bg-cyan-brand text-ink font-semibold rounded-lg px-4 text-sm"
-                        >
-                          Crear
-                        </button>
-                      </div>
-                    )}
-
-                    {modo === 'importar' && (
-                      <div className="flex flex-col gap-2 bg-black/20 border border-white/10 rounded-lg p-3">
-                        <input
-                          value={importForm.nombre}
+                          type="file"
+                          accept=".xlsx"
                           onChange={(e) =>
                             setImportForm({
                               ...importForm,
-                              nombre: e.target.value,
+                              archivo: e.target.files[0],
                             })
                           }
-                          placeholder="Nombre de la rutina"
-                          className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none"
+                          className="hidden"
                         />
-                        <input
-                          value={importForm.link}
-                          onChange={(e) =>
-                            setImportForm({
-                              ...importForm,
-                              link: e.target.value,
-                            })
-                          }
-                          placeholder="Link de Google Sheets (opcional)"
-                          className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none"
-                        />
-                        <label className="flex items-center justify-center gap-2 bg-white/5 border border-dashed border-white/20 rounded-lg py-3 text-sm text-white/60 cursor-pointer">
-                          <Upload size={15} />
-                          {importForm.archivo
-                            ? importForm.archivo.name
-                            : 'Elegir archivo Excel (.xlsx)'}
-                          <input
-                            type="file"
-                            accept=".xlsx"
-                            onChange={(e) =>
-                              setImportForm({
-                                ...importForm,
-                                archivo: e.target.files[0],
-                              })
-                            }
-                            className="hidden"
-                          />
-                        </label>
-                        {importMensaje && (
-                          <p
-                            className={`text-xs ${
-                              importMensaje.ok
-                                ? 'text-cyan-brand'
-                                : 'text-red-400'
-                            }`}
-                          >
-                            {importMensaje.mensaje}
-                          </p>
-                        )}
-                        <button
-                          onClick={() => handleImportarYAsignar(a.id)}
-                          disabled={importando}
-                          className="bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm disabled:opacity-50"
+                      </label>
+                      {importMensaje && (
+                        <p
+                          className={`text-xs ${
+                            importMensaje.ok
+                              ? 'text-cyan-brand'
+                              : 'text-red-400'
+                          }`}
                         >
-                          {importando ? 'Importando...' : 'Importar y asignar'}
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="flex gap-3 mt-2">
+                          {importMensaje.mensaje}
+                        </p>
+                      )}
                       <button
-                        onClick={() =>
-                          setModo(modo === 'nueva' ? 'seleccionar' : 'nueva')
-                        }
-                        className="flex items-center gap-1 text-cyan-brand text-xs font-medium"
+                        onClick={() => handleImportarYAsignar(a.id)}
+                        disabled={importando}
+                        className="bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm disabled:opacity-50 transition-transform active:scale-[0.98]"
                       >
-                        <Plus size={13} />{' '}
-                        {modo === 'nueva'
-                          ? 'Elegir una existente'
-                          : 'Crear rutina nueva'}
-                      </button>
-                      <button
-                        onClick={() =>
-                          setModo(
-                            modo === 'importar' ? 'seleccionar' : 'importar'
-                          )
-                        }
-                        className="flex items-center gap-1 text-cyan-brand text-xs font-medium"
-                      >
-                        <Upload size={13} />{' '}
-                        {modo === 'importar'
-                          ? 'Cancelar'
-                          : 'Importar desde Excel'}
+                        {importando ? 'Importando...' : 'Importar y asignar'}
                       </button>
                     </div>
                   </div>
@@ -352,7 +308,7 @@ export default function Alumnos() {
                       </p>
                       <div className="flex flex-col gap-1">
                         {historial.map((h) => (
-                          <p key={h.id} className="text-white/40 text-xs">
+                          <p key={h.id} className="text-white/50 text-xs">
                             {h.rutina.nombre} ·{' '}
                             {formatearFecha(h.fecha_asignacion)} a{' '}
                             {formatearFecha(h.fecha_fin)}

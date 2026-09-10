@@ -41,6 +41,7 @@ export default function Horarios() {
     usuarioActual,
     sesionesRestantes,
     horarioEstaCancelado,
+    horasAnticipacion,
   } = useAuth();
   const navigate = useNavigate();
   const [seleccionado, setSeleccionado] = useState(null);
@@ -73,14 +74,13 @@ export default function Horarios() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <div className="flex items-center justify-between mb-6">
-        <p className="font-display text-3xl text-white">Horarios</p>
-        {restantes !== null && (
+      {restantes !== null && (
+        <div className="flex justify-end mb-4">
           <span className="text-cyan-brand text-sm font-medium">
             {restantes} sesiones disponibles
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-5">
         {dias.map((dia) => {
@@ -111,7 +111,8 @@ export default function Horarios() {
                     const cancelada = horarioEstaCancelado(h.id, dia.key);
                     const bloqueada =
                       !reservada &&
-                      (reservaBloqueada(dia.key, h.hora) || cancelada);
+                      (reservaBloqueada(dia.key, h.hora, horasAnticipacion) ||
+                        cancelada);
                     const deshabilitada = (lleno || bloqueada) && !reservada;
                     const estaSeleccionado = seleccionado === clave;
 

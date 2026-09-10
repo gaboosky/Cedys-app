@@ -87,6 +87,7 @@ function proximosDiasHabiles(cantidad = 14) {
   return dias;
 }
 
+// Un horario aplica a esa fecha si: es único y coincide exacto, o es recurrente y coincide el día de semana
 function horarioAplicaEnFecha(h, diaClave, diaNombre) {
   if (h.fecha_unica) return h.fecha_unica === diaClave;
   return h.dia === diaNombre;
@@ -206,34 +207,31 @@ export default function ClasesAdmin() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <div className="flex items-center justify-between mb-4">
-        <p className="font-display text-3xl text-white">Clases</p>
-        <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setMostrarFormFija(!mostrarFormFija);
-              setMostrarFormPuntual(false);
-            }}
-            className="flex items-center gap-1 bg-cyan-brand text-ink text-sm font-semibold px-3 py-2 rounded-lg"
-          >
-            <Plus size={16} /> Clase fija Nueva
-          </button>
-          <button
-            onClick={() => {
-              setMostrarFormPuntual(!mostrarFormPuntual);
-              setMostrarFormFija(false);
-            }}
-            className="flex items-center gap-1 bg-white text-ink text-sm font-semibold px-3 py-2 rounded-lg"
-          >
-            <Plus size={16} /> Clase puntual
-          </button>
-        </div>
+      <div className="flex justify-end gap-2 mb-6">
+        <button
+          onClick={() => {
+            setMostrarFormFija(!mostrarFormFija);
+            setMostrarFormPuntual(false);
+          }}
+          className="flex items-center gap-1 bg-cyan-brand text-ink text-sm font-semibold px-3 py-2 rounded-lg transition-transform active:scale-95"
+        >
+          <Plus size={16} /> Clase fija Nueva
+        </button>
+        <button
+          onClick={() => {
+            setMostrarFormPuntual(!mostrarFormPuntual);
+            setMostrarFormFija(false);
+          }}
+          className="flex items-center gap-1 bg-white text-ink text-sm font-semibold px-3 py-2 rounded-lg transition-transform active:scale-95"
+        >
+          <Plus size={16} /> Clase puntual
+        </button>
       </div>
 
       {mostrarFormFija && (
         <form
           onSubmit={handleCrearFija}
-          className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4 flex flex-col gap-3"
+          className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 mb-4 flex flex-col gap-3"
         >
           <div>
             <label className="text-white/40 text-xs mb-1 block">
@@ -242,7 +240,7 @@ export default function ClasesAdmin() {
             <select
               value={form.dia}
               onChange={(e) => setForm({ ...form, dia: e.target.value })}
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             >
               {DIAS.map((d) => (
                 <option key={d} value={d}>
@@ -261,7 +259,7 @@ export default function ClasesAdmin() {
               type="time"
               value={form.hora}
               onChange={(e) => setForm({ ...form, hora: e.target.value })}
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             />
           </div>
           <div>
@@ -269,7 +267,7 @@ export default function ClasesAdmin() {
             <select
               value={form.coach_id}
               onChange={(e) => setForm({ ...form, coach_id: e.target.value })}
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             >
               <option value="">Selecciona coach</option>
               {coaches.map((c) => (
@@ -287,12 +285,12 @@ export default function ClasesAdmin() {
               type="number"
               value={form.cupo_max}
               onChange={(e) => setForm({ ...form, cupo_max: e.target.value })}
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             />
           </div>
           <button
             type="submit"
-            className="bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm"
+            className="bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm transition-transform active:scale-[0.98]"
           >
             Crear clase fija
           </button>
@@ -302,7 +300,7 @@ export default function ClasesAdmin() {
       {mostrarFormPuntual && (
         <form
           onSubmit={handleCrearPuntual}
-          className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4 flex flex-col gap-3"
+          className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 mb-4 flex flex-col gap-3"
         >
           <div>
             <label className="text-white/40 text-xs mb-1 block">
@@ -314,7 +312,7 @@ export default function ClasesAdmin() {
               onChange={(e) =>
                 setFormPuntual({ ...formPuntual, fecha_unica: e.target.value })
               }
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             />
             {formPuntual.fecha_unica && (
               <p className="text-cyan-brand text-xs mt-1">
@@ -331,7 +329,7 @@ export default function ClasesAdmin() {
               onChange={(e) =>
                 setFormPuntual({ ...formPuntual, hora: e.target.value })
               }
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             />
           </div>
           <div>
@@ -341,7 +339,7 @@ export default function ClasesAdmin() {
               onChange={(e) =>
                 setFormPuntual({ ...formPuntual, coach_id: e.target.value })
               }
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             >
               <option value="">Selecciona coach</option>
               {coaches.map((c) => (
@@ -361,12 +359,12 @@ export default function ClasesAdmin() {
               onChange={(e) =>
                 setFormPuntual({ ...formPuntual, cupo_max: e.target.value })
               }
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             />
           </div>
           <button
             type="submit"
-            className="bg-white text-ink font-semibold rounded-lg py-2 text-sm"
+            className="bg-white text-ink font-semibold rounded-lg py-2 text-sm transition-transform active:scale-[0.98]"
           >
             Crear clase puntual
           </button>
@@ -385,7 +383,7 @@ export default function ClasesAdmin() {
           return (
             <div
               key={dia.key}
-              className="bg-white/5 border border-white/10 rounded-xl overflow-hidden"
+              className="bg-white/[0.04] border border-white/10 rounded-2xl overflow-hidden"
             >
               <button
                 onClick={() => setDiaAbierto(abiertoAqui ? -1 : index)}
@@ -419,7 +417,7 @@ export default function ClasesAdmin() {
                     return (
                       <div
                         key={h.id}
-                        className="bg-black/20 border border-white/10 rounded-lg overflow-hidden"
+                        className="bg-black/20 border border-white/10 rounded-xl overflow-hidden"
                       >
                         {editandoEste ? (
                           <div className="p-3 flex flex-col gap-2">
@@ -437,7 +435,7 @@ export default function ClasesAdmin() {
                                     dia: e.target.value,
                                   })
                                 }
-                                className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                                className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
                               >
                                 {DIAS.map((d) => (
                                   <option key={d} value={d}>
@@ -455,7 +453,7 @@ export default function ClasesAdmin() {
                                   hora: e.target.value,
                                 })
                               }
-                              className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                              className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
                             />
                             <select
                               value={formEdicion.coach_id}
@@ -465,7 +463,7 @@ export default function ClasesAdmin() {
                                   coach_id: e.target.value,
                                 })
                               }
-                              className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                              className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
                             >
                               <option value="">Sin coach</option>
                               {coaches.map((c) => (
@@ -484,7 +482,7 @@ export default function ClasesAdmin() {
                                 })
                               }
                               placeholder="Cupo maximo"
-                              className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                              className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
                             />
                             <div className="flex gap-2">
                               <button

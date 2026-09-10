@@ -1,22 +1,63 @@
+import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { LOGO_CEDS } from '../../assets/logo';
-import { Upload } from 'lucide-react';
+import { subirImagen } from '../../lib/storage';
+import { LOGO_CEDS_WORDMARK } from '../../assets/logoWordmark';
+import { Upload, Pencil } from 'lucide-react';
 
 export default function Configuracion() {
-  const { logoUrl, actualizarLogo } = useAuth();
+  const {
+    logoUrl,
+    actualizarLogo,
+    horasAnticipacion,
+    diasRenovacion,
+    actualizarPoliticas,
+  } = useAuth();
+  const [probarError, setProbarError] = useState(false);
 
-  function handleLogoChange(e) {
+  if (probarError) {
+    throw new Error('Error de prueba de Sentry');
+  }
+
+  const [editandoPoliticas, setEditandoPoliticas] = useState(false);
+  const [formPoliticas, setFormPoliticas] = useState({
+    horas_anticipacion: horasAnticipacion,
+    dias_renovacion: diasRenovacion,
+  });
+  const [guardando, setGuardando] = useState(false);
+
+  async function handleLogoChange(e) {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('La imagen es muy pesada. Usa una de menos de 2MB.');
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen es muy pesada. Usa una de menos de 5MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => actualizarLogo(reader.result);
-    reader.readAsDataURL(file);
+    try {
+      const url = await subirImagen(file, 'logo');
+      actualizarLogo(url);
+    } catch (err) {
+      alert('Error al subir el logo: ' + err.message);
+    }
+  }
+
+  function abrirEdicionPoliticas() {
+    setFormPoliticas({
+      horas_anticipacion: horasAnticipacion,
+      dias_renovacion: diasRenovacion,
+    });
+    setEditandoPoliticas(true);
+  }
+
+  async function guardarPoliticas() {
+    setGuardando(true);
+    await actualizarPoliticas({
+      horas_anticipacion: Number(formPoliticas.horas_anticipacion),
+      dias_renovacion: Number(formPoliticas.dias_renovacion),
+    });
+    setGuardando(false);
+    setEditandoPoliticas(false);
   }
 
   return (
@@ -29,7 +70,7 @@ export default function Configuracion() {
         <div className="flex items-center gap-4 mb-4">
           <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center overflow-hidden p-1 shrink-0">
             <img
-              src={logoUrl || LOGO_CEDS}
+              src={logoUrl || LOGO_CEDS_WORDMARK}
               alt="Logo actual"
               className="w-full h-full object-contain"
             />
@@ -37,7 +78,7 @@ export default function Configuracion() {
           <div>
             <p className="text-white text-sm">Logo actual</p>
             <p className="text-white/40 text-xs">
-              Se muestra en el topbar de la app
+              Se muestra en el header de la app, para todos los usuarios
             </p>
           </div>
         </div>
@@ -57,29 +98,105 @@ export default function Configuracion() {
         </p>
       </div>
 
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-5 mb-4">
-        <p className="text-white/50 text-sm mb-3">Marca</p>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-cyan-brand" />
-          <div>
-            <p className="text-white text-sm">Cian principal</p>
-            <p className="text-white/40 text-xs">#03CDE6</p>
-          </div>
-        </div>
-      </div>
-
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-        <p className="text-white/50 text-sm mb-3">Políticas</p>
-        <div className="flex flex-col gap-3">
-          <div>
-            <p className="text-white text-sm">Tiempo mínimo para cancelar</p>
-            <p className="text-white/40 text-xs">2 horas antes de la clase</p>
-          </div>
-          <div>
-            <p className="text-white text-sm">Renovación de plan</p>
-            <p className="text-white/40 text-xs">Automática cada 30 días</p>
-          </div>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-white/50 text-sm">Políticas</p>
+          {!editandoPoliticas && (
+            <button
+              onClick={abrirEdicionPoliticas}
+              className="flex items-center gap-1 text-cyan-brand text-xs font-medium"
+            >
+              <Pencil size={13} /> Editar
+            </button>
+          )}
         </div>
+
+        {editandoPoliticas ? (
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="text-white text-sm mb-1 block">
+                Tiempo mínimo para reservar o cancelar
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  value={formPoliticas.horas_anticipacion}
+                  onChange={(e) =>
+                    setFormPoliticas({
+                      ...formPoliticas,
+                      horas_anticipacion: e.target.value,
+                    })
+                  }
+                  className="w-20 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                />
+                <span className="text-white/40 text-sm">
+                  horas antes de la clase
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="text-white text-sm mb-1 block">
+                Renovación de plan
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-white/40 text-sm">
+                  Marcar como vencida después de
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  value={formPoliticas.dias_renovacion}
+                  onChange={(e) =>
+                    setFormPoliticas({
+                      ...formPoliticas,
+                      dias_renovacion: e.target.value,
+                    })
+                  }
+                  className="w-20 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                />
+                <span className="text-white/40 text-sm">días</span>
+              </div>
+              <p className="text-white/30 text-xs mt-1">
+                El admin la sigue confirmando manualmente en Usuarios
+                ("Confirmar pago")
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={guardarPoliticas}
+                disabled={guardando}
+                className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2.5 text-sm disabled:opacity-50"
+              >
+                {guardando ? 'Guardando...' : 'Guardar'}
+              </button>
+              <button
+                onClick={() => setEditandoPoliticas(false)}
+                className="flex-1 bg-white/10 text-white rounded-lg py-2.5 text-sm"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div>
+              <p className="text-white text-sm">
+                Tiempo mínimo para reservar o cancelar
+              </p>
+              <p className="text-white/40 text-xs">
+                {horasAnticipacion} horas antes de la clase
+              </p>
+            </div>
+            <div>
+              <p className="text-white text-sm">Renovación de plan</p>
+              <p className="text-white/40 text-xs">
+                Se marca como vencida después de {diasRenovacion} días. El admin
+                la confirma manualmente en Usuarios ("Confirmar pago")
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

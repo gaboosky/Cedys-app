@@ -1,5 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { subirImagen } from '../lib/storage';
+import {
+  activarNotificacionesPush,
+  yaEstaSuscrito,
+  pushDisponible,
+} from '../lib/push';
 import {
   LogOut,
   Mail,
@@ -15,6 +21,7 @@ import {
   Snowflake,
   Flame,
   Award,
+  BellRing,
 } from 'lucide-react';
 
 function calcularEdad(fechaNacimiento) {
@@ -73,12 +80,15 @@ export default function Perfil() {
     congelacionActivaDe,
     solicitarCongelacion,
     congelaciones,
+    rolEfectivo,
+    cambiarVista,
   } = useAuth();
   const plan = usuarioActual.plan_id ? planes[usuarioActual.plan_id] : null;
   const restantes = sesionesRestantes(usuarioActual);
   const edad = calcularEdad(usuarioActual.fecha_nacimiento);
-  const esCoach = usuarioActual.rol === 'coach';
-  const esUsuario = usuarioActual.rol === 'usuario';
+  const esAdmin = usuarioActual.rol === 'head_coach';
+  const esCoach = rolEfectivo === 'coach';
+  const esUsuario = rolEfectivo === 'usuario';
 
   const congelacionActiva = esUsuario
     ? congelacionActivaDe(usuarioActual.id)
@@ -103,6 +113,24 @@ export default function Perfil() {
   const [mensajeCongelar, setMensajeCongelar] = useState(null);
 
   const [editando, setEditando] = useState(false);
+  const [pushActivo, setPushActivo] = useState(false);
+  const [activandoPush, setActivandoPush] = useState(false);
+  const [mensajePush, setMensajePush] = useState(null);
+
+  useEffect(() => {
+    if (pushDisponible()) {
+      yaEstaSuscrito().then(setPushActivo);
+    }
+  }, []);
+
+  async function handleActivarPush() {
+    setActivandoPush(true);
+    const resultado = await activarNotificacionesPush(usuarioActual.id);
+    setActivandoPush(false);
+    setMensajePush(resultado);
+    if (resultado.ok) setPushActivo(true);
+    setTimeout(() => setMensajePush(null), 3000);
+  }
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
   const [form, setForm] = useState({
@@ -153,17 +181,19 @@ export default function Perfil() {
     }
   }
 
-  function handleFoto(e) {
+  async function handleFoto(e) {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 1024 * 1024) {
-      alert('La imagen es muy pesada. Usa una de menos de 1MB.');
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen es muy pesada. Usa una de menos de 5MB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () =>
-      actualizarPerfil(usuarioActual.id, { foto_url: reader.result });
-    reader.readAsDataURL(file);
+    try {
+      const url = await subirImagen(file, 'perfil');
+      actualizarPerfil(usuarioActual.id, { foto_url: url });
+    } catch (err) {
+      alert('Error al subir la foto: ' + err.message);
+    }
   }
 
   async function handleSolicitarCongelar(e) {
@@ -217,6 +247,33 @@ export default function Perfil() {
           </p>
         </div>
       </div>
+
+      {esAdmin && (
+        <div className="mb-6">
+          <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+            Verme como
+          </p>
+          <div className="flex bg-white/[0.04] border border-white/10 rounded-xl p-1">
+            {[
+              { valor: 'head_coach', label: 'Admin' },
+              { valor: 'coach', label: 'Coach' },
+              { valor: 'usuario', label: 'Usuario' },
+            ].map((opcion) => (
+              <button
+                key={opcion.valor}
+                onClick={() => cambiarVista(opcion.valor)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  rolEfectivo === opcion.valor
+                    ? 'bg-cyan-brand text-ink'
+                    : 'text-white/50'
+                }`}
+              >
+                {opcion.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {esCoach && (
         <div className="grid grid-cols-3 gap-2 mb-6">
@@ -375,6 +432,26 @@ export default function Perfil() {
             </form>
           )}
         </div>
+      )}
+
+      {pushDisponible() && !pushActivo && (
+        <button
+          onClick={handleActivarPush}
+          disabled={activandoPush}
+          className="flex items-center justify-center gap-2 w-full bg-white/[0.04] border border-cyan-brand/25 rounded-2xl py-3 text-white/80 text-sm mb-6 transition-transform active:scale-[0.98] disabled:opacity-50"
+        >
+          <BellRing size={15} className="text-cyan-brand" />
+          {activandoPush ? 'Activando...' : 'Activar notificaciones'}
+        </button>
+      )}
+      {mensajePush && (
+        <p
+          className={`text-xs mb-4 -mt-4 ${
+            mensajePush.ok ? 'text-cyan-brand' : 'text-red-400'
+          }`}
+        >
+          {mensajePush.mensaje}
+        </p>
       )}
 
       <div className="flex items-center justify-between mb-2">

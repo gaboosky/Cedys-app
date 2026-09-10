@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { subirImagen } from '../lib/storage';
 import {
   Plus,
   X,
@@ -7,6 +8,7 @@ import {
   TrendingDown,
   Camera,
   Trash2,
+  Activity,
 } from 'lucide-react';
 
 function capitalizar(s) {
@@ -64,16 +66,19 @@ export default function Progreso() {
     setEjercicios(ejercicios.filter((_, i) => i !== index));
   }
 
-  function handleFoto(e) {
+  async function handleFoto(e) {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert('La imagen es muy pesada. Usa una de menos de 2MB.');
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen es muy pesada. Usa una de menos de 5MB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => setForm({ ...form, foto_url: reader.result });
-    reader.readAsDataURL(file);
+    try {
+      const url = await subirImagen(file, 'progreso');
+      setForm({ ...form, foto_url: url });
+    } catch (err) {
+      alert('Error al subir la foto: ' + err.message);
+    }
   }
 
   async function handleGuardar(e) {
@@ -126,21 +131,26 @@ export default function Progreso() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <div className="flex items-center justify-between mb-6">
-        <p className="font-display text-3xl text-white">Progreso</p>
+      <div className="flex justify-end mb-6">
         <button
           onClick={() => setMostrarForm(!mostrarForm)}
-          className="flex items-center gap-1 bg-cyan-brand text-ink text-sm font-semibold px-3 py-2 rounded-lg"
+          className="flex items-center gap-1 bg-cyan-brand text-ink text-sm font-semibold px-3 py-2 rounded-lg transition-transform active:scale-95"
         >
           <Plus size={16} /> Registrar
         </button>
       </div>
 
       {ultimoPeso !== null && (
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-5 mb-6">
-          <p className="text-white/50 text-sm mb-1">Peso actual</p>
-          <div className="flex items-baseline gap-2">
-            <span className="font-display text-5xl text-cyan-brand">
+        <div className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-6 mb-6 overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-cyan-brand" />
+          <div className="flex items-center gap-2 mb-1">
+            <Activity size={14} className="text-cyan-brand" />
+            <p className="text-cyan-brand text-[11px] font-semibold tracking-[0.2em] uppercase">
+              Peso actual
+            </p>
+          </div>
+          <div className="flex items-baseline gap-2 mt-2">
+            <span className="font-display text-5xl text-white">
               {ultimoPeso}
             </span>
             <span className="text-white/50 text-sm">kg</span>
@@ -165,7 +175,7 @@ export default function Progreso() {
       {mostrarForm && (
         <form
           onSubmit={handleGuardar}
-          className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6 flex flex-col gap-3"
+          className="bg-white/[0.04] border border-white/10 rounded-3xl p-5 mb-6 flex flex-col gap-3"
         >
           <div>
             <label className="text-white/40 text-xs mb-1 block">Fecha</label>
@@ -173,7 +183,7 @@ export default function Progreso() {
               type="date"
               value={form.fecha}
               onChange={(e) => setForm({ ...form, fecha: e.target.value })}
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             />
           </div>
           <div>
@@ -186,7 +196,7 @@ export default function Progreso() {
               value={form.peso_kg}
               onChange={(e) => setForm({ ...form, peso_kg: e.target.value })}
               placeholder="Ej: 72.5"
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             />
           </div>
 
@@ -203,7 +213,7 @@ export default function Progreso() {
                       actualizarEjercicio(i, 'nombre', e.target.value)
                     }
                     placeholder="Ej: Sentadilla"
-                    className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                    className="flex-1 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
                   />
                   <input
                     type="number"
@@ -212,13 +222,13 @@ export default function Progreso() {
                       actualizarEjercicio(i, 'peso_kg', e.target.value)
                     }
                     placeholder="kg"
-                    className="w-20 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                    className="w-20 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
                   />
                   {ejercicios.length > 1 && (
                     <button
                       type="button"
                       onClick={() => quitarEjercicio(i)}
-                      className="text-red-400/70 px-1"
+                      className="text-red-400/70 px-1 transition-transform active:scale-90"
                     >
                       <X size={16} />
                     </button>
@@ -229,13 +239,13 @@ export default function Progreso() {
             <button
               type="button"
               onClick={agregarFilaEjercicio}
-              className="flex items-center gap-1 text-cyan-brand text-xs font-medium mt-2"
+              className="flex items-center gap-1 text-cyan-brand text-xs font-medium mt-2 transition-transform active:scale-95"
             >
               <Plus size={13} /> Agregar ejercicio
             </button>
           </div>
 
-          <label className="flex items-center justify-center gap-2 bg-white/5 border border-dashed border-white/20 rounded-lg py-3 text-sm text-white/60 cursor-pointer">
+          <label className="flex items-center justify-center gap-2 bg-white/[0.02] border border-dashed border-white/20 rounded-xl py-3 text-sm text-white/60 cursor-pointer">
             <Camera size={15} />
             {form.foto_url ? 'Foto lista ✓' : 'Agregar foto (opcional)'}
             <input
@@ -251,7 +261,7 @@ export default function Progreso() {
             onChange={(e) => setForm({ ...form, notas: e.target.value })}
             placeholder="Notas (opcional)"
             rows={2}
-            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm resize-none"
+            className="bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors resize-none"
           />
 
           {mensaje && (
@@ -267,7 +277,7 @@ export default function Progreso() {
           <button
             type="submit"
             disabled={guardando}
-            className="bg-cyan-brand text-ink font-semibold rounded-lg py-2.5 text-sm disabled:opacity-50"
+            className="bg-cyan-brand text-ink font-bold rounded-xl py-3 text-sm tracking-wide disabled:opacity-50 transition-transform active:scale-[0.98]"
           >
             {guardando ? 'Guardando...' : 'Guardar registro'}
           </button>
@@ -291,14 +301,14 @@ export default function Progreso() {
         {entradas?.map((e) => (
           <div
             key={e.id}
-            className="bg-white/5 border border-white/10 rounded-xl p-4"
+            className="bg-white/[0.04] border border-white/10 rounded-2xl p-4"
           >
             <div className="flex items-start gap-3">
               {e.foto_url && (
                 <img
                   src={e.foto_url}
                   alt="Progreso"
-                  className="w-16 h-16 rounded-lg object-cover shrink-0"
+                  className="w-16 h-16 rounded-xl object-cover shrink-0 border border-white/10"
                 />
               )}
               <div className="flex-1">
@@ -310,13 +320,13 @@ export default function Progreso() {
                     <div className="flex gap-1">
                       <button
                         onClick={() => handleEliminar(e.id)}
-                        className="text-red-400 text-xs font-semibold px-2 py-1 bg-red-500/20 rounded"
+                        className="text-red-400 text-xs font-semibold px-2 py-1 bg-red-500/20 rounded transition-transform active:scale-95"
                       >
                         Sí
                       </button>
                       <button
                         onClick={() => setEliminandoId(null)}
-                        className="text-white/50 text-xs px-2 py-1 bg-white/10 rounded"
+                        className="text-white/50 text-xs px-2 py-1 bg-white/10 rounded transition-transform active:scale-95"
                       >
                         No
                       </button>
@@ -324,7 +334,7 @@ export default function Progreso() {
                   ) : (
                     <button
                       onClick={() => setEliminandoId(e.id)}
-                      className="text-white/20 hover:text-red-400"
+                      className="text-white/20 hover:text-red-400 transition-colors"
                     >
                       <Trash2 size={14} />
                     </button>

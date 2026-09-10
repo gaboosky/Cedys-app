@@ -174,7 +174,7 @@ export default function MiRutina() {
             />
             <div>
               <label className="text-white/40 text-xs mb-1 block">
-                Google Sheets (opcional)
+                Google Sheets (opcional, solo referencia)
               </label>
               <input
                 value={form.link}
@@ -182,6 +182,10 @@ export default function MiRutina() {
                 placeholder="Pega el enlace de tu rutina"
                 className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
               />
+              <p className="text-white/30 text-xs mt-1">
+                El link es solo una referencia visual. El contenido de la rutina
+                siempre se carga desde el archivo Excel de abajo.
+              </p>
             </div>
 
             <label

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { ArrowLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ExternalLink, Dumbbell } from 'lucide-react';
 
 export default function RutinaSemanas() {
   const { rutinaId } = useParams();
@@ -19,27 +19,36 @@ export default function RutinaSemanas() {
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1 text-white/50 text-sm mb-6"
+        className="flex items-center gap-1 text-white/40 text-sm mb-6 hover:text-white/70 transition-colors"
       >
-        <ArrowLeft size={16} /> Volver
+        <ArrowLeft size={15} /> Volver
       </button>
 
-      <p className="font-display text-3xl text-white leading-none mb-1">
-        {rutina?.nombre || 'Rutina'}
-      </p>
+      <div className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-6 mb-6 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-cyan-brand" />
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-10 h-10 rounded-full bg-cyan-brand/15 border border-cyan-brand/30 flex items-center justify-center shrink-0">
+            <Dumbbell size={18} className="text-cyan-brand" />
+          </div>
+          <p
+            className="font-display text-white leading-tight"
+            style={{ fontSize: '1.5rem' }}
+          >
+            {rutina?.nombre || 'Rutina'}
+          </p>
+        </div>
 
-      {rutina?.link_googlesheet && (
-        <a
-          href={rutina.link_googlesheet}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-cyan-brand text-xs mb-6"
-        >
-          <ExternalLink size={12} /> Ver en Google Sheets
-        </a>
-      )}
-
-      {!rutina?.link_googlesheet && <div className="mb-6" />}
+        {rutina?.link_googlesheet && (
+          <a
+            href={rutina.link_googlesheet}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-cyan-brand text-xs mt-3 transition-transform active:scale-[0.98]"
+          >
+            <ExternalLink size={12} /> Ver en Google Sheets
+          </a>
+        )}
+      </div>
 
       <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
         Semanas
@@ -57,17 +66,17 @@ export default function RutinaSemanas() {
           <button
             key={s.id}
             onClick={() => navigate(`/rutinas/${rutinaId}/semanas/${s.id}`)}
-            className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4"
+            className="flex items-center justify-between bg-white/[0.04] border border-white/10 rounded-2xl p-4 transition-transform active:scale-[0.98]"
           >
             <div className="text-left">
-              <p className="text-white font-display text-xl">
+              <p className="text-white font-display text-xl leading-tight">
                 Semana {s.numero}
               </p>
               {s.objetivo && (
-                <p className="text-white/40 text-sm">{s.objetivo}</p>
+                <p className="text-white/40 text-sm mt-0.5">{s.objetivo}</p>
               )}
             </div>
-            <ChevronRight size={18} className="text-white/30" />
+            <ChevronRight size={18} className="text-cyan-brand/60" />
           </button>
         ))}
       </div>

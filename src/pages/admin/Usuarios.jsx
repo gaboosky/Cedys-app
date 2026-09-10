@@ -15,6 +15,7 @@ export default function Usuarios() {
     congelaciones,
     aprobarCongelacion,
     rechazarCongelacion,
+    diasRenovacion,
   } = useAuth();
   const [busqueda, setBusqueda] = useState('');
   const [diasCongelar, setDiasCongelar] = useState({});
@@ -92,11 +93,10 @@ export default function Usuarios() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <div className="flex items-center justify-between mb-4">
-        <p className="font-display text-3xl text-white">Usuarios</p>
+      <div className="flex justify-end mb-5">
         <button
           onClick={() => setMostrarNuevo(!mostrarNuevo)}
-          className="flex items-center gap-1 bg-cyan-brand text-ink text-sm font-semibold px-3 py-2 rounded-lg"
+          className="flex items-center gap-1 bg-cyan-brand text-ink text-sm font-semibold px-3 py-2 rounded-lg transition-transform active:scale-95"
         >
           <Plus size={16} /> Agregar
         </button>
@@ -105,7 +105,7 @@ export default function Usuarios() {
       {mostrarNuevo && (
         <form
           onSubmit={handleCrear}
-          className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6 flex flex-col gap-2"
+          className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 mb-6 flex flex-col gap-2"
         >
           <p className="text-white/40 text-xs mb-1">
             Úsalo para personas que no puedan registrarse solas desde la app
@@ -117,7 +117,7 @@ export default function Usuarios() {
               setFormNuevo({ ...formNuevo, nombre: e.target.value })
             }
             placeholder="Nombre completo"
-            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
           />
           <input
             value={formNuevo.rut}
@@ -125,7 +125,7 @@ export default function Usuarios() {
               setFormNuevo({ ...formNuevo, rut: e.target.value })
             }
             placeholder="RUT"
-            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
           />
           <input
             value={formNuevo.nacionalidad}
@@ -133,7 +133,7 @@ export default function Usuarios() {
               setFormNuevo({ ...formNuevo, nacionalidad: e.target.value })
             }
             placeholder="Nacionalidad"
-            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
           />
           <div>
             <label className="text-white/40 text-xs mb-1 block">
@@ -145,7 +145,7 @@ export default function Usuarios() {
               onChange={(e) =>
                 setFormNuevo({ ...formNuevo, fecha_nacimiento: e.target.value })
               }
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             />
           </div>
           <input
@@ -154,7 +154,7 @@ export default function Usuarios() {
               setFormNuevo({ ...formNuevo, telefono: e.target.value })
             }
             placeholder="Teléfono"
-            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
           />
           <input
             type="email"
@@ -163,14 +163,14 @@ export default function Usuarios() {
               setFormNuevo({ ...formNuevo, correo: e.target.value })
             }
             placeholder="Correo"
-            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
           />
           <input
             type="password"
             value={passwordNuevo}
             onChange={(e) => setPasswordNuevo(e.target.value)}
             placeholder="Contraseña (mínimo 6 caracteres)"
-            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
           />
 
           {mensajeCrear && (
@@ -186,7 +186,7 @@ export default function Usuarios() {
           <button
             type="submit"
             disabled={creando}
-            className="bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm disabled:opacity-50"
+            className="bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm disabled:opacity-50 transition-transform active:scale-[0.98]"
           >
             {creando ? 'Creando...' : 'Crear usuario'}
           </button>
@@ -204,7 +204,7 @@ export default function Usuarios() {
               return (
                 <div
                   key={c.id}
-                  className="bg-blue-400/10 border border-blue-400/30 rounded-xl p-4"
+                  className="bg-blue-400/10 border border-blue-400/30 rounded-2xl p-4"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Snowflake size={14} className="text-blue-300" />
@@ -232,13 +232,13 @@ export default function Usuarios() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleAprobarCongelacion(c.id)}
-                      className="flex-1 flex items-center justify-center gap-1 bg-blue-400 text-ink text-sm font-semibold rounded-lg py-2"
+                      className="flex-1 flex items-center justify-center gap-1 bg-blue-400 text-ink text-sm font-semibold rounded-lg py-2 transition-transform active:scale-[0.98]"
                     >
                       <Check size={16} /> Aprobar
                     </button>
                     <button
                       onClick={() => rechazarCongelacion(c.id)}
-                      className="flex-1 flex items-center justify-center gap-1 bg-white/10 text-white/70 text-sm font-semibold rounded-lg py-2"
+                      className="flex-1 flex items-center justify-center gap-1 bg-white/10 text-white/70 text-sm font-semibold rounded-lg py-2 transition-transform active:scale-[0.98]"
                     >
                       <X size={16} /> Rechazar
                     </button>
@@ -259,7 +259,7 @@ export default function Usuarios() {
             {pendientes.map((u) => (
               <div
                 key={u.id}
-                className="bg-cyan-brand/10 border border-cyan-brand/30 rounded-xl p-4"
+                className="bg-cyan-brand/10 border border-cyan-brand/30 rounded-2xl p-4"
               >
                 <p className="text-white text-sm font-medium">{u.nombre}</p>
                 <p className="text-white/40 text-xs mb-3">
@@ -268,13 +268,13 @@ export default function Usuarios() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => aprobarUsuario(u.id)}
-                    className="flex-1 flex items-center justify-center gap-1 bg-cyan-brand text-ink text-sm font-semibold rounded-lg py-2"
+                    className="flex-1 flex items-center justify-center gap-1 bg-cyan-brand text-ink text-sm font-semibold rounded-lg py-2 transition-transform active:scale-[0.98]"
                   >
                     <Check size={16} /> Aprobar
                   </button>
                   <button
                     onClick={() => rechazarUsuario(u.id)}
-                    className="flex-1 flex items-center justify-center gap-1 bg-white/10 text-white/70 text-sm font-semibold rounded-lg py-2"
+                    className="flex-1 flex items-center justify-center gap-1 bg-white/10 text-white/70 text-sm font-semibold rounded-lg py-2 transition-transform active:scale-[0.98]"
                   >
                     <X size={16} /> Rechazar
                   </button>
@@ -289,7 +289,7 @@ export default function Usuarios() {
         value={busqueda}
         onChange={(e) => setBusqueda(e.target.value)}
         placeholder="Buscar por nombre..."
-        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-white/30 outline-none focus:border-cyan-brand transition-colors mb-4 text-sm"
+        className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-white/30 outline-none focus:border-cyan-brand transition-colors mb-4 text-sm"
       />
 
       <div className="flex flex-col gap-2">
@@ -305,12 +305,13 @@ export default function Usuarios() {
               )
             : null;
           const necesitaRenovar =
-            diasDesdeRenovacion === null || diasDesdeRenovacion >= 30;
+            diasDesdeRenovacion === null ||
+            diasDesdeRenovacion >= diasRenovacion;
 
           return (
             <div
               key={u.id}
-              className="bg-white/5 border border-white/10 rounded-xl p-4"
+              className="bg-white/[0.04] border border-white/10 rounded-2xl p-4"
             >
               <div className="flex items-center justify-between mb-2">
                 <div>
@@ -328,10 +329,10 @@ export default function Usuarios() {
 
               {plan && (
                 <div
-                  className={`flex items-center justify-between rounded-lg px-3 py-2 mb-2 ${
+                  className={`flex items-center justify-between rounded-xl px-3 py-2 mb-2 ${
                     necesitaRenovar
                       ? 'bg-yellow-400/10 border border-yellow-400/30'
-                      : 'bg-white/5'
+                      : 'bg-white/[0.03]'
                   }`}
                 >
                   <p
@@ -347,7 +348,7 @@ export default function Usuarios() {
                   </p>
                   <button
                     onClick={() => confirmarRenovacion(u.id)}
-                    className="bg-cyan-brand text-ink text-xs font-semibold px-2.5 py-1.5 rounded-md whitespace-nowrap"
+                    className="bg-cyan-brand text-ink text-xs font-semibold px-2.5 py-1.5 rounded-md whitespace-nowrap transition-transform active:scale-95"
                   >
                     Confirmar pago
                   </button>
@@ -357,7 +358,7 @@ export default function Usuarios() {
               <select
                 value={u.plan_id || ''}
                 onChange={(e) => asignarPlan(u.id, e.target.value)}
-                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand mb-2"
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors mb-2"
               >
                 <option value="">Sin plan asignado</option>
                 {Object.values(planes).map((p) => (
@@ -370,7 +371,7 @@ export default function Usuarios() {
               <select
                 value={u.rol}
                 onChange={(e) => cambiarRol(u.id, e.target.value)}
-                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand"
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
               >
                 <option value="usuario">Usuario</option>
                 <option value="coach">Coach</option>

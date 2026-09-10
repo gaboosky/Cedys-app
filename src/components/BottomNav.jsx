@@ -33,16 +33,15 @@ export const TABS_ADMIN = [
   { to: '/clases-admin', label: 'Clases', icon: Calendar },
   { to: '/planes', label: 'Planes', icon: CreditCard },
   { to: '/Usuarios', label: 'Usuarios', icon: Users },
-  { to: '/coaches', label: 'Coach', icon: Users },
 ];
 
 export default function BottomNav() {
-  const { usuarioActual } = useAuth();
+  const { rolEfectivo } = useAuth();
 
   const tabs =
-    usuarioActual.rol === 'head_coach'
+    rolEfectivo === 'head_coach'
       ? TABS_ADMIN
-      : usuarioActual.rol === 'coach'
+      : rolEfectivo === 'coach'
       ? TABS_COACH
       : TABS_USUARIO;
 

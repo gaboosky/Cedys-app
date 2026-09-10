@@ -1,4 +1,4 @@
-const HORAS_ANTICIPACION = 4;
+const HORAS_ANTICIPACION_DEFECTO = 4;
 
 export function horaAFecha(fecha, hora) {
   return new Date(`${fecha}T${hora}:00`);
@@ -9,10 +9,20 @@ export function horasHastaClase(fecha, hora) {
   return (inicio.getTime() - Date.now()) / (1000 * 60 * 60);
 }
 
-export function reservaBloqueada(fecha, hora) {
-  return horasHastaClase(fecha, hora) < HORAS_ANTICIPACION;
+// true si falta menos de X horas para que empiece (no se puede reservar)
+export function reservaBloqueada(
+  fecha,
+  hora,
+  horasAnticipacion = HORAS_ANTICIPACION_DEFECTO
+) {
+  return horasHastaClase(fecha, hora) < horasAnticipacion;
 }
 
-export function esCancelacionTardia(fecha, hora) {
-  return horasHastaClase(fecha, hora) <= HORAS_ANTICIPACION;
+// true si cancelar ahora cuenta como cancelación tardía (se pierde la sesión)
+export function esCancelacionTardia(
+  fecha,
+  hora,
+  horasAnticipacion = HORAS_ANTICIPACION_DEFECTO
+) {
+  return horasHastaClase(fecha, hora) <= horasAnticipacion;
 }

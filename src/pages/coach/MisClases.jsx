@@ -1,323 +1,323 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, ChevronDown, ChevronUp, Check, X } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  Dumbbell,
+  Upload,
+  Cake,
+  Scale,
+} from 'lucide-react';
 
-function capitalizar(s) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function formatFechaLarga(fechaISO) {
-  const fecha = new Date(fechaISO + 'T00:00:00');
-  const texto = fecha.toLocaleDateString('es-CL', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  return capitalizar(texto);
-}
-
-function proximosDiasHabiles(cantidad = 14) {
-  const dias = [];
+function calcularEdad(fechaNacimiento) {
+  if (!fechaNacimiento) return null;
   const hoy = new Date();
-  let offset = 0;
-  while (dias.length < cantidad) {
-    const fecha = new Date(hoy);
-    fecha.setDate(hoy.getDate() + offset);
-    if (fecha.getDay() !== 0) {
-      const nombreDia = capitalizar(
-        fecha.toLocaleDateString('es-CL', { weekday: 'long' })
-      );
-      dias.push({ key: fecha.toISOString().slice(0, 10), nombreDia });
-    }
-    offset++;
-  }
-  return dias;
+  const nacimiento = new Date(fechaNacimiento);
+  let edad = hoy.getFullYear() - nacimiento.getFullYear();
+  const m = hoy.getMonth() - nacimiento.getMonth();
+  if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) edad--;
+  return edad;
 }
 
-function nombreMes(mesKey) {
-  const [anio, mes] = mesKey.split('-');
-  const fecha = new Date(Number(anio), Number(mes) - 1, 1);
-  return capitalizar(
-    fecha.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })
-  );
-}
+export default function Alumnos() {
+  const navigate = useNavigate();
+  const {
+    usuarioActual,
+    horarios,
+    usuarios,
+    reservas,
+    crearRutina,
+    importarContenidoRutina,
+    asignarRutina,
+    rutinaActivaDe,
+    historialRutinasDe,
+    obtenerProgreso,
+  } = useAuth();
 
-function FilaAlumno({ item, onMarcar }) {
-  const { usuario, reservaId, asistio } = item;
-  return (
-    <div className="flex items-center justify-between px-4 py-3">
-      <div>
-        <span className="text-white text-sm block">{usuario.nombre}</span>
-        <span className="text-white/30 text-xs">{usuario.telefono}</span>
-      </div>
-      <div className="flex gap-1">
-        <button
-          onClick={() => onMarcar(reservaId, true)}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-            asistio === true
-              ? 'bg-cyan-brand text-ink'
-              : 'bg-white/5 text-white/30'
-          }`}
-        >
-          <Check size={15} />
-        </button>
-        <button
-          onClick={() => onMarcar(reservaId, false)}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-            asistio === false
-              ? 'bg-red-500/80 text-white'
-              : 'bg-white/5 text-white/30'
-          }`}
-        >
-          <X size={15} />
-        </button>
-      </div>
-    </div>
-  );
-}
+  const [abierto, setAbierto] = useState(null);
+  const [pesoPorAlumno, setPesoPorAlumno] = useState({});
+  const [importForm, setImportForm] = useState({
+    nombre: '',
+    link: '',
+    archivo: null,
+  });
+  const [importando, setImportando] = useState(false);
+  const [importMensaje, setImportMensaje] = useState(null);
 
-export default function MisClases() {
-  const { usuarioActual, horarios, usuarios, reservas, marcarAsistencia } =
-    useAuth();
-  const [tab, setTab] = useState('proximas');
-  const [abierta, setAbierta] = useState(null);
-  const [mesFiltro, setMesFiltro] = useState('todos');
+  const misHorariosIds = horarios
+    .filter((h) => h.coach_id === usuarioActual.id)
+    .map((h) => h.id);
 
-  const misHorarios = horarios.filter((h) => h.coach_id === usuarioActual.id);
-  const misHorarioIds = misHorarios.map((h) => h.id);
-  const hoyISO = new Date().toISOString().slice(0, 10);
-
-  function inscritosDe(horarioId, fecha) {
-    return reservas
-      .filter((r) => r.horario_id === horarioId && r.fecha === fecha)
-      .map((r) => {
-        const usuario = usuarios.find((u) => u.id === r.usuario_id);
-        return usuario
-          ? { usuario, reservaId: r.id, asistio: r.asistio }
-          : null;
-      })
-      .filter(Boolean);
-  }
-
-  const diasProximos = proximosDiasHabiles(14);
-
-  const realizadasPorFecha = useMemo(() => {
-    const grupos = {};
-    reservas
-      .filter((r) => misHorarioIds.includes(r.horario_id) && r.fecha < hoyISO)
-      .forEach((r) => {
-        if (!grupos[r.fecha]) grupos[r.fecha] = new Set();
-        grupos[r.fecha].add(r.horario_id);
-      });
-    return grupos;
-  }, [reservas, misHorarioIds, hoyISO]);
-
-  const fechasRealizadas = Object.keys(realizadasPorFecha).sort().reverse();
-  const mesesDisponibles = [
-    ...new Set(fechasRealizadas.map((f) => f.slice(0, 7))),
+  const alumnosIds = [
+    ...new Set(
+      reservas
+        .filter((r) => misHorariosIds.includes(r.horario_id))
+        .map((r) => r.usuario_id)
+    ),
   ];
-  const fechasFiltradas =
-    mesFiltro === 'todos'
-      ? fechasRealizadas
-      : fechasRealizadas.filter((f) => f.slice(0, 7) === mesFiltro);
-  const totalClasesRealizadas = fechasFiltradas.reduce(
-    (acc, f) => acc + realizadasPorFecha[f].size,
-    0
-  );
+
+  const alumnos = alumnosIds
+    .map((id) => usuarios.find((u) => u.id === id))
+    .filter(Boolean);
+
+  async function handleImportarYAsignar(usuarioId) {
+    if (!importForm.nombre.trim() || !importForm.archivo) {
+      setImportMensaje({
+        ok: false,
+        mensaje: 'Ponle un nombre a la rutina y elige el archivo Excel.',
+      });
+      return;
+    }
+    setImportando(true);
+    setImportMensaje(null);
+    try {
+      const { leerArchivoExcel } = await import('../../lib/excelRutinaParser');
+      const datosSemanas = await leerArchivoExcel(importForm.archivo);
+      if (Object.keys(datosSemanas).length === 0) {
+        setImportMensaje({
+          ok: false,
+          mensaje: 'No encontré hojas con formato "Semana X" en ese archivo.',
+        });
+        setImportando(false);
+        return;
+      }
+      const nueva = await crearRutina(
+        importForm.nombre.trim(),
+        importForm.link.trim()
+      );
+      await importarContenidoRutina(nueva.id, datosSemanas);
+      await asignarRutina(usuarioId, nueva.id);
+      setImportMensaje({
+        ok: true,
+        mensaje: `Rutina importada con ${
+          Object.keys(datosSemanas).length
+        } semana(s).`,
+      });
+      setImportForm({ nombre: '', link: '', archivo: null });
+      setTimeout(() => setImportMensaje(null), 1500);
+    } catch (err) {
+      setImportMensaje({
+        ok: false,
+        mensaje: 'No pude leer ese archivo. Revisa que sea un .xlsx válido.',
+      });
+    }
+    setImportando(false);
+  }
+
+  async function toggleAbierto(alumnoId) {
+    const yaAbierto = abierto === alumnoId;
+    setAbierto(yaAbierto ? null : alumnoId);
+    if (!yaAbierto && pesoPorAlumno[alumnoId] === undefined) {
+      const datos = await obtenerProgreso(alumnoId);
+      setPesoPorAlumno((prev) => ({
+        ...prev,
+        [alumnoId]: datos?.[0]?.peso_kg ?? null,
+      }));
+    }
+  }
+
+  function formatearFecha(fecha) {
+    if (!fecha) return '';
+    return new Date(fecha + 'T00:00:00').toLocaleDateString('es-CL', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <p className="font-display text-3xl text-white mb-4">Mis Clases</p>
-
-      <div className="flex bg-white/5 border border-white/10 rounded-xl p-1 mb-6">
-        <button
-          onClick={() => setTab('proximas')}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === 'proximas' ? 'bg-cyan-brand text-ink' : 'text-white/50'
-          }`}
-        >
-          Próximas
-        </button>
-        <button
-          onClick={() => setTab('realizadas')}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === 'realizadas' ? 'bg-cyan-brand text-ink' : 'text-white/50'
-          }`}
-        >
-          Realizadas
-        </button>
-      </div>
-
-      {tab === 'proximas' && (
-        <div className="flex flex-col gap-6">
-          {diasProximos.map((dia) => {
-            const horariosDelDia = misHorarios
-              .filter((h) => h.dia === dia.nombreDia)
-              .sort((a, b) => a.hora.localeCompare(b.hora));
-            if (horariosDelDia.length === 0) return null;
-            return (
-              <div key={dia.key}>
-                <p className="text-white/50 text-xs uppercase tracking-wide mb-2">
-                  {formatFechaLarga(dia.key)}
-                </p>
-                <div className="flex flex-col gap-2">
-                  {horariosDelDia.map((h) => {
-                    const inscritos = inscritosDe(h.id, dia.key);
-                    const claveAbierta = `${h.id}_${dia.key}`;
-                    const abiertaAqui = abierta === claveAbierta;
-                    return (
-                      <div
-                        key={h.id}
-                        className="bg-white/5 border border-white/10 rounded-xl overflow-hidden"
-                      >
-                        <button
-                          onClick={() =>
-                            setAbierta(abiertaAqui ? null : claveAbierta)
-                          }
-                          className="w-full flex items-center justify-between p-4"
-                        >
-                          <p className="text-white font-display text-xl">
-                            {h.hora}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <span className="flex items-center gap-1 text-white/40 text-xs">
-                              <Users size={13} /> {inscritos.length}/
-                              {h.cupo_max}
-                            </span>
-                            {abiertaAqui ? (
-                              <ChevronUp size={16} className="text-white/40" />
-                            ) : (
-                              <ChevronDown
-                                size={16}
-                                className="text-white/40"
-                              />
-                            )}
-                          </div>
-                        </button>
-                        {abiertaAqui && (
-                          <div className="border-t border-white/10 divide-y divide-white/5">
-                            {inscritos.length === 0 && (
-                              <p className="text-white/30 text-sm px-4 py-3">
-                                Nadie inscrito todavía.
-                              </p>
-                            )}
-                            {inscritos.map((item) => (
-                              <FilaAlumno
-                                key={item.reservaId}
-                                item={item}
-                                onMarcar={marcarAsistencia}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {alumnos.length === 0 && (
+        <p className="text-white/40 text-sm">
+          Todavía no tienes alumnos inscritos.
+        </p>
       )}
 
-      {tab === 'realizadas' && (
-        <>
-          <div className="flex items-center justify-between mb-4">
-            <select
-              value={mesFiltro}
-              onChange={(e) => setMesFiltro(e.target.value)}
-              className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none"
+      <div className="flex flex-col gap-2">
+        {alumnos.map((a) => {
+          const abiertoAqui = abierto === a.id;
+          const rutinaActiva = rutinaActivaDe(a.id);
+          const historial = historialRutinasDe(a.id).filter((h) => !h.activa);
+
+          return (
+            <div
+              key={a.id}
+              className="bg-white/[0.04] border border-white/10 rounded-2xl overflow-hidden"
             >
-              <option value="todos">Todos los meses</option>
-              {mesesDisponibles.map((m) => (
-                <option key={m} value={m}>
-                  {nombreMes(m)}
-                </option>
-              ))}
-            </select>
-            <span className="text-cyan-brand text-sm font-medium">
-              {totalClasesRealizadas} clases
-            </span>
-          </div>
-
-          {fechasFiltradas.length === 0 && (
-            <p className="text-white/30 text-sm">
-              Aún no tienes clases realizadas.
-            </p>
-          )}
-
-          <div className="flex flex-col gap-6">
-            {fechasFiltradas.map((fecha) => {
-              const horarioIdsDelDia = [...realizadasPorFecha[fecha]];
-              return (
-                <div key={fecha}>
-                  <p className="text-white/50 text-xs uppercase tracking-wide mb-2">
-                    {formatFechaLarga(fecha)}
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    {horarioIdsDelDia.map((horarioId) => {
-                      const h = horarios.find((x) => x.id === horarioId);
-                      if (!h) return null;
-                      const inscritos = inscritosDe(horarioId, fecha);
-                      const asistieron = inscritos.filter(
-                        (i) => i.asistio === true
-                      ).length;
-                      const claveAbierta = `${horarioId}_${fecha}`;
-                      const abiertaAqui = abierta === claveAbierta;
-                      return (
-                        <div
-                          key={horarioId}
-                          className="bg-white/5 border border-white/10 rounded-xl overflow-hidden"
-                        >
-                          <button
-                            onClick={() =>
-                              setAbierta(abiertaAqui ? null : claveAbierta)
-                            }
-                            className="w-full flex items-center justify-between p-4"
-                          >
-                            <p className="text-white font-display text-xl">
-                              {h.hora}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <span className="flex items-center gap-1 text-white/40 text-xs">
-                                <Users size={13} /> {asistieron}/
-                                {inscritos.length} asistieron
-                              </span>
-                              {abiertaAqui ? (
-                                <ChevronUp
-                                  size={16}
-                                  className="text-white/40"
-                                />
-                              ) : (
-                                <ChevronDown
-                                  size={16}
-                                  className="text-white/40"
-                                />
-                              )}
-                            </div>
-                          </button>
-                          {abiertaAqui && (
-                            <div className="border-t border-white/10 divide-y divide-white/5">
-                              {inscritos.map((item) => (
-                                <FilaAlumno
-                                  key={item.reservaId}
-                                  item={item}
-                                  onMarcar={marcarAsistencia}
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+              <button
+                onClick={() => toggleAbierto(a.id)}
+                className="w-full flex items-center justify-between p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-cyan-brand/15 border border-cyan-brand/40 flex items-center justify-center">
+                    <span className="font-display text-cyan-brand text-sm">
+                      {a.nombre.charAt(0)}
+                    </span>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-white text-sm font-medium">{a.nombre}</p>
+                    <p className="text-white/40 text-xs">
+                      {rutinaActiva
+                        ? rutinaActiva.nombre
+                        : 'Sin rutina asignada'}
+                    </p>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </>
-      )}
+                {abiertoAqui ? (
+                  <ChevronUp size={18} className="text-white/40" />
+                ) : (
+                  <ChevronDown size={18} className="text-white/40" />
+                )}
+              </button>
+
+              {abiertoAqui && (
+                <div className="border-t border-white/10 p-4 flex flex-col gap-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3">
+                      <div className="flex items-center gap-1.5 text-white/40 text-[10px] uppercase tracking-wide mb-1">
+                        <Cake size={12} /> Edad
+                      </div>
+                      <p className="text-white font-display text-lg leading-none">
+                        {calcularEdad(a.fecha_nacimiento) !== null
+                          ? `${calcularEdad(a.fecha_nacimiento)} años`
+                          : '—'}
+                      </p>
+                    </div>
+                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3">
+                      <div className="flex items-center gap-1.5 text-white/40 text-[10px] uppercase tracking-wide mb-1">
+                        <Scale size={12} /> Peso actual
+                      </div>
+                      <p className="text-white font-display text-lg leading-none">
+                        {pesoPorAlumno[a.id]
+                          ? `${pesoPorAlumno[a.id]} kg`
+                          : '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+                      Rutina actual
+                    </p>
+                    {rutinaActiva ? (
+                      <button
+                        onClick={() => navigate(`/rutinas/${rutinaActiva.id}`)}
+                        className="w-full flex items-center gap-2 bg-cyan-brand/10 border border-cyan-brand/30 rounded-xl px-3 py-2.5 transition-transform active:scale-[0.98]"
+                      >
+                        <Dumbbell size={16} className="text-cyan-brand" />
+                        <div className="text-left flex-1">
+                          <p className="text-white text-sm">
+                            {rutinaActiva.nombre}
+                          </p>
+                          <p className="text-white/40 text-xs">
+                            desde{' '}
+                            {formatearFecha(rutinaActiva.fecha_asignacion)}
+                          </p>
+                        </div>
+                        <ChevronRight
+                          size={16}
+                          className="text-cyan-brand/60"
+                        />
+                      </button>
+                    ) : (
+                      <p className="text-white/30 text-sm">
+                        Sin rutina asignada.
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+                      Importar rutina desde Excel
+                    </p>
+
+                    <div className="flex flex-col gap-2 bg-black/20 border border-white/10 rounded-xl p-3">
+                      <input
+                        value={importForm.nombre}
+                        onChange={(e) =>
+                          setImportForm({
+                            ...importForm,
+                            nombre: e.target.value,
+                          })
+                        }
+                        placeholder="Nombre de la rutina"
+                        className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
+                      />
+                      <input
+                        value={importForm.link}
+                        onChange={(e) =>
+                          setImportForm({ ...importForm, link: e.target.value })
+                        }
+                        placeholder="Link de Google Sheets (opcional, solo referencia)"
+                        className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
+                      />
+                      <p className="text-white/40 text-xs -mt-1">
+                        El link es solo una referencia visual. El contenido de
+                        la rutina siempre se carga desde el archivo Excel de
+                        abajo.
+                      </p>
+                      <label className="flex items-center justify-center gap-2 bg-white/5 border border-dashed border-white/20 rounded-lg py-3 text-sm text-white/60 cursor-pointer">
+                        <Upload size={15} />
+                        {importForm.archivo
+                          ? importForm.archivo.name
+                          : 'Elegir archivo Excel (.xlsx)'}
+                        <input
+                          type="file"
+                          accept=".xlsx"
+                          onChange={(e) =>
+                            setImportForm({
+                              ...importForm,
+                              archivo: e.target.files[0],
+                            })
+                          }
+                          className="hidden"
+                        />
+                      </label>
+                      {importMensaje && (
+                        <p
+                          className={`text-xs ${
+                            importMensaje.ok
+                              ? 'text-cyan-brand'
+                              : 'text-red-400'
+                          }`}
+                        >
+                          {importMensaje.mensaje}
+                        </p>
+                      )}
+                      <button
+                        onClick={() => handleImportarYAsignar(a.id)}
+                        disabled={importando}
+                        className="bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm disabled:opacity-50 transition-transform active:scale-[0.98]"
+                      >
+                        {importando ? 'Importando...' : 'Importar y asignar'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {historial.length > 0 && (
+                    <div>
+                      <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+                        Historial
+                      </p>
+                      <div className="flex flex-col gap-1">
+                        {historial.map((h) => (
+                          <p key={h.id} className="text-white/50 text-xs">
+                            {h.rutina.nombre} ·{' '}
+                            {formatearFecha(h.fecha_asignacion)} a{' '}
+                            {formatearFecha(h.fecha_fin)}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
