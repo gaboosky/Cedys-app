@@ -1,4 +1,10 @@
 import { precacheAndRoute } from 'workbox-precaching';
+import { clientsClaim } from 'workbox-core';
+
+// Hace que la versión nueva de la app se active de inmediato,
+// en vez de esperar a que cierres la app por completo.
+self.skipWaiting();
+clientsClaim();
 
 precacheAndRoute(self.__WB_MANIFEST);
 

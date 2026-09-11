@@ -68,3 +68,14 @@ createRoot(document.getElementById('root')).render(
     </Sentry.ErrorBoundary>
   </StrictMode>
 );
+
+// Cuando llega una versión nueva de la app, recarga la pantalla sola
+// para que se vea el cambio, aunque la app ya estuviera instalada.
+if ('serviceWorker' in navigator) {
+  let yaRecargo = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (yaRecargo) return;
+    yaRecargo = true;
+    window.location.reload();
+  });
+}

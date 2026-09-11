@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LOGO_CEDS_WORDMARK } from '../assets/logoWordmark';
+import { LOGO_CEDS_CIRCULO } from '../assets/logoCirculo';
 
 const TITULOS = {
   '/perfil': 'Mi Perfil',
@@ -131,9 +132,9 @@ export default function Header() {
         <div className="relative">
           <div className="absolute left-1/2 top-0 -translate-x-1/2 w-40 h-40 rounded-full bg-cyan-brand/15 blur-2xl pointer-events-none" />
           <div className="relative flex justify-center -mt-9">
-            <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border-2 border-cyan-brand/70 shadow-[0_0_24px_rgba(3,205,230,0.3)] flex items-center justify-center overflow-hidden p-3">
+            <div className="w-20 h-20 rounded-full bg-white border-2 border-cyan-brand/70 shadow-[0_0_24px_rgba(3,205,230,0.3)] flex items-center justify-center overflow-hidden p-3">
               <img
-                src={logoUrl || LOGO_CEDS_WORDMARK}
+                src={logoUrl || LOGO_CEDS_CIRCULO}
                 alt="CED&S"
                 className="w-full h-full object-contain"
               />
