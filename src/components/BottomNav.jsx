@@ -46,7 +46,7 @@ export default function BottomNav() {
       : TABS_USUARIO;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-ink border-t border-white/10 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+    <nav className="fixed bottom-0 left-0 right-0 bg-black border-t border-white/10 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
       <div className="flex justify-around max-w-md mx-auto">
         {tabs.map(({ to, label, icon: Icon }) => (
           <NavLink

@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LOGO_CEDS_WORDMARK } from '../assets/logoWordmark';
-import { LOGO_CEDS_CIRCULO } from '../assets/logoCirculo';
 
 const TITULOS = {
   '/perfil': 'Mi Perfil',
@@ -106,71 +105,42 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40">
-        <div
-          className="relative shadow-[0_6px_16px_-4px_rgba(0,0,0,0.5)] overflow-hidden"
-          style={{
-            backgroundImage:
-              'linear-gradient(135deg, #03CDE6, #02A6BA), ' +
-              'radial-gradient(circle at 12% 30%, rgba(255,255,255,0.35) 0.5px, transparent 1px), ' +
-              'radial-gradient(circle at 38% 70%, rgba(255,255,255,0.25) 0.5px, transparent 1px), ' +
-              'radial-gradient(circle at 62% 20%, rgba(255,255,255,0.3) 0.5px, transparent 1px), ' +
-              'radial-gradient(circle at 85% 55%, rgba(255,255,255,0.2) 0.5px, transparent 1px), ' +
-              'radial-gradient(circle at 95% 15%, rgba(255,255,255,0.3) 0.5px, transparent 1px), ' +
-              'radial-gradient(circle at 22% 85%, rgba(255,255,255,0.2) 0.5px, transparent 1px)',
-            backgroundSize:
-              'cover, 140px 140px, 140px 140px, 140px 140px, 140px 140px, 140px 140px, 140px 140px',
-          }}
-        >
-          <div className="flex items-center justify-between px-3 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-9">
-            <button
-              onClick={() => setMenuAbierto(true)}
-              className="text-ink/80 p-1.5 rounded-lg hover:bg-black/10 active:scale-90 transition-all"
-              aria-label="Abrir menú"
-            >
-              <Menu size={20} />
-            </button>
-            <button
-              onClick={toggleNotificaciones}
-              className="relative text-ink/80 p-1.5 rounded-lg hover:bg-black/10 active:scale-90 transition-all"
-              aria-label="Notificaciones"
-            >
-              <Bell size={18} />
-              {noLeidas > 0 && (
-                <span className="absolute top-0.5 right-0.5 bg-ink text-cyan-brand text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
-                  {noLeidas > 9 ? '9+' : noLeidas}
-                </span>
-              )}
-            </button>
-          </div>
-          <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+      <header className="sticky top-0 z-40 bg-black border-b border-white/10">
+        <div className="flex items-center justify-between px-3 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-9">
+          <button
+            onClick={() => setMenuAbierto(true)}
+            className="text-white/80 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
+            aria-label="Abrir menú"
+          >
+            <Menu size={20} />
+          </button>
+          <button
+            onClick={toggleNotificaciones}
+            className="relative text-white/80 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
+            aria-label="Notificaciones"
+          >
+            <Bell size={18} />
+            {noLeidas > 0 && (
+              <span className="absolute top-0.5 right-0.5 bg-cyan-brand text-ink text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                {noLeidas > 9 ? '9+' : noLeidas}
+              </span>
+            )}
+          </button>
         </div>
 
-        <div
-          className="bg-ink border-b border-white/10 relative"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 8% 20%, rgba(3,205,230,0.5) 0.5px, transparent 1px), ' +
-              'radial-gradient(circle at 30% 75%, rgba(255,255,255,0.3) 0.5px, transparent 1px), ' +
-              'radial-gradient(circle at 55% 15%, rgba(3,205,230,0.4) 0.5px, transparent 1px), ' +
-              'radial-gradient(circle at 78% 60%, rgba(255,255,255,0.25) 0.5px, transparent 1px), ' +
-              'radial-gradient(circle at 92% 30%, rgba(3,205,230,0.4) 0.5px, transparent 1px), ' +
-              'radial-gradient(circle at 15% 90%, rgba(255,255,255,0.2) 0.5px, transparent 1px)',
-            backgroundSize: '160px 160px',
-          }}
-        >
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-40 h-40 rounded-full bg-cyan-brand/10 blur-2xl pointer-events-none" />
+        <div className="relative">
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-40 h-40 rounded-full bg-cyan-brand/15 blur-2xl pointer-events-none" />
           <div className="relative flex justify-center -mt-9">
-            <div className="w-16 h-16 rounded-full bg-white border-[3px] border-cyan-brand shadow-lg flex items-center justify-center overflow-hidden p-1.5">
+            <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border-2 border-cyan-brand/70 shadow-[0_0_24px_rgba(3,205,230,0.3)] flex items-center justify-center overflow-hidden p-3">
               <img
-                src={logoUrl || LOGO_CEDS_CIRCULO}
+                src={logoUrl || LOGO_CEDS_WORDMARK}
                 alt="CED&S"
                 className="w-full h-full object-contain"
               />
             </div>
           </div>
 
-          <div className="relative pt-1 pb-3 px-6 text-center">
+          <div className="relative pt-2 pb-3 px-6 text-center">
             <p className="font-display text-xl text-white leading-none">
               {titulo}
             </p>
