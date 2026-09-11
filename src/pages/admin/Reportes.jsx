@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Users, CalendarCheck, DollarSign, Download } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import {
+  Users,
+  CalendarCheck,
+  DollarSign,
+  Download,
+  CalendarX,
+} from 'lucide-react';
 
 function capitalizar(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -31,6 +38,7 @@ export default function Reportes() {
         Plan: u.plan_id ? planes[u.plan_id]?.nombre || '' : 'Sin plan',
         Estado: u.estado,
         'Sesiones usadas': u.sesiones_usadas,
+        'Fecha de registro': u.fecha_registro || '',
         'Última renovación': u.fecha_ultima_renovacion || '',
       }));
 
@@ -53,6 +61,7 @@ export default function Reportes() {
         const horario = horarios.find((h) => h.id === r.horario_id);
         const usuario = usuarios.find((u) => u.id === r.usuario_id);
         if (!horario || !usuario) return null;
+        const fechaReserva = r.creado_en ? new Date(r.creado_en) : null;
         return {
           Fecha: r.fecha,
           Día: r.dia_semana || '',
@@ -65,6 +74,15 @@ export default function Reportes() {
               : r.asistio === false
               ? 'No'
               : 'Sin marcar',
+          'Fecha en que reservó': fechaReserva
+            ? fechaReserva.toLocaleDateString('es-CL')
+            : '',
+          'Hora en que reservó': fechaReserva
+            ? fechaReserva.toLocaleTimeString('es-CL', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : '',
         };
       })
       .filter(Boolean)
@@ -76,6 +94,47 @@ export default function Reportes() {
     XLSX.writeFile(
       libro,
       `asistencia-ceds-${new Date().toISOString().slice(0, 10)}.xlsx`
+    );
+    setGenerando(null);
+  }
+
+  async function exportarCanceladas() {
+    setGenerando('canceladas');
+    const XLSX = await import('xlsx');
+
+    const { data: canceladas } = await supabase
+      .from('reservas')
+      .select('*')
+      .eq('estado', 'cancelada')
+      .order('cancelado_en', { ascending: false });
+
+    const filas = (canceladas || []).map((r) => {
+      const horario = horarios.find((h) => h.id === r.horario_id);
+      const usuario = usuarios.find((u) => u.id === r.usuario_id);
+      const fechaCancelacion = r.cancelado_en ? new Date(r.cancelado_en) : null;
+      return {
+        Alumno: usuario?.nombre || '',
+        'Fecha de la clase': r.fecha,
+        'Hora de la clase': horario?.hora || '',
+        'Fecha en que canceló': fechaCancelacion
+          ? fechaCancelacion.toLocaleDateString('es-CL')
+          : '',
+        'Hora en que canceló': fechaCancelacion
+          ? fechaCancelacion.toLocaleTimeString('es-CL', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : '',
+        'Cancelación tardía': r.penalizada ? 'Sí' : 'No',
+      };
+    });
+
+    const hoja = XLSX.utils.json_to_sheet(filas);
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hoja, 'Canceladas');
+    XLSX.writeFile(
+      libro,
+      `horas-canceladas-ceds-${new Date().toISOString().slice(0, 10)}.xlsx`
     );
     setGenerando(null);
   }
@@ -92,7 +151,11 @@ export default function Reportes() {
           Socio: u.nombre,
           Plan: plan?.nombre || '',
           'Valor neto': plan?.valor_neto || 0,
-          'Valor con IVA': plan?.valor_con_iva || 0,
+          'Valor con IVA':
+            u.plan_monto_personalizado || plan?.valor_con_iva || 0,
+          'Duración (días)': u.plan_dias_personalizado || '',
+          'Última renovación':
+            u.fecha_ultima_renovacion || 'Sin renovación registrada',
         };
       });
 
@@ -103,6 +166,8 @@ export default function Reportes() {
       Plan: 'TOTAL',
       'Valor neto': totalNeto,
       'Valor con IVA': totalConIva,
+      'Duración (días)': '',
+      'Última renovación': '',
     });
 
     const hoja = XLSX.utils.json_to_sheet(filas);
@@ -197,6 +262,28 @@ export default function Reportes() {
           >
             <Download size={15} />{' '}
             {generando === 'ingresos' ? 'Generando...' : 'Descargar Excel'}
+          </button>
+        </div>
+
+        <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-cyan-brand/15 border border-cyan-brand/30 flex items-center justify-center shrink-0">
+              <CalendarX size={18} className="text-cyan-brand" />
+            </div>
+            <div>
+              <p className="text-white text-sm font-medium">Horas canceladas</p>
+              <p className="text-white/40 text-xs">
+                Quién canceló, qué clase, y cuándo lo hizo
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={exportarCanceladas}
+            disabled={generando === 'canceladas'}
+            className="w-full flex items-center justify-center gap-2 bg-cyan-brand text-ink font-semibold rounded-xl py-2.5 text-sm disabled:opacity-50 transition-transform active:scale-[0.98]"
+          >
+            <Download size={15} />{' '}
+            {generando === 'canceladas' ? 'Generando...' : 'Descargar Excel'}
           </button>
         </div>
       </div>

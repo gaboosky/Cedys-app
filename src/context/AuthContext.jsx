@@ -24,6 +24,7 @@ export function AuthProvider({ children }) {
   const [congelaciones, setCongelaciones] = useState([]);
   const [notificaciones, setNotificaciones] = useState([]);
   const [listaEspera, setListaEspera] = useState([]);
+  const [notasCoach, setNotasCoach] = useState([]);
 
   useEffect(() => {
     iniciar();
@@ -139,6 +140,7 @@ export function AuthProvider({ children }) {
       resNotificaciones,
       resConfigApp,
       resListaEspera,
+      resNotasCoach,
     ] = await Promise.all([
       supabase.from('usuarios').select('*'),
       supabase.from('horarios').select('*'),
@@ -172,6 +174,10 @@ export function AuthProvider({ children }) {
         .from('lista_espera')
         .select('*')
         .order('creado_en', { ascending: true }),
+      supabase
+        .from('notas_coach')
+        .select('*')
+        .order('creado_en', { ascending: false }),
     ]);
     if (resNoticias.data) setNoticias(resNoticias.data);
     if (resFotos.data) setFotosGym(resFotos.data);
@@ -187,6 +193,7 @@ export function AuthProvider({ children }) {
       setDiasRenovacion(resConfigApp.data.dias_renovacion ?? 30);
     }
     if (resListaEspera.data) setListaEspera(resListaEspera.data);
+    if (resNotasCoach.data) setNotasCoach(resNotasCoach.data);
 
     if (resUsuarios.data) setUsuarios(resUsuarios.data);
     if (resHorarios.data) setHorarios(resHorarios.data);
@@ -289,10 +296,13 @@ export function AuthProvider({ children }) {
   }
 
   function sesionesRestantes(usuario) {
-    if (!usuario || !usuario.plan_id) return null;
-    const plan = planes[usuario.plan_id];
-    if (!plan || plan.cantidad_sesiones === null) return null;
-    return plan.cantidad_sesiones - usuario.sesiones_usadas;
+    if (!usuario) return null;
+    const plan = usuario.plan_id ? planes[usuario.plan_id] : null;
+    const total =
+      usuario.plan_sesiones_personalizado || plan?.cantidad_sesiones || null;
+    if (total === null) return null;
+    const extra = usuario.sesiones_extra || 0;
+    return total + extra - usuario.sesiones_usadas;
   }
 
   function syncUsuario(usuarioActualizado) {
@@ -469,6 +479,66 @@ export function AuthProvider({ children }) {
     );
     await supabase.from('lista_espera').delete().eq('id', primero.id);
     setListaEspera((prev) => prev.filter((l) => l.id !== primero.id));
+  }
+
+  async function agregarSesionesExtra(usuarioId, cantidad) {
+    const usuario = usuarios.find((u) => u.id === usuarioId);
+    if (!usuario) return { ok: false, mensaje: 'Usuario no encontrado.' };
+
+    const nuevoExtra = (usuario.sesiones_extra || 0) + Number(cantidad);
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ sesiones_extra: nuevoExtra })
+      .eq('id', usuarioId);
+    if (error)
+      return { ok: false, mensaje: 'No se pudo agregar las sesiones.' };
+
+    setUsuarios((prev) =>
+      prev.map((u) =>
+        u.id === usuarioId ? { ...u, sesiones_extra: nuevoExtra } : u
+      )
+    );
+    if (usuarioActual?.id === usuarioId)
+      syncUsuario({ ...usuarioActual, sesiones_extra: nuevoExtra });
+
+    return {
+      ok: true,
+      mensaje:
+        cantidad < 0
+          ? `Se restaron ${Math.abs(cantidad)} sesión(es).`
+          : `Se agregaron ${cantidad} sesión(es).`,
+    };
+  }
+
+  // --- Notas de coach ---
+
+  async function crearNotaCoach(horarioId, fecha, nota) {
+    const { data, error } = await supabase
+      .from('notas_coach')
+      .insert({
+        horario_id: horarioId,
+        fecha,
+        coach_id: usuarioActual.id,
+        nota,
+      })
+      .select()
+      .single();
+
+    if (error) return { ok: false, mensaje: 'No se pudo enviar la nota.' };
+    setNotasCoach((prev) => [data, ...prev]);
+
+    const horario = horarios.find((h) => h.id === horarioId);
+    const admins = usuarios.filter((u) => u.rol === 'head_coach');
+    for (const admin of admins) {
+      await crearNotificacion(
+        admin.id,
+        `Nota de ${usuarioActual.nombre} sobre la clase de las ${
+          horario?.hora || ''
+        } (${fecha}): ${nota}`
+      );
+    }
+
+    return { ok: true, mensaje: 'Nota enviada al admin.' };
   }
 
   // --- Registro público de nuevos usuarios ---
@@ -1171,6 +1241,9 @@ export function AuthProvider({ children }) {
         listaEsperaDe,
         anotarseListaEspera,
         quitarseListaEspera,
+        notasCoach,
+        crearNotaCoach,
+        agregarSesionesExtra,
         registrarUsuario,
         aprobarUsuario,
         rechazarUsuario,

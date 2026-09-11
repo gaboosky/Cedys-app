@@ -21,6 +21,7 @@ const RutinaEjercicios = lazy(() => import('./pages/rutinas/RutinaEjercicios'));
 const MiRutina = lazy(() => import('./pages/MiRutina'));
 const Progreso = lazy(() => import('./pages/Progreso'));
 const Privacidad = lazy(() => import('./pages/Privacidad'));
+const Terminos = lazy(() => import('./pages/Terminos'));
 const MisClases = lazy(() => import('./pages/coach/MisClases'));
 const Alumnos = lazy(() => import('./pages/coach/Alumnos'));
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -30,6 +31,7 @@ const Planes = lazy(() => import('./pages/admin/Planes'));
 const Coaches = lazy(() => import('./pages/admin/Coaches'));
 const Configuracion = lazy(() => import('./pages/admin/Configuracion'));
 const Reportes = lazy(() => import('./pages/admin/Reportes'));
+const NotasCoach = lazy(() => import('./pages/admin/NotasCoach'));
 
 function CargandoPantalla() {
   return (
@@ -83,6 +85,7 @@ function AppShell() {
           <Route path="/coaches" element={<Coaches />} />
           <Route path="/configuracion" element={<Configuracion />} />
           <Route path="/reportes" element={<Reportes />} />
+          <Route path="/notas-coach" element={<NotasCoach />} />
           <Route path="/mas" element={<Mas />} />
 
           {/* Compartida */}
@@ -99,6 +102,7 @@ function AppShell() {
           <Route path="/mi-rutina" element={<MiRutina />} />
           <Route path="/progreso" element={<Progreso />} />
           <Route path="/privacidad" element={<Privacidad />} />
+          <Route path="/terminos" element={<Terminos />} />
 
           <Route path="*" element={<Navigate to={inicio} replace />} />
         </Routes>

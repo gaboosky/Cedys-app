@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Check, X, Plus, Snowflake } from 'lucide-react';
+import { Check, X, Plus, Snowflake, Pencil, Zap } from 'lucide-react';
 
 export default function Usuarios() {
   const {
@@ -10,15 +10,25 @@ export default function Usuarios() {
     confirmarRenovacion,
     aprobarUsuario,
     rechazarUsuario,
-    cambiarRol,
     crearUsuarioConPassword,
     congelaciones,
     aprobarCongelacion,
     rechazarCongelacion,
     diasRenovacion,
+    actualizarPerfil,
+    agregarSesionesExtra,
   } = useAuth();
   const [busqueda, setBusqueda] = useState('');
   const [diasCongelar, setDiasCongelar] = useState({});
+  const [editandoPlanId, setEditandoPlanId] = useState(null);
+  const [formPlan, setFormPlan] = useState({
+    dias: '',
+    monto: '',
+    sesiones: '',
+  });
+  const [agregandoSesionesId, setAgregandoSesionesId] = useState(null);
+  const [cantidadExtra, setCantidadExtra] = useState('');
+  const [mensajeExtra, setMensajeExtra] = useState(null);
 
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
   const [formNuevo, setFormNuevo] = useState({
@@ -82,6 +92,43 @@ export default function Usuarios() {
       setTimeout(() => {
         setMostrarNuevo(false);
         setMensajeCrear(null);
+      }, 1500);
+    }
+  }
+
+  function abrirEdicionPlan(u) {
+    setEditandoPlanId(u.id);
+    setFormPlan({
+      dias: u.plan_dias_personalizado ?? '',
+      monto: u.plan_monto_personalizado ?? '',
+      sesiones: u.plan_sesiones_personalizado ?? '',
+    });
+  }
+
+  async function guardarEdicionPlan(usuarioId) {
+    await actualizarPerfil(usuarioId, {
+      plan_dias_personalizado:
+        formPlan.dias === '' ? null : Number(formPlan.dias),
+      plan_monto_personalizado:
+        formPlan.monto === '' ? null : Number(formPlan.monto),
+      plan_sesiones_personalizado:
+        formPlan.sesiones === '' ? null : Number(formPlan.sesiones),
+    });
+    setEditandoPlanId(null);
+  }
+
+  async function handleAgregarSesiones(usuarioId) {
+    if (cantidadExtra === '' || Number(cantidadExtra) === 0) return;
+    const resultado = await agregarSesionesExtra(
+      usuarioId,
+      Number(cantidadExtra)
+    );
+    setMensajeExtra(resultado);
+    if (resultado.ok) {
+      setCantidadExtra('');
+      setTimeout(() => {
+        setAgregandoSesionesId(null);
+        setMensajeExtra(null);
       }, 1500);
     }
   }
@@ -295,9 +342,14 @@ export default function Usuarios() {
       <div className="flex flex-col gap-2">
         {clientes.map((u) => {
           const plan = u.plan_id ? planes[u.plan_id] : null;
-          const restantes = plan?.cantidad_sesiones
-            ? plan.cantidad_sesiones - u.sesiones_usadas
-            : null;
+          const totalSesiones =
+            u.plan_sesiones_personalizado || plan?.cantidad_sesiones || null;
+          const extra = u.sesiones_extra || 0;
+          const restantes =
+            totalSesiones !== null
+              ? totalSesiones + extra - u.sesiones_usadas
+              : null;
+          const diasVigencia = u.plan_dias_personalizado || diasRenovacion;
           const diasDesdeRenovacion = u.fecha_ultima_renovacion
             ? Math.floor(
                 (Date.now() - new Date(u.fecha_ultima_renovacion).getTime()) /
@@ -305,8 +357,8 @@ export default function Usuarios() {
               )
             : null;
           const necesitaRenovar =
-            diasDesdeRenovacion === null ||
-            diasDesdeRenovacion >= diasRenovacion;
+            diasDesdeRenovacion === null || diasDesdeRenovacion >= diasVigencia;
+          const editandoEste = editandoPlanId === u.id;
 
           return (
             <div
@@ -321,9 +373,16 @@ export default function Usuarios() {
                   </p>
                 </div>
                 {restantes !== null && (
-                  <span className="text-cyan-brand text-xs font-medium">
-                    {restantes}/{plan.cantidad_sesiones}
-                  </span>
+                  <div className="text-right">
+                    <span className="text-cyan-brand text-xs font-medium block">
+                      {restantes} disponibles
+                    </span>
+                    {extra > 0 && (
+                      <span className="text-white/30 text-[10px]">
+                        (incluye {extra} extra)
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -355,6 +414,161 @@ export default function Usuarios() {
                 </div>
               )}
 
+              {editandoEste ? (
+                <div className="bg-black/20 border border-white/10 rounded-xl p-3 mb-2 flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-white/40 text-xs mb-1 block">
+                        Duración (días)
+                      </label>
+                      <input
+                        type="number"
+                        value={formPlan.dias}
+                        onChange={(e) =>
+                          setFormPlan({ ...formPlan, dias: e.target.value })
+                        }
+                        placeholder={String(diasRenovacion)}
+                        className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-white/40 text-xs mb-1 block">
+                        Monto ($)
+                      </label>
+                      <input
+                        type="number"
+                        value={formPlan.monto}
+                        onChange={(e) =>
+                          setFormPlan({ ...formPlan, monto: e.target.value })
+                        }
+                        placeholder={
+                          plan ? String(plan.valor_con_iva) : 'Sin plan base'
+                        }
+                        className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-white/40 text-xs mb-1 block">
+                        Sesiones
+                      </label>
+                      <input
+                        type="number"
+                        value={formPlan.sesiones}
+                        onChange={(e) =>
+                          setFormPlan({ ...formPlan, sesiones: e.target.value })
+                        }
+                        placeholder={
+                          !plan || plan.cantidad_sesiones === null
+                            ? 'Ilimitado'
+                            : String(plan.cantidad_sesiones)
+                        }
+                        className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-white/30 text-xs">
+                    {plan
+                      ? 'Deja vacío para usar los valores normales del plan.'
+                      : 'Este usuario no tiene un plan base — completa al menos las sesiones para que le aparezcan disponibles.'}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => guardarEdicionPlan(u.id)}
+                      className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      onClick={() => setEditandoPlanId(null)}
+                      className="flex-1 bg-white/10 text-white rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => abrirEdicionPlan(u)}
+                  className="flex items-center gap-1 text-cyan-brand text-xs font-medium mb-2"
+                >
+                  <Pencil size={12} />
+                  {u.plan_dias_personalizado ||
+                  u.plan_monto_personalizado ||
+                  u.plan_sesiones_personalizado
+                    ? `Personalizado: ${
+                        u.plan_dias_personalizado || diasRenovacion
+                      } días · $${(
+                        u.plan_monto_personalizado ||
+                        plan?.valor_con_iva ||
+                        0
+                      ).toLocaleString('es-CL')} · ${
+                        u.plan_sesiones_personalizado ||
+                        plan?.cantidad_sesiones ||
+                        'Ilimitado'
+                      } sesiones`
+                    : 'Editar duración / monto / sesiones'}
+                </button>
+              )}
+
+              {agregandoSesionesId === u.id ? (
+                <div className="bg-black/20 border border-white/10 rounded-xl p-3 mb-2 flex flex-col gap-2">
+                  <label className="text-white/40 text-xs block">
+                    ¿Cuántas sesiones agregar? (usa negativo para restar, ej:
+                    -2)
+                  </label>
+                  <input
+                    type="number"
+                    value={cantidadExtra}
+                    onChange={(e) => setCantidadExtra(e.target.value)}
+                    placeholder="Ej: 2"
+                    className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
+                  />
+                  {u.sesiones_extra > 0 && (
+                    <p className="text-white/30 text-xs">
+                      Ya tiene {u.sesiones_extra} sesión(es) extra acumulada(s).
+                    </p>
+                  )}
+                  {mensajeExtra && (
+                    <p
+                      className={`text-xs ${
+                        mensajeExtra.ok ? 'text-cyan-brand' : 'text-red-400'
+                      }`}
+                    >
+                      {mensajeExtra.mensaje}
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleAgregarSesiones(u.id)}
+                      className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
+                    >
+                      {Number(cantidadExtra) < 0 ? 'Restar' : 'Agregar'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAgregandoSesionesId(null);
+                        setCantidadExtra('');
+                        setMensajeExtra(null);
+                      }}
+                      className="flex-1 bg-white/10 text-white rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setAgregandoSesionesId(u.id)}
+                  className="flex items-center gap-1 text-cyan-brand text-xs font-medium mb-2"
+                >
+                  <Zap size={12} />
+                  Agregar sesiones
+                  {u.sesiones_extra > 0
+                    ? ` (+${u.sesiones_extra} ya agregadas)`
+                    : ''}
+                </button>
+              )}
+
               <select
                 value={u.plan_id || ''}
                 onChange={(e) => asignarPlan(u.id, e.target.value)}
@@ -366,16 +580,6 @@ export default function Usuarios() {
                     {p.nombre}
                   </option>
                 ))}
-              </select>
-
-              <select
-                value={u.rol}
-                onChange={(e) => cambiarRol(u.id, e.target.value)}
-                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
-              >
-                <option value="usuario">Usuario</option>
-                <option value="coach">Coach</option>
-                <option value="head_coach">Head Coach / Admin</option>
               </select>
             </div>
           );

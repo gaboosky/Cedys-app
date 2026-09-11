@@ -1,36 +1,59 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { subirImagen } from '../lib/storage';
 import {
   MessageCircle,
   Plus,
   Trash2,
-  Camera,
-  FileText,
   Newspaper,
-  Image as ImageIcon,
+  FileText,
   Shield,
+  AtSign,
+  MapPin,
+  ChevronDown,
+  ChevronUp,
+  HelpCircle,
 } from 'lucide-react';
 
 const WHATSAPP_NUMERO = '56958540928';
-const LINK_TERMINOS =
-  'https://docs.google.com/forms/d/e/1FAIpQLSfUWWCQPOlvTI5a7tVhAqOti3aYzLIp7N2Np9wAubf5pgxFHQ/viewform';
+const INSTAGRAM_USUARIO = 'ce.cedys';
+const DIRECCION = 'Carlos Aguirre Luco 2546, Puente Alto, Santiago, Chile';
+
+const PREGUNTAS_FRECUENTES = [
+  {
+    pregunta: '¿Cómo cancelo una reserva?',
+    respuesta:
+      'Ve a "Mis Reservas", elige la clase y toca "Cancelar esta reserva". Debes hacerlo con al menos 6 horas de anticipación, o la sesión se descontará igual.',
+  },
+  {
+    pregunta: '¿Qué pasa si llego tarde a una clase?',
+    respuesta:
+      'Se acepta un atraso máximo de 15 minutos. Pasado ese tiempo, se pierde la sesión reservada y no se puede ingresar a esa clase.',
+  },
+  {
+    pregunta: '¿Puedo congelar mi plan si me voy de viaje?',
+    respuesta:
+      'Sí, desde tu Perfil puedes solicitar congelar tu membresía. Avisa con al menos 7 días de anticipación.',
+  },
+  {
+    pregunta: '¿Qué hago si la clase que quiero está llena?',
+    respuesta:
+      'Puedes anotarte en la lista de espera desde esa clase. Si alguien cancela, se te notifica automáticamente para que reserves ese cupo.',
+  },
+  {
+    pregunta: '¿Puedo transferirle mi plan a otra persona?',
+    respuesta:
+      'No, los planes son instransferibles. Escríbenos por WhatsApp para cualquier imprevisto.',
+  },
+];
 
 export default function General() {
-  const {
-    usuarioActual,
-    noticias,
-    fotosGym,
-    crearNoticia,
-    eliminarNoticia,
-    subirFotoGym,
-    eliminarFotoGym,
-  } = useAuth();
+  const { usuarioActual, noticias, crearNoticia, eliminarNoticia } = useAuth();
   const esAdmin = usuarioActual.rol === 'head_coach';
 
   const [mostrarForm, setMostrarForm] = useState(false);
   const [form, setForm] = useState({ titulo: '', contenido: '' });
+  const [faqAbierta, setFaqAbierta] = useState(null);
 
   function handleCrearNoticia(e) {
     e.preventDefault();
@@ -38,21 +61,6 @@ export default function General() {
     crearNoticia(form);
     setForm({ titulo: '', contenido: '' });
     setMostrarForm(false);
-  }
-
-  async function handleFoto(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen es muy pesada. Usa una de menos de 5MB.');
-      return;
-    }
-    try {
-      const url = await subirImagen(file, 'gym');
-      subirFotoGym(url);
-    } catch (err) {
-      alert('Error al subir la foto: ' + err.message);
-    }
   }
 
   function formatearFecha(fecha) {
@@ -173,53 +181,84 @@ export default function General() {
       )}
       {ultimaNoticia && restoNoticias.length === 0 && <div className="mb-8" />}
 
-      {/* Fotos del gym */}
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-white/40 text-xs uppercase tracking-wide">
-          Fotos del gimnasio
-        </p>
-        {esAdmin && (
-          <label className="flex items-center gap-1 bg-cyan-brand/10 border border-cyan-brand/30 text-cyan-brand text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer transition-transform active:scale-95">
-            <Camera size={13} /> Subir
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFoto}
-              className="hidden"
-            />
-          </label>
-        )}
+      {/* Redes sociales y ubicación */}
+      <p className="text-white/40 text-xs uppercase tracking-wide mb-3">
+        Encuéntranos
+      </p>
+      <div className="flex flex-col gap-2 mb-8">
+        <a
+          href={`https://instagram.com/${INSTAGRAM_USUARIO}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 bg-white/[0.04] border border-white/10 rounded-2xl p-4 transition-transform active:scale-[0.98]"
+        >
+          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+            <AtSign size={18} className="text-white/60" />
+          </div>
+          <div>
+            <p className="text-white text-sm font-medium">Instagram</p>
+            <p className="text-white/50 text-xs">@{INSTAGRAM_USUARIO}</p>
+          </div>
+        </a>
+
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+            DIRECCION
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 bg-white/[0.04] border border-white/10 rounded-2xl p-4 transition-transform active:scale-[0.98]"
+        >
+          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+            <MapPin size={18} className="text-white/60" />
+          </div>
+          <div>
+            <p className="text-white text-sm font-medium">Cómo llegar</p>
+            <p className="text-white/50 text-xs">{DIRECCION}</p>
+          </div>
+        </a>
       </div>
 
-      {fotosGym.length === 0 ? (
-        <div className="text-center py-10 mb-8">
-          <ImageIcon size={32} className="text-white/15 mx-auto mb-3" />
-          <p className="text-white/30 text-sm">Aún no se han subido fotos.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-3 gap-2 mb-8">
-          {fotosGym.map((f) => (
+      {/* Preguntas frecuentes */}
+      <p className="text-white/40 text-xs uppercase tracking-wide mb-3">
+        Preguntas frecuentes
+      </p>
+      <div className="flex flex-col gap-2 mb-8">
+        {PREGUNTAS_FRECUENTES.map((item, i) => {
+          const abierta = faqAbierta === i;
+          return (
             <div
-              key={f.id}
-              className="relative aspect-square rounded-xl overflow-hidden bg-white/5 border border-white/10"
+              key={i}
+              className="bg-white/[0.04] border border-white/10 rounded-2xl overflow-hidden"
             >
-              <img
-                src={f.url}
-                alt="Foto del gimnasio"
-                className="w-full h-full object-cover"
-              />
-              {esAdmin && (
-                <button
-                  onClick={() => eliminarFotoGym(f.id)}
-                  className="absolute top-1 right-1 w-6 h-6 bg-black/70 rounded-full flex items-center justify-center transition-transform active:scale-90"
-                >
-                  <Trash2 size={12} className="text-white" />
-                </button>
+              <button
+                onClick={() => setFaqAbierta(abierta ? null : i)}
+                className="w-full flex items-center justify-between gap-3 p-4 text-left"
+              >
+                <div className="flex items-center gap-2">
+                  <HelpCircle
+                    size={15}
+                    className="text-cyan-brand/70 shrink-0"
+                  />
+                  <p className="text-white text-sm font-medium">
+                    {item.pregunta}
+                  </p>
+                </div>
+                {abierta ? (
+                  <ChevronUp size={16} className="text-white/40 shrink-0" />
+                ) : (
+                  <ChevronDown size={16} className="text-white/40 shrink-0" />
+                )}
+              </button>
+              {abierta && (
+                <p className="text-white/60 text-sm px-4 pb-4 pl-11">
+                  {item.respuesta}
+                </p>
               )}
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
       {/* Dudas y consultas */}
       <p className="text-white/40 text-xs uppercase tracking-wide mb-3">
@@ -242,10 +281,8 @@ export default function General() {
         </div>
       </a>
 
-      <a
-        href={LINK_TERMINOS}
-        target="_blank"
-        rel="noopener noreferrer"
+      <Link
+        to="/terminos"
         className="flex items-center gap-3 bg-white/[0.04] border border-white/10 rounded-2xl p-4 mt-3 transition-transform active:scale-[0.98]"
       >
         <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
@@ -259,7 +296,7 @@ export default function General() {
             Revisa las condiciones de tu membresía
           </p>
         </div>
-      </a>
+      </Link>
 
       <Link
         to="/privacidad"

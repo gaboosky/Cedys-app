@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { reservaBloqueada } from '../lib/horarioUtils';
@@ -31,6 +31,7 @@ export default function HorarioDetalle() {
   } = useAuth();
   const [mensaje, setMensaje] = useState(null);
   const [enviando, setEnviando] = useState(false);
+  const yaEnviando = useRef(false);
 
   const horario = horarios.find((h) => h.id === horarioId);
 
@@ -76,9 +77,12 @@ export default function HorarioDetalle() {
   });
 
   async function handleReservar() {
+    if (yaEnviando.current) return;
+    yaEnviando.current = true;
     setEnviando(true);
     const resultado = await reservarClase(horarioId, fecha);
     setEnviando(false);
+    yaEnviando.current = false;
     setMensaje(resultado);
     setTimeout(() => setMensaje(null), 3000);
   }

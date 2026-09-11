@@ -291,10 +291,12 @@ export default function Perfil() {
         </div>
       )}
 
-      {plan && (
+      {(plan || restantes !== null) && (
         <div className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-6 mb-4 overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-cyan-brand" />
-          <p className="text-white/50 text-sm mb-1">{plan.nombre}</p>
+          <p className="text-white/50 text-sm mb-1">
+            {plan ? plan.nombre : 'Tu plan'}
+          </p>
           {restantes !== null ? (
             <>
               <div className="flex items-baseline gap-2">
@@ -302,7 +304,7 @@ export default function Perfil() {
                   {restantes}
                 </span>
                 <span className="text-white/50 text-sm">
-                  disponibles de {plan.cantidad_sesiones}
+                  sesiones disponibles
                 </span>
               </div>
               <p className="text-white/30 text-xs mt-1">
@@ -318,7 +320,7 @@ export default function Perfil() {
             <div
               className="h-full bg-cyan-brand rounded-full transition-all"
               style={{
-                width: plan.cantidad_sesiones
+                width: plan?.cantidad_sesiones
                   ? `${
                       100 -
                       (usuarioActual.sesiones_usadas / plan.cantidad_sesiones) *

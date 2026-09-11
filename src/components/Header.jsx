@@ -9,6 +9,7 @@ import {
   Settings,
   Dumbbell,
   FileBarChart,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LOGO_CEDS_WORDMARK } from '../assets/logoWordmark';
@@ -28,6 +29,8 @@ const TITULOS = {
   '/configuracion': 'Configuración',
   '/reportes': 'Reportes',
   '/privacidad': 'Política de Privacidad',
+  '/terminos': 'Términos y Condiciones',
+  '/notas-coach': 'Nota de Coach',
   '/mas': 'Más',
   '/general': 'General',
   '/mi-rutina': 'Mi Rutina',
@@ -104,33 +107,61 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-40">
-        <div className="bg-cyan-brandDark">
-          <div className="flex items-center justify-between px-3 pt-[calc(0.625rem+env(safe-area-inset-top))] pb-14">
+        <div
+          className="relative shadow-[0_6px_16px_-4px_rgba(0,0,0,0.5)] overflow-hidden"
+          style={{
+            backgroundImage:
+              'linear-gradient(135deg, #03CDE6, #02A6BA), ' +
+              'radial-gradient(circle at 12% 30%, rgba(255,255,255,0.35) 0.5px, transparent 1px), ' +
+              'radial-gradient(circle at 38% 70%, rgba(255,255,255,0.25) 0.5px, transparent 1px), ' +
+              'radial-gradient(circle at 62% 20%, rgba(255,255,255,0.3) 0.5px, transparent 1px), ' +
+              'radial-gradient(circle at 85% 55%, rgba(255,255,255,0.2) 0.5px, transparent 1px), ' +
+              'radial-gradient(circle at 95% 15%, rgba(255,255,255,0.3) 0.5px, transparent 1px), ' +
+              'radial-gradient(circle at 22% 85%, rgba(255,255,255,0.2) 0.5px, transparent 1px)',
+            backgroundSize:
+              'cover, 140px 140px, 140px 140px, 140px 140px, 140px 140px, 140px 140px, 140px 140px',
+          }}
+        >
+          <div className="flex items-center justify-between px-3 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-9">
             <button
               onClick={() => setMenuAbierto(true)}
-              className="text-ink/80 p-2 rounded-lg hover:bg-black/10 active:scale-90 transition-all"
+              className="text-ink/80 p-1.5 rounded-lg hover:bg-black/10 active:scale-90 transition-all"
               aria-label="Abrir menú"
             >
-              <Menu size={21} />
+              <Menu size={20} />
             </button>
             <button
               onClick={toggleNotificaciones}
-              className="relative text-ink/80 p-2 rounded-lg hover:bg-black/10 active:scale-90 transition-all"
+              className="relative text-ink/80 p-1.5 rounded-lg hover:bg-black/10 active:scale-90 transition-all"
               aria-label="Notificaciones"
             >
-              <Bell size={19} />
+              <Bell size={18} />
               {noLeidas > 0 && (
-                <span className="absolute top-1 right-1 bg-ink text-cyan-brand text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                <span className="absolute top-0.5 right-0.5 bg-ink text-cyan-brand text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
                   {noLeidas > 9 ? '9+' : noLeidas}
                 </span>
               )}
             </button>
           </div>
+          <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
         </div>
 
-        <div className="bg-ink border-b border-white/10">
-          <div className="relative flex justify-center -mt-14">
-            <div className="w-20 h-20 rounded-full bg-white border-[3px] border-cyan-brand shadow-lg flex items-center justify-center overflow-hidden p-2">
+        <div
+          className="bg-ink border-b border-white/10 relative"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 8% 20%, rgba(3,205,230,0.5) 0.5px, transparent 1px), ' +
+              'radial-gradient(circle at 30% 75%, rgba(255,255,255,0.3) 0.5px, transparent 1px), ' +
+              'radial-gradient(circle at 55% 15%, rgba(3,205,230,0.4) 0.5px, transparent 1px), ' +
+              'radial-gradient(circle at 78% 60%, rgba(255,255,255,0.25) 0.5px, transparent 1px), ' +
+              'radial-gradient(circle at 92% 30%, rgba(3,205,230,0.4) 0.5px, transparent 1px), ' +
+              'radial-gradient(circle at 15% 90%, rgba(255,255,255,0.2) 0.5px, transparent 1px)',
+            backgroundSize: '160px 160px',
+          }}
+        >
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-40 h-40 rounded-full bg-cyan-brand/10 blur-2xl pointer-events-none" />
+          <div className="relative flex justify-center -mt-9">
+            <div className="w-16 h-16 rounded-full bg-white border-[3px] border-cyan-brand shadow-lg flex items-center justify-center overflow-hidden p-1.5">
               <img
                 src={logoUrl || LOGO_CEDS_CIRCULO}
                 alt="CED&S"
@@ -139,12 +170,12 @@ export default function Header() {
             </div>
           </div>
 
-          <div className="pt-2 pb-5 px-6 text-center">
-            <p className="font-display text-2xl text-white leading-none">
+          <div className="relative pt-1 pb-3 px-6 text-center">
+            <p className="font-display text-xl text-white leading-none">
               {titulo}
             </p>
             {subtitulo && (
-              <p className="text-white/40 text-sm mt-1.5">{subtitulo}</p>
+              <p className="text-white/40 text-xs mt-1">{subtitulo}</p>
             )}
           </div>
         </div>
@@ -314,6 +345,20 @@ export default function Header() {
                   >
                     <FileBarChart size={18} />
                     Reportes
+                  </NavLink>
+                  <NavLink
+                    to="/notas-coach"
+                    onClick={() => setMenuAbierto(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'text-white/70 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <MessageSquare size={18} />
+                    Nota de Coach
                   </NavLink>
                 </>
               )}
