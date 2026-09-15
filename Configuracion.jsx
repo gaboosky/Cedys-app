@@ -12,11 +12,6 @@ export default function Configuracion() {
     diasRenovacion,
     actualizarPoliticas,
   } = useAuth();
-  const [probarError, setProbarError] = useState(false);
-
-  if (probarError) {
-    throw new Error('Error de prueba de Sentry');
-  }
 
   const [editandoPoliticas, setEditandoPoliticas] = useState(false);
   const [formPoliticas, setFormPoliticas] = useState({
@@ -93,9 +88,18 @@ export default function Configuracion() {
             className="hidden"
           />
         </label>
-        <p className="text-white/30 text-xs mt-2 text-center">
+        <p className="text-white/30 text-xs mt-2 text-center mb-3">
           Formatos: PNG, JPG. Máximo 2MB.
         </p>
+
+        {logoUrl && (
+          <button
+            onClick={() => actualizarLogo(null)}
+            className="w-full text-red-400/70 text-sm py-2 hover:text-red-400 transition-colors"
+          >
+            Quitar logo personalizado (usar el de por defecto)
+          </button>
+        )}
       </div>
 
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
