@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { horaAFecha } from '../../lib/horarioUtils';
 import {
   Users,
   ChevronDown,
@@ -8,6 +9,12 @@ import {
   X,
   MessageSquarePlus,
 } from 'lucide-react';
+
+const DOS_HORAS_MS = 2 * 60 * 60 * 1000;
+
+function yaSeRealizo(fecha, hora) {
+  return Date.now() >= horaAFecha(fecha, hora).getTime() + DOS_HORAS_MS;
+}
 
 function capitalizar(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -85,11 +92,20 @@ function FilaAlumno({ item, onMarcar }) {
 }
 
 function NotaCoach({ horarioId, fecha }) {
-  const { crearNotaCoach } = useAuth();
+  const { crearNotaCoach, notasCoach, usuarioActual } = useAuth();
   const [abierta, setAbierta] = useState(false);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
+
+  const notasDeEstaClase = notasCoach
+    .filter(
+      (n) =>
+        n.horario_id === horarioId &&
+        n.fecha === fecha &&
+        n.coach_id === usuarioActual.id
+    )
+    .sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
 
   async function handleEnviar() {
     if (!texto.trim()) return;
@@ -108,12 +124,35 @@ function NotaCoach({ horarioId, fecha }) {
 
   return (
     <div className="px-4 py-3 border-t border-white/5">
+      {notasDeEstaClase.length > 0 && (
+        <div className="flex flex-col gap-1.5 mb-2">
+          {notasDeEstaClase.map((n) => (
+            <div
+              key={n.id}
+              className="bg-cyan-brand/10 border border-cyan-brand/20 rounded-lg px-3 py-2"
+            >
+              <p className="text-white/80 text-xs">{n.nota}</p>
+              <p className="text-white/30 text-[10px] mt-0.5">
+                {new Date(n.creado_en).toLocaleDateString('es-CL', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
       {!abierta ? (
         <button
           onClick={() => setAbierta(true)}
           className="flex items-center gap-1.5 text-cyan-brand text-xs font-medium"
         >
-          <MessageSquarePlus size={14} /> Agregar nota para el admin
+          <MessageSquarePlus size={14} />{' '}
+          {notasDeEstaClase.length > 0
+            ? 'Agregar otra nota'
+            : 'Agregar nota para el admin'}
         </button>
       ) : (
         <div className="flex flex-col gap-2">
@@ -166,7 +205,6 @@ export default function MisClases() {
 
   const misHorarios = horarios.filter((h) => h.coach_id === usuarioActual.id);
   const misHorarioIds = misHorarios.map((h) => h.id);
-  const hoyISO = new Date().toISOString().slice(0, 10);
 
   function inscritosDe(horarioId, fecha) {
     return reservas
@@ -185,13 +223,17 @@ export default function MisClases() {
   const realizadasPorFecha = useMemo(() => {
     const grupos = {};
     reservas
-      .filter((r) => misHorarioIds.includes(r.horario_id) && r.fecha < hoyISO)
+      .filter((r) => {
+        if (!misHorarioIds.includes(r.horario_id)) return false;
+        const horario = horarios.find((h) => h.id === r.horario_id);
+        return horario && yaSeRealizo(r.fecha, horario.hora);
+      })
       .forEach((r) => {
         if (!grupos[r.fecha]) grupos[r.fecha] = new Set();
         grupos[r.fecha].add(r.horario_id);
       });
     return grupos;
-  }, [reservas, misHorarioIds, hoyISO]);
+  }, [reservas, misHorarioIds, horarios]);
 
   const fechasRealizadas = Object.keys(realizadasPorFecha).sort().reverse();
   const mesesDisponibles = [
@@ -236,6 +278,7 @@ export default function MisClases() {
                   ? h.fecha_unica === dia.key
                   : h.dia === dia.nombreDia
               )
+              .filter((h) => !yaSeRealizo(dia.key, h.hora))
               .sort((a, b) => a.hora.localeCompare(b.hora));
             if (horariosDelDia.length === 0) return null;
             return (

@@ -259,6 +259,13 @@ export function AuthProvider({ children }) {
       await supabase.auth.signOut();
       return false;
     }
+    if (encontrado.estado === 'inactivo') {
+      setError(
+        'Tu cuenta está desactivada. Contacta al gimnasio para más información.'
+      );
+      await supabase.auth.signOut();
+      return false;
+    }
 
     setError('');
     return true;
@@ -314,6 +321,14 @@ export function AuthProvider({ children }) {
   }
 
   async function reservarClase(horarioId, fecha) {
+    if (usuarioActual.estado !== 'activo') {
+      return {
+        ok: false,
+        mensaje:
+          'Tu cuenta está desactivada. Contacta al gimnasio para más información.',
+      };
+    }
+
     const horario = horarios.find((h) => h.id === horarioId);
     if (!horario) return { ok: false, mensaje: 'Horario no encontrado.' };
 
@@ -383,7 +398,11 @@ export function AuthProvider({ children }) {
         mensaje: 'Error al actualizar sesiones: ' + errorUsuario.message,
       };
 
-    setReservas((prev) => [...prev, nuevaReserva]);
+    setReservas((prev) =>
+      prev.some((r) => r.id === nuevaReserva.id)
+        ? prev
+        : [...prev, nuevaReserva]
+    );
     syncUsuario({ ...usuarioActual, sesiones_usadas: nuevasSesiones });
 
     return { ok: true, mensaje: 'Reserva confirmada.' };
@@ -606,6 +625,26 @@ export function AuthProvider({ children }) {
     await crearNotificacion(
       usuarioId,
       'Tu cuenta fue aprobada. ¡Bienvenido a CED&S!'
+    );
+  }
+
+  async function desactivarUsuario(usuarioId) {
+    await supabase
+      .from('usuarios')
+      .update({ estado: 'inactivo' })
+      .eq('id', usuarioId);
+    setUsuarios((prev) =>
+      prev.map((u) => (u.id === usuarioId ? { ...u, estado: 'inactivo' } : u))
+    );
+  }
+
+  async function reactivarUsuario(usuarioId) {
+    await supabase
+      .from('usuarios')
+      .update({ estado: 'activo' })
+      .eq('id', usuarioId);
+    setUsuarios((prev) =>
+      prev.map((u) => (u.id === usuarioId ? { ...u, estado: 'activo' } : u))
     );
   }
 
@@ -928,6 +967,19 @@ export function AuthProvider({ children }) {
     if (!error) setNoticias((prev) => [data, ...prev]);
   }
 
+  async function actualizarNoticia(noticiaId, datos) {
+    const { data, error } = await supabase
+      .from('noticias')
+      .update(datos)
+      .eq('id', noticiaId)
+      .select()
+      .single();
+    if (error)
+      return { ok: false, mensaje: 'No se pudo actualizar la noticia.' };
+    setNoticias((prev) => prev.map((n) => (n.id === noticiaId ? data : n)));
+    return { ok: true, mensaje: 'Noticia actualizada.' };
+  }
+
   async function eliminarNoticia(noticiaId) {
     await supabase.from('noticias').delete().eq('id', noticiaId);
     setNoticias((prev) => prev.filter((n) => n.id !== noticiaId));
@@ -1152,7 +1204,13 @@ export function AuthProvider({ children }) {
       .insert(nueva)
       .select()
       .single();
-    if (!error) setHorarios((prev) => [...prev, data]);
+    if (error)
+      return {
+        ok: false,
+        mensaje: 'No se pudo crear la clase: ' + error.message,
+      };
+    setHorarios((prev) => [...prev, data]);
+    return { ok: true, mensaje: 'Clase creada correctamente.' };
   }
 
   async function eliminarClase(horarioId) {
@@ -1244,6 +1302,9 @@ export function AuthProvider({ children }) {
         notasCoach,
         crearNotaCoach,
         agregarSesionesExtra,
+        actualizarNoticia,
+        desactivarUsuario,
+        reactivarUsuario,
         registrarUsuario,
         aprobarUsuario,
         rechazarUsuario,

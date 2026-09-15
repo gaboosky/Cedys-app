@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LOGO_CEDS_WORDMARK } from '../assets/logoWordmark';
-import { LOGO_CEDS_CIRCULO } from '../assets/logoCirculo';
 
 const TITULOS = {
   '/perfil': 'Mi Perfil',
@@ -106,21 +105,30 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-black border-b border-white/10">
-        <div className="flex items-center justify-between px-3 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-9">
+      <header className="sticky top-0 z-40 bg-black border-b border-white/10 relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.6)]">
+        <div
+          className="absolute -top-12 -right-12 w-52 h-52 bg-cyan-brand pointer-events-none"
+          style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 0)' }}
+        />
+        <div
+          className="absolute -top-20 -right-20 w-64 h-64 bg-cyan-brandDark pointer-events-none"
+          style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 0)' }}
+        />
+
+        <div className="relative flex items-center justify-between px-3 pt-[calc(0.625rem+env(safe-area-inset-top))] pb-2">
           <button
             onClick={() => setMenuAbierto(true)}
             className="text-white/80 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
             aria-label="Abrir menú"
           >
-            <Menu size={20} />
+            <Menu size={21} />
           </button>
           <button
             onClick={toggleNotificaciones}
             className="relative text-white/80 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
             aria-label="Notificaciones"
           >
-            <Bell size={18} />
+            <Bell size={19} />
             {noLeidas > 0 && (
               <span className="absolute top-0.5 right-0.5 bg-cyan-brand text-ink text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
                 {noLeidas > 9 ? '9+' : noLeidas}
@@ -129,26 +137,25 @@ export default function Header() {
           </button>
         </div>
 
-        <div className="relative">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-40 h-40 rounded-full bg-cyan-brand/15 blur-2xl pointer-events-none" />
-          <div className="relative flex justify-center -mt-9">
-            <div className="w-20 h-20 rounded-full bg-white border-2 border-cyan-brand/70 shadow-[0_0_24px_rgba(3,205,230,0.3)] flex items-center justify-center overflow-hidden p-3">
-              <img
-                src={logoUrl || LOGO_CEDS_CIRCULO}
-                alt="CED&S"
-                className="w-full h-full object-contain"
-              />
-            </div>
-          </div>
+        <div className="relative flex justify-center pt-2 pb-2">
+          <div className="absolute w-56 h-24 bg-cyan-brand/15 blur-3xl pointer-events-none" />
+          <img
+            src={logoUrl || LOGO_CEDS_WORDMARK}
+            alt="CED&S"
+            className="relative w-[220px] h-auto object-contain drop-shadow-[0_2px_10px_rgba(3,205,230,0.25)]"
+          />
+        </div>
+        <div className="relative flex justify-center pb-3">
+          <div className="w-20 h-[5px] rounded-full bg-cyan-brand shadow-[0_0_12px_rgba(3,205,230,0.6)]" />
+        </div>
 
-          <div className="relative pt-2 pb-3 px-6 text-center">
-            <p className="font-display text-xl text-white leading-none">
-              {titulo}
-            </p>
-            {subtitulo && (
-              <p className="text-white/40 text-xs mt-1">{subtitulo}</p>
-            )}
-          </div>
+        <div className="relative pb-4 px-6 text-center">
+          <p className="font-display text-2xl text-white leading-none tracking-wide">
+            {titulo}
+          </p>
+          {subtitulo && (
+            <p className="text-white/40 text-xs mt-1.5">{subtitulo}</p>
+          )}
         </div>
       </header>
 
@@ -255,23 +262,6 @@ export default function Header() {
                 <User size={18} />
                 Mi Perfil
               </NavLink>
-
-              {usuarioActual.rol === 'coach' && (
-                <NavLink
-                  to="/mi-rutina"
-                  onClick={() => setMenuAbierto(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                      isActive
-                        ? 'bg-cyan-brand/15 text-cyan-brand'
-                        : 'text-white/70 hover:bg-white/5'
-                    }`
-                  }
-                >
-                  <Dumbbell size={18} />
-                  Rutina
-                </NavLink>
-              )}
 
               {usuarioActual.rol === 'head_coach' && (
                 <>

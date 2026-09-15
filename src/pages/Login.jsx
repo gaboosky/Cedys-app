@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { formatearRut, formatearTelefono } from '../lib/formato';
 
 const LINK_TERMINOS =
   'https://docs.google.com/forms/d/e/1FAIpQLSfUWWCQPOlvTI5a7tVhAqOti3aYzLIp7N2Np9wAubf5pgxFHQ/viewform';
@@ -195,7 +196,9 @@ export default function Login() {
           />
           <input
             value={form.rut}
-            onChange={(e) => setForm({ ...form, rut: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, rut: formatearRut(e.target.value) })
+            }
             placeholder="RUT"
             className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 outline-none focus:border-cyan-brand transition-colors"
             required
@@ -230,7 +233,9 @@ export default function Login() {
           />
           <input
             value={form.telefono}
-            onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, telefono: formatearTelefono(e.target.value) })
+            }
             placeholder="Teléfono"
             className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 outline-none focus:border-cyan-brand transition-colors"
             required

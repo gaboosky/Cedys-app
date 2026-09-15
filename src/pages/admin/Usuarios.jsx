@@ -1,6 +1,17 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Check, X, Plus, Snowflake, Pencil, Zap } from 'lucide-react';
+import {
+  Check,
+  X,
+  Plus,
+  Snowflake,
+  Pencil,
+  Zap,
+  UserX,
+  UserCheck,
+  Trash2,
+} from 'lucide-react';
+import { formatearRut, formatearTelefono } from '../../lib/formato';
 
 export default function Usuarios() {
   const {
@@ -17,6 +28,8 @@ export default function Usuarios() {
     diasRenovacion,
     actualizarPerfil,
     agregarSesionesExtra,
+    desactivarUsuario,
+    reactivarUsuario,
   } = useAuth();
   const [busqueda, setBusqueda] = useState('');
   const [diasCongelar, setDiasCongelar] = useState({});
@@ -27,6 +40,7 @@ export default function Usuarios() {
     sesiones: '',
   });
   const [agregandoSesionesId, setAgregandoSesionesId] = useState(null);
+  const [confirmandoAccionId, setConfirmandoAccionId] = useState(null);
   const [cantidadExtra, setCantidadExtra] = useState('');
   const [mensajeExtra, setMensajeExtra] = useState(null);
 
@@ -169,7 +183,7 @@ export default function Usuarios() {
           <input
             value={formNuevo.rut}
             onChange={(e) =>
-              setFormNuevo({ ...formNuevo, rut: e.target.value })
+              setFormNuevo({ ...formNuevo, rut: formatearRut(e.target.value) })
             }
             placeholder="RUT"
             className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
@@ -198,7 +212,10 @@ export default function Usuarios() {
           <input
             value={formNuevo.telefono}
             onChange={(e) =>
-              setFormNuevo({ ...formNuevo, telefono: e.target.value })
+              setFormNuevo({
+                ...formNuevo,
+                telefono: formatearTelefono(e.target.value),
+              })
             }
             placeholder="Teléfono"
             className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
@@ -363,11 +380,22 @@ export default function Usuarios() {
           return (
             <div
               key={u.id}
-              className="bg-white/[0.04] border border-white/10 rounded-2xl p-4"
+              className={`bg-white/[0.04] border rounded-2xl p-4 ${
+                u.estado === 'inactivo'
+                  ? 'border-yellow-500/30 opacity-60'
+                  : 'border-white/10'
+              }`}
             >
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <p className="text-white text-sm font-medium">{u.nombre}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-white text-sm font-medium">{u.nombre}</p>
+                    {u.estado === 'inactivo' && (
+                      <span className="text-yellow-400 text-[10px] font-semibold uppercase tracking-wide bg-yellow-500/10 px-1.5 py-0.5 rounded">
+                        Inactivo
+                      </span>
+                    )}
+                  </div>
                   <p className="text-white/40 text-xs">
                     {u.rut} · {u.correo}
                   </p>
@@ -572,7 +600,7 @@ export default function Usuarios() {
               <select
                 value={u.plan_id || ''}
                 onChange={(e) => asignarPlan(u.id, e.target.value)}
-                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors mb-2"
+                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors mb-3"
               >
                 <option value="">Sin plan asignado</option>
                 {Object.values(planes).map((p) => (
@@ -581,6 +609,64 @@ export default function Usuarios() {
                   </option>
                 ))}
               </select>
+
+              {confirmandoAccionId === u.id ? (
+                <div className="bg-black/20 border border-white/10 rounded-xl p-3 flex flex-col gap-2">
+                  <p className="text-white/70 text-xs">
+                    {u.estado === 'inactivo'
+                      ? '¿Reactivar esta cuenta?'
+                      : '¿Desactivar esta cuenta? No podrá iniciar sesión ni reservar clases, pero su historial se conserva.'}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        if (u.estado === 'inactivo') reactivarUsuario(u.id);
+                        else desactivarUsuario(u.id);
+                        setConfirmandoAccionId(null);
+                      }}
+                      className={`flex-1 font-semibold rounded-lg py-2 text-xs transition-transform active:scale-[0.98] ${
+                        u.estado === 'inactivo'
+                          ? 'bg-cyan-brand text-ink'
+                          : 'bg-yellow-500/80 text-ink'
+                      }`}
+                    >
+                      Sí, {u.estado === 'inactivo' ? 'reactivar' : 'desactivar'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmandoAccionId(null)}
+                      className="flex-1 bg-white/10 text-white rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setConfirmandoAccionId(u.id)}
+                    className={`flex items-center gap-1 text-xs font-medium ${
+                      u.estado === 'inactivo'
+                        ? 'text-cyan-brand'
+                        : 'text-yellow-400/80'
+                    }`}
+                  >
+                    {u.estado === 'inactivo' ? (
+                      <UserCheck size={13} />
+                    ) : (
+                      <UserX size={13} />
+                    )}
+                    {u.estado === 'inactivo'
+                      ? 'Reactivar cuenta'
+                      : 'Desactivar cuenta'}
+                  </button>
+                  <button
+                    onClick={() => rechazarUsuario(u.id)}
+                    className="flex items-center gap-1 text-red-400/60 text-xs hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 size={13} /> Eliminar
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

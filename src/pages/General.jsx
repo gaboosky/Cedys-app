@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { subirImagen } from '../lib/storage';
 import {
   MessageCircle,
   Plus,
   Trash2,
+  Pencil,
   Newspaper,
   FileText,
   Shield,
@@ -13,6 +15,8 @@ import {
   ChevronDown,
   ChevronUp,
   HelpCircle,
+  Camera,
+  X,
 } from 'lucide-react';
 
 const WHATSAPP_NUMERO = '56958540928';
@@ -23,7 +27,7 @@ const PREGUNTAS_FRECUENTES = [
   {
     pregunta: '¿Cómo cancelo una reserva?',
     respuesta:
-      'Ve a "Mis Reservas", elige la clase y toca "Cancelar esta reserva". Debes hacerlo con al menos 6 horas de anticipación, o la sesión se descontará igual.',
+      'Ve a "Mis Reservas", elige la clase y toca "Cancelar esta reserva". Debes hacerlo con al menos 3 horas de anticipación, o la sesión se descontará igual.',
   },
   {
     pregunta: '¿Qué pasa si llego tarde a una clase?',
@@ -33,7 +37,7 @@ const PREGUNTAS_FRECUENTES = [
   {
     pregunta: '¿Puedo congelar mi plan si me voy de viaje?',
     respuesta:
-      'Sí, desde tu Perfil puedes solicitar congelar tu membresía. Avisa con al menos 7 días de anticipación.',
+      'Sí, desde tu Perfil puedes solicitar congelar tu membresía. Avisa con al menos 7 días de anticipación; se permite congelar hasta 1 mes.',
   },
   {
     pregunta: '¿Qué hago si la clase que quiero está llena?',
@@ -43,24 +47,150 @@ const PREGUNTAS_FRECUENTES = [
   {
     pregunta: '¿Puedo transferirle mi plan a otra persona?',
     respuesta:
-      'No, los planes son instransferibles. Escríbenos por WhatsApp para cualquier imprevisto.',
+      'Sí, los planes son transferibles. Escríbenos por WhatsApp para coordinarlo.',
   },
 ];
 
+function renderizarContenido(texto) {
+  const partes = texto.split(/(\*\*.*?\*\*|\{\{.*?\}\})/g);
+  return partes.map((parte, i) => {
+    if (parte.startsWith('**') && parte.endsWith('**')) {
+      return (
+        <strong key={i} className="text-white font-semibold">
+          {parte.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (parte.startsWith('{{') && parte.endsWith('}}')) {
+      return (
+        <span key={i} className="text-cyan-brand font-medium">
+          {parte.slice(2, -2)}
+        </span>
+      );
+    }
+    return parte;
+  });
+}
+
+function FormularioNoticia({
+  valorInicial,
+  onGuardar,
+  onCancelar,
+  textoBoton,
+}) {
+  const [form, setForm] = useState(valorInicial);
+  const [subiendoImagen, setSubiendoImagen] = useState(false);
+
+  async function handleImagen(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen es muy pesada. Usa una de menos de 5MB.');
+      return;
+    }
+    setSubiendoImagen(true);
+    try {
+      const url = await subirImagen(file, 'noticias');
+      setForm((prev) => ({ ...prev, imagen_url: url }));
+    } catch (err) {
+      alert('Error al subir la imagen: ' + err.message);
+    }
+    setSubiendoImagen(false);
+  }
+
+  return (
+    <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 mb-3 flex flex-col gap-2">
+      <input
+        value={form.titulo}
+        onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+        placeholder="Título"
+        className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+      />
+      <textarea
+        value={form.contenido}
+        onChange={(e) => setForm({ ...form, contenido: e.target.value })}
+        placeholder={
+          'Contenido\n\nEnter = párrafo nuevo · "- " = lista · **negrita** · {{celeste}}'
+        }
+        rows={6}
+        className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm resize-none"
+      />
+
+      {form.imagen_url ? (
+        <div className="relative">
+          <img
+            src={form.imagen_url}
+            alt="Adjunto"
+            className="w-full rounded-lg max-h-48 object-cover"
+          />
+          <button
+            type="button"
+            onClick={() => setForm({ ...form, imagen_url: '' })}
+            className="absolute top-2 right-2 w-7 h-7 bg-black/70 rounded-full flex items-center justify-center"
+          >
+            <X size={14} className="text-white" />
+          </button>
+        </div>
+      ) : (
+        <label className="flex items-center justify-center gap-2 bg-white/[0.03] border border-dashed border-white/20 rounded-lg py-3 text-sm text-white/60 cursor-pointer">
+          <Camera size={15} />
+          {subiendoImagen ? 'Subiendo...' : 'Adjuntar una foto (opcional)'}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImagen}
+            disabled={subiendoImagen}
+            className="hidden"
+          />
+        </label>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          onClick={() => onGuardar(form)}
+          className="flex-1 bg-cyan-brand text-ink font-semibold rounded-xl py-2.5 text-sm transition-transform active:scale-[0.98]"
+        >
+          {textoBoton}
+        </button>
+        <button
+          onClick={onCancelar}
+          className="flex-1 bg-white/10 text-white rounded-xl py-2.5 text-sm transition-transform active:scale-[0.98]"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function General() {
-  const { usuarioActual, noticias, crearNoticia, eliminarNoticia } = useAuth();
+  const {
+    usuarioActual,
+    noticias,
+    crearNoticia,
+    eliminarNoticia,
+    actualizarNoticia,
+  } = useAuth();
   const esAdmin = usuarioActual.rol === 'head_coach';
 
   const [mostrarForm, setMostrarForm] = useState(false);
-  const [form, setForm] = useState({ titulo: '', contenido: '' });
+  const [editandoId, setEditandoId] = useState(null);
   const [faqAbierta, setFaqAbierta] = useState(null);
 
-  function handleCrearNoticia(e) {
-    e.preventDefault();
-    if (!form.titulo || !form.contenido) return;
-    crearNoticia(form);
-    setForm({ titulo: '', contenido: '' });
+  function handleCrearNoticia(datos) {
+    if (!datos.titulo || !datos.contenido) return;
+    crearNoticia(datos);
     setMostrarForm(false);
+  }
+
+  function handleGuardarEdicion(datos) {
+    if (!datos.titulo || !datos.contenido) return;
+    actualizarNoticia(editandoId, {
+      titulo: datos.titulo,
+      contenido: datos.contenido,
+      imagen_url: datos.imagen_url,
+    });
+    setEditandoId(null);
   }
 
   function formatearFecha(fecha) {
@@ -81,7 +211,10 @@ export default function General() {
         </p>
         {esAdmin && (
           <button
-            onClick={() => setMostrarForm(!mostrarForm)}
+            onClick={() => {
+              setMostrarForm(!mostrarForm);
+              setEditandoId(null);
+            }}
             className="flex items-center gap-1 bg-cyan-brand/10 border border-cyan-brand/30 text-cyan-brand text-xs font-semibold px-3 py-1.5 rounded-full transition-transform active:scale-95"
           >
             <Plus size={13} /> Nueva
@@ -90,30 +223,12 @@ export default function General() {
       </div>
 
       {mostrarForm && (
-        <form
-          onSubmit={handleCrearNoticia}
-          className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 mb-3 flex flex-col gap-2"
-        >
-          <input
-            value={form.titulo}
-            onChange={(e) => setForm({ ...form, titulo: e.target.value })}
-            placeholder="Título"
-            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-          />
-          <textarea
-            value={form.contenido}
-            onChange={(e) => setForm({ ...form, contenido: e.target.value })}
-            placeholder="Contenido"
-            rows={3}
-            className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm resize-none"
-          />
-          <button
-            type="submit"
-            className="bg-cyan-brand text-ink font-semibold rounded-xl py-2.5 text-sm transition-transform active:scale-[0.98]"
-          >
-            Publicar
-          </button>
-        </form>
+        <FormularioNoticia
+          valorInicial={{ titulo: '', contenido: '', imagen_url: '' }}
+          onGuardar={handleCrearNoticia}
+          onCancelar={() => setMostrarForm(false)}
+          textoBoton="Publicar"
+        />
       )}
 
       {noticias.length === 0 && (
@@ -123,60 +238,124 @@ export default function General() {
         </div>
       )}
 
-      {ultimaNoticia && (
-        <div className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-5 mb-3 overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-cyan-brand" />
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <p className="text-cyan-brand text-[10px] font-semibold tracking-[0.2em] uppercase">
-              Última publicación
-            </p>
-            {esAdmin && (
-              <button
-                onClick={() => eliminarNoticia(ultimaNoticia.id)}
-                className="text-red-400/60 shrink-0 hover:text-red-400 transition-colors"
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
-          </div>
-          <p className="text-white font-display text-xl leading-tight mt-2">
-            {ultimaNoticia.titulo}
-          </p>
-          <p className="text-white/60 text-sm mt-1.5">
-            {ultimaNoticia.contenido}
-          </p>
-          <p className="text-white/30 text-xs mt-3">
-            {formatearFecha(ultimaNoticia.created_at)}
-          </p>
-        </div>
-      )}
-
-      {restoNoticias.length > 0 && (
-        <div className="flex flex-col gap-2 mb-8">
-          {restoNoticias.map((n) => (
-            <div
-              key={n.id}
-              className="bg-white/[0.04] border border-white/10 rounded-2xl p-4"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-white font-display text-lg leading-tight">
-                  {n.titulo}
-                </p>
-                {esAdmin && (
+      {ultimaNoticia &&
+        (editandoId === ultimaNoticia.id ? (
+          <FormularioNoticia
+            valorInicial={{
+              titulo: ultimaNoticia.titulo,
+              contenido: ultimaNoticia.contenido,
+              imagen_url: ultimaNoticia.imagen_url || '',
+            }}
+            onGuardar={handleGuardarEdicion}
+            onCancelar={() => setEditandoId(null)}
+            textoBoton="Guardar cambios"
+          />
+        ) : (
+          <div className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-5 mb-3 overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-cyan-brand" />
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <p className="text-cyan-brand text-[10px] font-semibold tracking-[0.2em] uppercase">
+                Última publicación
+              </p>
+              {esAdmin && (
+                <div className="flex gap-2 shrink-0">
                   <button
-                    onClick={() => eliminarNoticia(n.id)}
-                    className="text-red-400/60 shrink-0 hover:text-red-400 transition-colors"
+                    onClick={() => {
+                      setEditandoId(ultimaNoticia.id);
+                      setMostrarForm(false);
+                    }}
+                    className="text-cyan-brand/70 hover:text-cyan-brand transition-colors"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => eliminarNoticia(ultimaNoticia.id)}
+                    className="text-red-400/60 hover:text-red-400 transition-colors"
                   >
                     <Trash2 size={14} />
                   </button>
-                )}
-              </div>
-              <p className="text-white/60 text-sm mt-1">{n.contenido}</p>
-              <p className="text-white/25 text-xs mt-2">
-                {formatearFecha(n.created_at)}
-              </p>
+                </div>
+              )}
             </div>
-          ))}
+            <p className="text-white font-display text-xl leading-tight mt-2">
+              {ultimaNoticia.titulo}
+            </p>
+            {ultimaNoticia.imagen_url && (
+              <img
+                src={ultimaNoticia.imagen_url}
+                alt=""
+                className="w-full rounded-xl mt-3 max-h-64 object-cover"
+              />
+            )}
+            <p className="text-white/60 text-sm mt-1.5 whitespace-pre-line">
+              {renderizarContenido(ultimaNoticia.contenido)}
+            </p>
+            <p className="text-white/30 text-xs mt-3">
+              {formatearFecha(ultimaNoticia.created_at)}
+            </p>
+          </div>
+        ))}
+
+      {restoNoticias.length > 0 && (
+        <div className="flex flex-col gap-2 mb-8">
+          {restoNoticias.map((n) =>
+            editandoId === n.id ? (
+              <FormularioNoticia
+                key={n.id}
+                valorInicial={{
+                  titulo: n.titulo,
+                  contenido: n.contenido,
+                  imagen_url: n.imagen_url || '',
+                }}
+                onGuardar={handleGuardarEdicion}
+                onCancelar={() => setEditandoId(null)}
+                textoBoton="Guardar cambios"
+              />
+            ) : (
+              <div
+                key={n.id}
+                className="bg-white/[0.04] border border-white/10 rounded-2xl p-4"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-white font-display text-lg leading-tight">
+                    {n.titulo}
+                  </p>
+                  {esAdmin && (
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={() => {
+                          setEditandoId(n.id);
+                          setMostrarForm(false);
+                        }}
+                        className="text-cyan-brand/70 hover:text-cyan-brand transition-colors"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => eliminarNoticia(n.id)}
+                        className="text-red-400/60 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {n.imagen_url && (
+                  <img
+                    src={n.imagen_url}
+                    alt=""
+                    className="w-full rounded-lg mt-2 max-h-48 object-cover"
+                  />
+                )}
+                <p className="text-white/60 text-sm mt-1 whitespace-pre-line">
+                  {renderizarContenido(n.contenido)}
+                </p>
+                <p className="text-white/25 text-xs mt-2">
+                  {formatearFecha(n.created_at)}
+                </p>
+              </div>
+            )
+          )}
         </div>
       )}
       {ultimaNoticia && restoNoticias.length === 0 && <div className="mb-8" />}

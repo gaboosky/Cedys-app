@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subirImagen } from '../lib/storage';
+import { formatearTelefono } from '../lib/formato';
 import {
   activarNotificacionesPush,
   yaEstaSuscrito,
@@ -476,7 +477,12 @@ export default function Perfil() {
             <label className="text-white/40 text-xs mb-1 block">Teléfono</label>
             <input
               value={form.telefono}
-              onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  telefono: formatearTelefono(e.target.value),
+                })
+              }
               className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand"
             />
           </div>

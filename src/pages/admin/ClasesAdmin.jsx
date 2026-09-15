@@ -120,6 +120,7 @@ export default function ClasesAdmin() {
     coach_id: '',
     cupo_max: 6,
   });
+  const [mensajeCrear, setMensajeCrear] = useState(null);
 
   const [diaAbierto, setDiaAbierto] = useState(0);
   const [editandoId, setEditandoId] = useState(null);
@@ -135,7 +136,7 @@ export default function ClasesAdmin() {
     e.preventDefault();
     if (!form.hora || !form.coach_id) return;
     const coach = coaches.find((c) => c.id === form.coach_id);
-    await crearClase({
+    const resultado = await crearClase({
       dia: form.dia,
       hora: form.hora,
       coach_id: form.coach_id,
@@ -143,8 +144,14 @@ export default function ClasesAdmin() {
       cupo_max: Number(form.cupo_max),
       fecha_unica: null,
     });
-    setForm({ dia: 'Lunes', hora: '', coach_id: '', cupo_max: 6 });
-    setMostrarFormFija(false);
+    setMensajeCrear(resultado);
+    if (resultado.ok) {
+      setForm({ dia: 'Lunes', hora: '', coach_id: '', cupo_max: 6 });
+      setTimeout(() => {
+        setMostrarFormFija(false);
+        setMensajeCrear(null);
+      }, 1200);
+    }
   }
 
   async function handleCrearPuntual(e) {
@@ -152,7 +159,7 @@ export default function ClasesAdmin() {
     if (!formPuntual.hora || !formPuntual.coach_id || !formPuntual.fecha_unica)
       return;
     const coach = coaches.find((c) => c.id === formPuntual.coach_id);
-    await crearClase({
+    const resultado = await crearClase({
       dia: nombreDiaDeFecha(formPuntual.fecha_unica),
       hora: formPuntual.hora,
       coach_id: formPuntual.coach_id,
@@ -160,8 +167,14 @@ export default function ClasesAdmin() {
       cupo_max: Number(formPuntual.cupo_max),
       fecha_unica: formPuntual.fecha_unica,
     });
-    setFormPuntual({ fecha_unica: '', hora: '', coach_id: '', cupo_max: 6 });
-    setMostrarFormPuntual(false);
+    setMensajeCrear(resultado);
+    if (resultado.ok) {
+      setFormPuntual({ fecha_unica: '', hora: '', coach_id: '', cupo_max: 6 });
+      setTimeout(() => {
+        setMostrarFormPuntual(false);
+        setMensajeCrear(null);
+      }, 1200);
+    }
   }
 
   function abrirEdicion(h) {
@@ -288,6 +301,15 @@ export default function ClasesAdmin() {
               className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             />
           </div>
+          {mensajeCrear && (
+            <p
+              className={`text-sm ${
+                mensajeCrear.ok ? 'text-cyan-brand' : 'text-red-400'
+              }`}
+            >
+              {mensajeCrear.mensaje}
+            </p>
+          )}
           <button
             type="submit"
             className="bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm transition-transform active:scale-[0.98]"
@@ -362,6 +384,15 @@ export default function ClasesAdmin() {
               className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
             />
           </div>
+          {mensajeCrear && (
+            <p
+              className={`text-sm ${
+                mensajeCrear.ok ? 'text-cyan-brand' : 'text-red-400'
+              }`}
+            >
+              {mensajeCrear.mensaje}
+            </p>
+          )}
           <button
             type="submit"
             className="bg-white text-ink font-semibold rounded-lg py-2 text-sm transition-transform active:scale-[0.98]"
