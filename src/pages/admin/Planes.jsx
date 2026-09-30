@@ -13,6 +13,7 @@ export default function Planes() {
     cantidad_sesiones: '',
     valor_neto: '',
     valor_con_iva: '',
+    duracion_dias: '30',
   });
   const [creando, setCreando] = useState(false);
 
@@ -23,6 +24,7 @@ export default function Planes() {
       cantidad_sesiones: plan.cantidad_sesiones ?? '',
       valor_neto: plan.valor_neto,
       valor_con_iva: plan.valor_con_iva,
+      duracion_dias: plan.duracion_dias ?? 30,
     });
     setMostrarNuevo(false);
   }
@@ -34,6 +36,8 @@ export default function Planes() {
         form.cantidad_sesiones === '' ? null : Number(form.cantidad_sesiones),
       valor_neto: Number(form.valor_neto),
       valor_con_iva: Number(form.valor_con_iva),
+      duracion_dias:
+        form.duracion_dias === '' ? 30 : Number(form.duracion_dias),
     });
     setEditando(null);
   }
@@ -55,6 +59,8 @@ export default function Planes() {
           : Number(formNuevo.cantidad_sesiones),
       valor_neto: Number(formNuevo.valor_neto),
       valor_con_iva: Number(formNuevo.valor_con_iva),
+      duracion_dias:
+        formNuevo.duracion_dias === '' ? 30 : Number(formNuevo.duracion_dias),
     });
     setCreando(false);
     setFormNuevo({
@@ -62,6 +68,7 @@ export default function Planes() {
       cantidad_sesiones: '',
       valor_neto: '',
       valor_con_iva: '',
+      duracion_dias: '30',
     });
     setMostrarNuevo(false);
   }
@@ -139,6 +146,24 @@ export default function Planes() {
               className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
             />
           </div>
+          <div>
+            <label className="text-white/40 text-xs mb-1 block">
+              Duración (días)
+            </label>
+            <input
+              type="number"
+              value={formNuevo.duracion_dias}
+              onChange={(e) =>
+                setFormNuevo({ ...formNuevo, duracion_dias: e.target.value })
+              }
+              placeholder="30"
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+            />
+            <p className="text-white/30 text-xs mt-1">
+              Ej: mensual 30, trimestral 90, semestral 180, anual 365. Solo los
+              planes de 90 días o más permiten congelar membresía.
+            </p>
+          </div>
           <button
             type="submit"
             disabled={creando}
@@ -190,6 +215,15 @@ export default function Planes() {
                   className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
                   placeholder="Valor con IVA"
                 />
+                <input
+                  type="number"
+                  value={form.duracion_dias}
+                  onChange={(e) =>
+                    setForm({ ...form, duracion_dias: e.target.value })
+                  }
+                  className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                  placeholder="Duración en días (ej: 30, 90, 180, 365)"
+                />
                 <div className="flex gap-2">
                   <button
                     onClick={() => guardar(p.id)}
@@ -215,6 +249,12 @@ export default function Planes() {
                       : 'Ilimitado'}{' '}
                     · Neto ${p.valor_neto.toLocaleString('es-CL')} · Con IVA $
                     {p.valor_con_iva.toLocaleString('es-CL')}
+                  </p>
+                  <p className="text-white/30 text-xs mt-0.5">
+                    Duración: {p.duracion_dias || 30} días
+                    {(p.duracion_dias || 30) < 90
+                      ? ' · sin derecho a congelar'
+                      : ' · con derecho a congelar'}
                   </p>
                 </div>
                 <button

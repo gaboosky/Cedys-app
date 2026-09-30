@@ -31,6 +31,16 @@ function formatFechaLarga(fechaISO) {
   return capitalizar(texto);
 }
 
+// Convierte un Date a "YYYY-MM-DD" usando el calendario LOCAL (no UTC).
+// fecha.toISOString() convierte a UTC y puede saltar al día siguiente en horario
+// de tarde/noche en Chile (UTC-3).
+function soloFechaLocal(fecha) {
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+}
+
 function proximosDiasHabiles(cantidad = 14) {
   const dias = [];
   const hoy = new Date();
@@ -42,7 +52,7 @@ function proximosDiasHabiles(cantidad = 14) {
       const nombreDia = capitalizar(
         fecha.toLocaleDateString('es-CL', { weekday: 'long' })
       );
-      dias.push({ key: fecha.toISOString().slice(0, 10), nombreDia });
+      dias.push({ key: soloFechaLocal(fecha), nombreDia });
     }
     offset++;
   }

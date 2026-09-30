@@ -22,6 +22,13 @@ export default function RutinaDias() {
         <ArrowLeft size={15} /> Volver a semanas
       </button>
 
+      <p className="font-display text-3xl text-white leading-tight mb-1">
+        Días
+      </p>
+      <p className="text-white/40 text-xs mb-6">
+        Elige el día que vas a entrenar
+      </p>
+
       {dias === null && <p className="text-white/30 text-sm">Cargando...</p>}
       {dias && dias.length === 0 && (
         <p className="text-white/30 text-sm">

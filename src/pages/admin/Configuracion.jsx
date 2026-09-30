@@ -12,11 +12,6 @@ export default function Configuracion() {
     diasRenovacion,
     actualizarPoliticas,
   } = useAuth();
-  const [probarError, setProbarError] = useState(false);
-
-  if (probarError) {
-    throw new Error('Error de prueba de Sentry');
-  }
 
   const [editandoPoliticas, setEditandoPoliticas] = useState(false);
   const [formPoliticas, setFormPoliticas] = useState({

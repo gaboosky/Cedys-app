@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { reservaBloqueada } from '../lib/horarioUtils';
+import { reservaBloqueada, horaAFecha } from '../lib/horarioUtils';
 import {
   ArrowLeft,
   Clock,
@@ -10,6 +10,8 @@ import {
   Check,
   AlertCircle,
   Bell,
+  Hourglass,
+  Send,
 } from 'lucide-react';
 
 export default function HorarioDetalle() {
@@ -28,6 +30,8 @@ export default function HorarioDetalle() {
     anotarseListaEspera,
     quitarseListaEspera,
     listaEsperaDe,
+    solicitudFueraPlazoDe,
+    solicitarFueraDePlazo,
   } = useAuth();
   const [mensaje, setMensaje] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -69,6 +73,16 @@ export default function HorarioDetalle() {
   const enListaEspera = estaEnListaEspera(horarioId, fecha);
   const totalEnEspera = listaEsperaDe(horarioId, fecha).length;
 
+  // Hora fuera de plazo: solo para clases de HOY que ya cerraron reservas pero todavía no empiezan.
+  const hoy = new Date();
+  const hoyISO = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}-${String(hoy.getDate()).padStart(2, '0')}`;
+  const yaEmpezo = horaAFecha(fecha, horario.hora).getTime() <= Date.now();
+  const puedeSolicitarFueraPlazo = !cancelada && fecha === hoyISO && !yaEmpezo;
+  const solicitud = solicitudFueraPlazoDe(horarioId, fecha);
+
   const fechaObj = new Date(fecha + 'T00:00:00');
   const diaSemana = fechaObj.toLocaleDateString('es-CL', { weekday: 'long' });
   const fechaCorta = fechaObj.toLocaleDateString('es-CL', {
@@ -85,6 +99,17 @@ export default function HorarioDetalle() {
     yaEnviando.current = false;
     setMensaje(resultado);
     setTimeout(() => setMensaje(null), 3000);
+  }
+
+  async function handleSolicitarFueraPlazo() {
+    if (yaEnviando.current) return;
+    yaEnviando.current = true;
+    setEnviando(true);
+    const resultado = await solicitarFueraDePlazo(horarioId, fecha);
+    setEnviando(false);
+    yaEnviando.current = false;
+    setMensaje(resultado);
+    setTimeout(() => setMensaje(null), 4000);
   }
 
   async function handleListaEspera() {
@@ -205,10 +230,42 @@ export default function HorarioDetalle() {
           {mensajeCancelacion ? `: ${mensajeCancelacion}` : ' para esta fecha.'}
         </div>
       ) : bloqueada ? (
-        <div className="w-full text-center bg-white/5 border border-white/10 text-white/40 rounded-2xl py-4 text-sm">
-          Ya no se puede reservar este horario (falta menos de 4 horas para que
-          empiece)
-        </div>
+        solicitud?.estado === 'pendiente' ? (
+          <div className="w-full flex flex-col items-center justify-center gap-1 bg-yellow-400/10 border border-yellow-400/30 text-yellow-200 rounded-2xl py-4 px-4 text-center">
+            <span className="flex items-center gap-2 font-medium">
+              <Hourglass size={18} /> A espera de aprobación
+            </span>
+            <span className="text-yellow-200/60 text-xs">
+              El administrador revisará tu solicitud y te llegará una
+              notificación.
+            </span>
+          </div>
+        ) : solicitud?.estado === 'rechazada' ? (
+          <div className="w-full text-center bg-red-500/10 border border-red-500/30 text-red-300 rounded-2xl py-4 text-sm px-4">
+            Tu solicitud fuera de plazo para esta clase no fue aprobada.
+          </div>
+        ) : puedeSolicitarFueraPlazo ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-white/40 text-xs text-center">
+              Las reservas para esta clase ya cerraron (faltan menos de{' '}
+              {horasAnticipacion} horas), pero puedes pedirle al administrador
+              que te deje entrar.
+            </p>
+            <button
+              onClick={handleSolicitarFueraPlazo}
+              disabled={enviando}
+              className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 font-bold text-base tracking-wide transition-all active:scale-[0.98] bg-yellow-400/15 border border-yellow-400/40 text-yellow-200 disabled:opacity-50"
+            >
+              <Send size={17} />
+              {enviando ? 'Enviando...' : 'Solicitar hora fuera de plazo'}
+            </button>
+          </div>
+        ) : (
+          <div className="w-full text-center bg-white/5 border border-white/10 text-white/40 rounded-2xl py-4 text-sm">
+            Ya no se puede reservar este horario (falta menos de{' '}
+            {horasAnticipacion} horas para que empiece)
+          </div>
+        )
       ) : lleno ? (
         enListaEspera ? (
           <div className="w-full flex items-center justify-center gap-2 bg-yellow-400/10 border border-yellow-400/30 text-yellow-200 rounded-2xl py-4 font-medium">

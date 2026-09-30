@@ -8,6 +8,9 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  Users,
+  X,
+  UserMinus,
 } from 'lucide-react';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -38,6 +41,16 @@ function formatFechaLarga(fechaISO) {
   );
 }
 
+// Convierte un Date a "YYYY-MM-DD" usando el calendario LOCAL (no UTC).
+// fecha.toISOString() convierte a UTC y puede saltar al día siguiente en horario
+// de tarde/noche en Chile (UTC-3), dejando mal guardada la fecha de la clase.
+function soloFechaLocal(fecha) {
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+}
+
 function proximaFechaParaDia(nombreDia) {
   const objetivo = DIAS_INDICE[nombreDia];
   const hoy = new Date();
@@ -45,7 +58,7 @@ function proximaFechaParaDia(nombreDia) {
     const fecha = new Date(hoy);
     fecha.setDate(hoy.getDate() + i);
     if (fecha.getDay() === objetivo)
-      return formatFechaLarga(fecha.toISOString().slice(0, 10));
+      return formatFechaLarga(soloFechaLocal(fecha));
   }
   return '';
 }
@@ -75,10 +88,11 @@ function proximosDiasHabiles(cantidad = 14) {
       const nombreDia = capitalizar(
         fecha.toLocaleDateString('es-CL', { weekday: 'long' })
       );
+      const key = soloFechaLocal(fecha);
       dias.push({
-        key: fecha.toISOString().slice(0, 10),
+        key,
         nombreDia,
-        fechaLarga: formatFechaLarga(fecha.toISOString().slice(0, 10)),
+        fechaLarga: formatFechaLarga(key),
         esHoy: offset === 0,
       });
     }
@@ -97,6 +111,7 @@ export default function ClasesAdmin() {
   const {
     horarios,
     usuarios,
+    reservas,
     crearClase,
     eliminarClase,
     editarClase,
@@ -104,6 +119,7 @@ export default function ClasesAdmin() {
     mensajeCancelacionDe,
     cancelarHorarioFecha,
     reactivarHorarioFecha,
+    cancelarReservaAdmin,
   } = useAuth();
 
   const [mostrarFormFija, setMostrarFormFija] = useState(false);
@@ -128,9 +144,42 @@ export default function ClasesAdmin() {
   const [cancelandoClave, setCancelandoClave] = useState(null);
   const [mensajeCancel, setMensajeCancel] = useState('');
   const [eliminandoId, setEliminandoId] = useState(null);
+  const [verInscritosClave, setVerInscritosClave] = useState(null);
+  const [quitandoReservaId, setQuitandoReservaId] = useState(null);
 
-  const coaches = usuarios.filter((u) => u.rol === 'coach');
+  const coaches = usuarios.filter(
+    (u) => u.rol === 'coach' || u.rol === 'head_coach'
+  );
   const dias = proximosDiasHabiles(14);
+
+  function inscritosDe(horarioId, fecha) {
+    return reservas
+      .filter(
+        (r) =>
+          r.horario_id === horarioId &&
+          r.fecha === fecha &&
+          r.estado === 'confirmada'
+      )
+      .map((r) => ({
+        reservaId: r.id,
+        usuario: usuarios.find((u) => u.id === r.usuario_id),
+      }))
+      .filter((x) => x.usuario);
+  }
+
+  function abrirInscritos(horarioId, fecha) {
+    const clave = `${horarioId}_${fecha}`;
+    setVerInscritosClave(verInscritosClave === clave ? null : clave);
+    setEditandoId(null);
+    setCancelandoClave(null);
+    setEliminandoId(null);
+    setQuitandoReservaId(null);
+  }
+
+  async function confirmarQuitarAlumno(reservaId) {
+    await cancelarReservaAdmin(reservaId);
+    setQuitandoReservaId(null);
+  }
 
   async function handleCrearFija(e) {
     e.preventDefault();
@@ -187,6 +236,7 @@ export default function ClasesAdmin() {
     });
     setCancelandoClave(null);
     setEliminandoId(null);
+    setVerInscritosClave(null);
   }
 
   async function guardarEdicion(horarioId) {
@@ -206,6 +256,7 @@ export default function ClasesAdmin() {
     setMensajeCancel('');
     setEditandoId(null);
     setEliminandoId(null);
+    setVerInscritosClave(null);
   }
 
   async function confirmarCancelacion(horarioId, fecha) {
@@ -605,6 +656,19 @@ export default function ClasesAdmin() {
                               ) : !cancelada ? (
                                 <div className="flex gap-1">
                                   <button
+                                    onClick={() =>
+                                      abrirInscritos(h.id, dia.key)
+                                    }
+                                    className="relative text-white/60 p-2 hover:text-white"
+                                  >
+                                    <Users size={16} />
+                                    {inscritosDe(h.id, dia.key).length > 0 && (
+                                      <span className="absolute -top-0.5 -right-0.5 bg-cyan-brand text-ink text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                                        {inscritosDe(h.id, dia.key).length}
+                                      </span>
+                                    )}
+                                  </button>
+                                  <button
                                     onClick={() => abrirEdicion(h)}
                                     className="text-cyan-brand/80 p-2 hover:text-cyan-brand"
                                   >
@@ -629,6 +693,88 @@ export default function ClasesAdmin() {
                                 </div>
                               ) : null}
                             </div>
+
+                            {verInscritosClave === claveCancel && (
+                              <div className="mt-2 pt-2 border-t border-white/10">
+                                <div className="flex items-center justify-between mb-2">
+                                  <p className="text-white/50 text-xs font-medium">
+                                    Inscritos (
+                                    {inscritosDe(h.id, dia.key).length}/
+                                    {h.cupo_max})
+                                  </p>
+                                  <button
+                                    onClick={() => setVerInscritosClave(null)}
+                                    className="text-white/30 hover:text-white/60"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+
+                                {inscritosDe(h.id, dia.key).length === 0 ? (
+                                  <p className="text-white/30 text-xs">
+                                    Nadie se ha inscrito todavía.
+                                  </p>
+                                ) : (
+                                  <div className="flex flex-col gap-1.5">
+                                    {inscritosDe(h.id, dia.key).map(
+                                      ({ reservaId, usuario }) => (
+                                        <div
+                                          key={reservaId}
+                                          className="flex items-center justify-between bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2"
+                                        >
+                                          <div>
+                                            <p className="text-white text-sm">
+                                              {usuario.nombre}
+                                            </p>
+                                            {usuario.telefono && (
+                                              <p className="text-white/30 text-[11px]">
+                                                {usuario.telefono}
+                                              </p>
+                                            )}
+                                          </div>
+
+                                          {quitandoReservaId === reservaId ? (
+                                            <div className="flex items-center gap-1.5">
+                                              <span className="text-red-300 text-[11px]">
+                                                ¿Sacar?
+                                              </span>
+                                              <button
+                                                onClick={() =>
+                                                  confirmarQuitarAlumno(
+                                                    reservaId
+                                                  )
+                                                }
+                                                className="bg-red-500/80 text-white text-[11px] font-semibold px-2 py-1 rounded-md"
+                                              >
+                                                Sí
+                                              </button>
+                                              <button
+                                                onClick={() =>
+                                                  setQuitandoReservaId(null)
+                                                }
+                                                className="bg-white/10 text-white text-[11px] px-2 py-1 rounded-md"
+                                              >
+                                                No
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <button
+                                              onClick={() =>
+                                                setQuitandoReservaId(reservaId)
+                                              }
+                                              className="text-red-400/70 p-1.5 hover:text-red-400"
+                                              title="Sacar de la clase"
+                                            >
+                                              <UserMinus size={15} />
+                                            </button>
+                                          )}
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
 
                             {cancelada && (
                               <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">

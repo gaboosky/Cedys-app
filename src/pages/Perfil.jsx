@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subirImagen } from '../lib/storage';
-import { formatearTelefono } from '../lib/formato';
+import { formatearTelefono, formatearRut } from '../lib/formato';
 import {
   activarNotificacionesPush,
   yaEstaSuscrito,
@@ -99,6 +99,9 @@ export default function Perfil() {
     congelaciones.some(
       (c) => c.usuario_id === usuarioActual.id && c.estado === 'pendiente'
     );
+  const duracionPlanDias =
+    usuarioActual.plan_dias_personalizado || plan?.duracion_dias || 30;
+  const puedeCongelar = duracionPlanDias >= 90;
 
   const misAsistencias = esUsuario
     ? reservas.filter(
@@ -379,7 +382,16 @@ export default function Perfil() {
         </div>
       )}
 
-      {esUsuario && !congelacionActiva && (
+      {esUsuario && !congelacionActiva && !puedeCongelar && (
+        <div className="flex items-center gap-2.5 bg-white/[0.03] border border-white/10 rounded-2xl py-3 px-4 mb-6">
+          <Snowflake size={15} className="text-white/30 shrink-0" />
+          <p className="text-white/40 text-xs">
+            El congelamiento está disponible solo para planes de 3 meses o más.
+          </p>
+        </div>
+      )}
+
+      {esUsuario && !congelacionActiva && puedeCongelar && (
         <div className="mb-6">
           {!mostrarCongelar ? (
             <button
@@ -540,7 +552,11 @@ export default function Perfil() {
         </div>
       ) : (
         <div className="bg-white/[0.04] border border-white/10 rounded-2xl divide-y divide-white/10">
-          <InfoRow icon={Fingerprint} label="RUT" value={usuarioActual.rut} />
+          <InfoRow
+            icon={Fingerprint}
+            label="RUT"
+            value={formatearRut(usuarioActual.rut)}
+          />
           <InfoRow icon={Mail} label="Correo" value={usuarioActual.correo} />
           <InfoRow
             icon={Phone}

@@ -108,6 +108,13 @@ export default function Reservas() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
+      <p className="font-display text-3xl text-white leading-tight">
+        Mis Reservas
+      </p>
+      <p className="text-white/40 text-xs mt-1 mb-4">
+        Tu agenda de entrenamiento
+      </p>
+
       <div className="flex bg-white/[0.04] border border-white/10 rounded-xl p-1 mb-6">
         <button
           onClick={() => setTab('proximas')}
@@ -157,12 +164,7 @@ export default function Reservas() {
               const confirmandoEsta = confirmando === proxima.id;
 
               return (
-                <div
-                  onClick={() =>
-                    navigate(`/horarios/${proxima.horario_id}/${proxima.fecha}`)
-                  }
-                  className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-6 mb-6 overflow-hidden cursor-pointer transition-transform active:scale-[0.99]"
-                >
+                <div className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-6 mb-6 overflow-hidden">
                   <div className="absolute top-0 left-0 w-full h-1 bg-cyan-brand" />
 
                   <p className="text-cyan-brand text-[11px] font-semibold tracking-[0.2em] uppercase mb-3">
@@ -194,26 +196,19 @@ export default function Reservas() {
 
                   {!confirmandoEsta ? (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setConfirmando(proxima.id);
-                      }}
+                      onClick={() => setConfirmando(proxima.id)}
                       className="flex items-center gap-1.5 text-red-400/80 text-sm mt-5 hover:text-red-400 transition-colors"
                     >
                       <X size={15} /> Cancelar esta reserva
                     </button>
                   ) : (
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <PanelCancelacion
-                        tardia={tardia}
-                        cancelando={cancelando}
-                        onConfirmar={() =>
-                          handleConfirmarCancelacion(proxima.id)
-                        }
-                        onMantener={() => setConfirmando(null)}
-                        horasAnticipacion={horasAnticipacion}
-                      />
-                    </div>
+                    <PanelCancelacion
+                      tardia={tardia}
+                      cancelando={cancelando}
+                      onConfirmar={() => handleConfirmarCancelacion(proxima.id)}
+                      onMantener={() => setConfirmando(null)}
+                      horasAnticipacion={horasAnticipacion}
+                    />
                   )}
                 </div>
               );
@@ -236,10 +231,7 @@ export default function Reservas() {
                   return (
                     <div
                       key={r.id}
-                      onClick={() =>
-                        navigate(`/horarios/${r.horario_id}/${r.fecha}`)
-                      }
-                      className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 cursor-pointer transition-transform active:scale-[0.98]"
+                      className="bg-white/[0.04] border border-white/10 rounded-2xl p-4"
                     >
                       <div className="flex items-center justify-between">
                         <div>
@@ -255,10 +247,7 @@ export default function Reservas() {
                         </div>
                         {!confirmandoEsta && (
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setConfirmando(r.id);
-                            }}
+                            onClick={() => setConfirmando(r.id)}
                             className="text-red-400/70 p-2 rounded-lg hover:bg-red-500/10 transition-colors"
                             aria-label="Cancelar reserva"
                           >
@@ -268,15 +257,13 @@ export default function Reservas() {
                       </div>
 
                       {confirmandoEsta && (
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <PanelCancelacion
-                            tardia={tardia}
-                            cancelando={cancelando}
-                            onConfirmar={() => handleConfirmarCancelacion(r.id)}
-                            onMantener={() => setConfirmando(null)}
-                            horasAnticipacion={horasAnticipacion}
-                          />
-                        </div>
+                        <PanelCancelacion
+                          tardia={tardia}
+                          cancelando={cancelando}
+                          onConfirmar={() => handleConfirmarCancelacion(r.id)}
+                          onMantener={() => setConfirmando(null)}
+                          horasAnticipacion={horasAnticipacion}
+                        />
                       )}
                     </div>
                   );
@@ -302,8 +289,7 @@ export default function Reservas() {
             {utilizadas.map((r) => (
               <div
                 key={r.id}
-                onClick={() => navigate(`/horarios/${r.horario_id}/${r.fecha}`)}
-                className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 opacity-70 cursor-pointer transition-transform active:scale-[0.98]"
+                className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 opacity-70"
               >
                 <div className="flex items-center justify-between">
                   <div>

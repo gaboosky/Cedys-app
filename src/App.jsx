@@ -32,6 +32,10 @@ const Coaches = lazy(() => import('./pages/admin/Coaches'));
 const Configuracion = lazy(() => import('./pages/admin/Configuracion'));
 const Reportes = lazy(() => import('./pages/admin/Reportes'));
 const NotasCoach = lazy(() => import('./pages/admin/NotasCoach'));
+const ReservasActivas = lazy(() => import('./pages/admin/ReservasActivas'));
+const PerfilAlumno = lazy(() => import('./pages/admin/PerfilAlumno'));
+const IngresoDetalle = lazy(() => import('./pages/admin/IngresoDetalle'));
+const ClasesRealizadas = lazy(() => import('./pages/admin/ClasesRealizadas'));
 
 function CargandoPantalla() {
   return (
@@ -80,12 +84,16 @@ function AppShell() {
           {/* Head Coach / Admin */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/usuarios" element={<Usuarios />} />
+          <Route path="/usuarios/:usuarioId" element={<PerfilAlumno />} />
+          <Route path="/ingreso-detalle" element={<IngresoDetalle />} />
+          <Route path="/clases-realizadas" element={<ClasesRealizadas />} />
           <Route path="/clases-admin" element={<ClasesAdmin />} />
           <Route path="/planes" element={<Planes />} />
           <Route path="/coaches" element={<Coaches />} />
           <Route path="/configuracion" element={<Configuracion />} />
           <Route path="/reportes" element={<Reportes />} />
           <Route path="/notas-coach" element={<NotasCoach />} />
+          <Route path="/reservas-activas" element={<ReservasActivas />} />
           <Route path="/mas" element={<Mas />} />
 
           {/* Compartida */}

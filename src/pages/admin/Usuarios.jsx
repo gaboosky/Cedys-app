@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Check,
@@ -10,10 +11,14 @@ import {
   UserX,
   UserCheck,
   Trash2,
+  UserCog,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { formatearRut, formatearTelefono } from '../../lib/formato';
 
 export default function Usuarios() {
+  const navigate = useNavigate();
   const {
     usuarios,
     planes,
@@ -30,6 +35,12 @@ export default function Usuarios() {
     agregarSesionesExtra,
     desactivarUsuario,
     reactivarUsuario,
+    usuarioActual,
+    horarios,
+    reservas,
+    solicitudesFueraPlazo,
+    aprobarSolicitudFueraPlazo,
+    rechazarSolicitudFueraPlazo,
   } = useAuth();
   const [busqueda, setBusqueda] = useState('');
   const [diasCongelar, setDiasCongelar] = useState({});
@@ -43,6 +54,8 @@ export default function Usuarios() {
   const [confirmandoAccionId, setConfirmandoAccionId] = useState(null);
   const [cantidadExtra, setCantidadExtra] = useState('');
   const [mensajeExtra, setMensajeExtra] = useState(null);
+  const [expandidoId, setExpandidoId] = useState(null);
+  const [procesandoSolicitudId, setProcesandoSolicitudId] = useState(null);
 
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
   const [formNuevo, setFormNuevo] = useState({
@@ -61,13 +74,50 @@ export default function Usuarios() {
     (c) => c.estado === 'pendiente'
   );
 
-  const pendientes = usuarios.filter(
-    (u) => u.rol === 'usuario' && u.estado === 'pendiente'
+  const pendientes = usuarios.filter((u) => u.estado === 'pendiente');
+
+  // Si llegamos desde el Dashboard con #solicitudes-pendientes, baja directo a esa sección.
+  const refSolicitudes = useRef(null);
+  const refFueraPlazo = useRef(null);
+  useEffect(() => {
+    if (
+      window.location.hash === '#solicitudes-pendientes' &&
+      refSolicitudes.current
+    ) {
+      refSolicitudes.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+    if (window.location.hash === '#fuera-de-plazo' && refFueraPlazo.current) {
+      refFueraPlazo.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  }, []);
+
+  const fueraPlazoPendientes = solicitudesFueraPlazo.filter(
+    (s) => s.estado === 'pendiente'
   );
 
+  async function resolverSolicitud(solicitudId, aprobar) {
+    setProcesandoSolicitudId(solicitudId);
+    const resultado = aprobar
+      ? await aprobarSolicitudFueraPlazo(solicitudId)
+      : await rechazarSolicitudFueraPlazo(solicitudId);
+    setProcesandoSolicitudId(null);
+    if (!resultado?.ok)
+      alert(resultado?.mensaje || 'No se pudo procesar la solicitud.');
+  }
+
+  // Todas las cuentas aparecen como usuarios (también admin y coaches, que igual entrenan).
   const clientes = usuarios
-    .filter((u) => u.rol === 'usuario' && u.estado !== 'pendiente')
-    .filter((u) => u.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+    .filter((u) => u.estado !== 'pendiente')
+    .filter((u) =>
+      (u.nombre || '').toLowerCase().includes(busqueda.toLowerCase())
+    )
+    .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
 
   async function handleCrear(e) {
     e.preventDefault();
@@ -257,6 +307,75 @@ export default function Usuarios() {
         </form>
       )}
 
+      {fueraPlazoPendientes.length > 0 && (
+        <div className="mb-6" ref={refFueraPlazo}>
+          <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+            Solicitudes de hora fuera de plazo ({fueraPlazoPendientes.length})
+          </p>
+          <div className="flex flex-col gap-2">
+            {fueraPlazoPendientes.map((sol) => {
+              const alumno = usuarios.find((u) => u.id === sol.usuario_id);
+              const horario = horarios.find((h) => h.id === sol.horario_id);
+              const inscritos = reservas.filter(
+                (r) =>
+                  r.horario_id === sol.horario_id &&
+                  r.fecha === sol.fecha &&
+                  r.estado === 'confirmada'
+              ).length;
+              const lleno = horario ? inscritos >= horario.cupo_max : false;
+              const fechaTexto = new Date(
+                sol.fecha + 'T00:00:00'
+              ).toLocaleDateString('es-CL', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              });
+              const procesando = procesandoSolicitudId === sol.id;
+              return (
+                <div
+                  key={sol.id}
+                  className="bg-yellow-400/10 border border-yellow-400/30 rounded-2xl p-4"
+                >
+                  <p className="text-white text-sm font-medium">
+                    {alumno?.nombre || 'Usuario'}
+                  </p>
+                  <p className="text-white/50 text-xs capitalize">
+                    Clase de las {horario?.hora || '—'} · {fechaTexto}
+                  </p>
+                  <p
+                    className={`text-xs mt-1 mb-3 ${
+                      lleno ? 'text-red-300' : 'text-white/40'
+                    }`}
+                  >
+                    {horario
+                      ? `${inscritos}/${horario.cupo_max} inscritos${
+                          lleno ? ' · clase llena, quedaría sobrecupo' : ''
+                        }`
+                      : 'Este horario ya no existe'}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => resolverSolicitud(sol.id, true)}
+                      disabled={procesando || !horario}
+                      className="flex-1 flex items-center justify-center gap-1 bg-cyan-brand text-ink text-sm font-semibold rounded-lg py-2 disabled:opacity-50 transition-transform active:scale-[0.98]"
+                    >
+                      <Check size={16} /> Aprobar
+                    </button>
+                    <button
+                      onClick={() => resolverSolicitud(sol.id, false)}
+                      disabled={procesando}
+                      className="flex-1 flex items-center justify-center gap-1 bg-white/10 text-white/70 text-sm font-semibold rounded-lg py-2 disabled:opacity-50 transition-transform active:scale-[0.98]"
+                    >
+                      <X size={16} /> Rechazar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {congelacionesPendientes.length > 0 && (
         <div className="mb-6">
           <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
@@ -315,7 +434,7 @@ export default function Usuarios() {
       )}
 
       {pendientes.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6" ref={refSolicitudes}>
           <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
             Solicitudes pendientes ({pendientes.length})
           </p>
@@ -327,7 +446,7 @@ export default function Usuarios() {
               >
                 <p className="text-white text-sm font-medium">{u.nombre}</p>
                 <p className="text-white/40 text-xs mb-3">
-                  {u.rut} · {u.correo} · {u.telefono}
+                  {formatearRut(u.rut)} · {u.correo} · {u.telefono}
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -366,7 +485,8 @@ export default function Usuarios() {
             totalSesiones !== null
               ? totalSesiones + extra - u.sesiones_usadas
               : null;
-          const diasVigencia = u.plan_dias_personalizado || diasRenovacion;
+          const diasVigencia =
+            u.plan_dias_personalizado || plan?.duracion_dias || diasRenovacion;
           const diasDesdeRenovacion = u.fecha_ultima_renovacion
             ? Math.floor(
                 (Date.now() - new Date(u.fecha_ultima_renovacion).getTime()) /
@@ -375,296 +495,391 @@ export default function Usuarios() {
             : null;
           const necesitaRenovar =
             diasDesdeRenovacion === null || diasDesdeRenovacion >= diasVigencia;
+          const fechaProximaRenovacion = u.fecha_ultima_renovacion
+            ? (() => {
+                const f = new Date(u.fecha_ultima_renovacion + 'T00:00:00');
+                f.setDate(f.getDate() + diasVigencia);
+                return f.toLocaleDateString('es-CL', {
+                  day: 'numeric',
+                  month: 'short',
+                });
+              })()
+            : null;
           const editandoEste = editandoPlanId === u.id;
+          const abierto = expandidoId === u.id;
 
           return (
             <div
               key={u.id}
-              className={`bg-white/[0.04] border rounded-2xl p-4 ${
+              className={`bg-white/[0.04] border rounded-2xl ${
+                abierto ? 'p-4' : 'px-4 py-3'
+              } ${
                 u.estado === 'inactivo'
                   ? 'border-yellow-500/30 opacity-60'
                   : 'border-white/10'
               }`}
             >
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-white text-sm font-medium">{u.nombre}</p>
+              <div
+                onClick={() => setExpandidoId(abierto ? null : u.id)}
+                className="flex items-center justify-between gap-2 cursor-pointer select-none"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-white text-sm font-medium truncate">
+                      {u.nombre}
+                    </p>
+                    {u.rol === 'head_coach' && (
+                      <span className="text-cyan-brand text-[10px] font-semibold uppercase tracking-wide bg-cyan-brand/10 px-1.5 py-0.5 rounded">
+                        Admin
+                      </span>
+                    )}
+                    {u.rol === 'coach' && (
+                      <span className="text-cyan-brand text-[10px] font-semibold uppercase tracking-wide bg-cyan-brand/10 px-1.5 py-0.5 rounded">
+                        Coach
+                      </span>
+                    )}
                     {u.estado === 'inactivo' && (
                       <span className="text-yellow-400 text-[10px] font-semibold uppercase tracking-wide bg-yellow-500/10 px-1.5 py-0.5 rounded">
                         Inactivo
                       </span>
                     )}
-                  </div>
-                  <p className="text-white/40 text-xs">
-                    {u.rut} · {u.correo}
-                  </p>
-                </div>
-                {restantes !== null && (
-                  <div className="text-right">
-                    <span className="text-cyan-brand text-xs font-medium block">
-                      {restantes} disponibles
-                    </span>
-                    {extra > 0 && (
-                      <span className="text-white/30 text-[10px]">
-                        (incluye {extra} extra)
+                    {plan && necesitaRenovar && (
+                      <span className="text-yellow-300 text-[10px] font-semibold uppercase tracking-wide bg-yellow-400/10 px-1.5 py-0.5 rounded">
+                        Pago pendiente
                       </span>
                     )}
                   </div>
-                )}
+                  <p className="text-white/40 text-xs truncate">
+                    {abierto
+                      ? `${formatearRut(u.rut)} · ${u.correo}`
+                      : `${plan ? plan.nombre : 'Sin plan'}${
+                          restantes !== null
+                            ? ` · ${restantes} disponibles`
+                            : ''
+                        }`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {abierto && restantes !== null && (
+                    <div className="text-right mr-1">
+                      <span className="text-cyan-brand text-xs font-medium block">
+                        {restantes} disponibles
+                      </span>
+                      {extra > 0 && (
+                        <span className="text-white/30 text-[10px]">
+                          (incluye {extra} extra)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/usuarios/${u.id}`);
+                    }}
+                    className="text-white/40 p-1.5 rounded-lg hover:text-cyan-brand hover:bg-white/5 transition-colors"
+                    title="Ver ficha del alumno"
+                  >
+                    <UserCog size={16} />
+                  </button>
+                  {abierto ? (
+                    <ChevronUp size={16} className="text-white/40" />
+                  ) : (
+                    <ChevronDown size={16} className="text-white/40" />
+                  )}
+                </div>
               </div>
 
-              {plan && (
-                <div
-                  className={`flex items-center justify-between rounded-xl px-3 py-2 mb-2 ${
-                    necesitaRenovar
-                      ? 'bg-yellow-400/10 border border-yellow-400/30'
-                      : 'bg-white/[0.03]'
-                  }`}
-                >
-                  <p
-                    className={`text-xs ${
-                      necesitaRenovar ? 'text-yellow-300' : 'text-white/40'
-                    }`}
-                  >
-                    {u.fecha_ultima_renovacion
-                      ? `Última renovación: ${u.fecha_ultima_renovacion}${
-                          necesitaRenovar ? ' (vencida)' : ''
-                        }`
-                      : 'Sin renovación registrada'}
-                  </p>
-                  <button
-                    onClick={() => confirmarRenovacion(u.id)}
-                    className="bg-cyan-brand text-ink text-xs font-semibold px-2.5 py-1.5 rounded-md whitespace-nowrap transition-transform active:scale-95"
-                  >
-                    Confirmar pago
-                  </button>
-                </div>
-              )}
-
-              {editandoEste ? (
-                <div className="bg-black/20 border border-white/10 rounded-xl p-3 mb-2 flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <label className="text-white/40 text-xs mb-1 block">
-                        Duración (días)
-                      </label>
-                      <input
-                        type="number"
-                        value={formPlan.dias}
-                        onChange={(e) =>
-                          setFormPlan({ ...formPlan, dias: e.target.value })
-                        }
-                        placeholder={String(diasRenovacion)}
-                        className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-white/40 text-xs mb-1 block">
-                        Monto ($)
-                      </label>
-                      <input
-                        type="number"
-                        value={formPlan.monto}
-                        onChange={(e) =>
-                          setFormPlan({ ...formPlan, monto: e.target.value })
-                        }
-                        placeholder={
-                          plan ? String(plan.valor_con_iva) : 'Sin plan base'
-                        }
-                        className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-white/40 text-xs mb-1 block">
-                        Sesiones
-                      </label>
-                      <input
-                        type="number"
-                        value={formPlan.sesiones}
-                        onChange={(e) =>
-                          setFormPlan({ ...formPlan, sesiones: e.target.value })
-                        }
-                        placeholder={
-                          !plan || plan.cantidad_sesiones === null
-                            ? 'Ilimitado'
-                            : String(plan.cantidad_sesiones)
-                        }
-                        className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-white/30 text-xs">
-                    {plan
-                      ? 'Deja vacío para usar los valores normales del plan.'
-                      : 'Este usuario no tiene un plan base — completa al menos las sesiones para que le aparezcan disponibles.'}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => guardarEdicionPlan(u.id)}
-                      className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
-                    >
-                      Guardar
-                    </button>
-                    <button
-                      onClick={() => setEditandoPlanId(null)}
-                      className="flex-1 bg-white/10 text-white rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => abrirEdicionPlan(u)}
-                  className="flex items-center gap-1 text-cyan-brand text-xs font-medium mb-2"
-                >
-                  <Pencil size={12} />
-                  {u.plan_dias_personalizado ||
-                  u.plan_monto_personalizado ||
-                  u.plan_sesiones_personalizado
-                    ? `Personalizado: ${
-                        u.plan_dias_personalizado || diasRenovacion
-                      } días · $${(
-                        u.plan_monto_personalizado ||
-                        plan?.valor_con_iva ||
-                        0
-                      ).toLocaleString('es-CL')} · ${
-                        u.plan_sesiones_personalizado ||
-                        plan?.cantidad_sesiones ||
-                        'Ilimitado'
-                      } sesiones`
-                    : 'Editar duración / monto / sesiones'}
-                </button>
-              )}
-
-              {agregandoSesionesId === u.id ? (
-                <div className="bg-black/20 border border-white/10 rounded-xl p-3 mb-2 flex flex-col gap-2">
-                  <label className="text-white/40 text-xs block">
-                    ¿Cuántas sesiones agregar? (usa negativo para restar, ej:
-                    -2)
-                  </label>
-                  <input
-                    type="number"
-                    value={cantidadExtra}
-                    onChange={(e) => setCantidadExtra(e.target.value)}
-                    placeholder="Ej: 2"
-                    className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
-                  />
-                  {u.sesiones_extra > 0 && (
-                    <p className="text-white/30 text-xs">
-                      Ya tiene {u.sesiones_extra} sesión(es) extra acumulada(s).
-                    </p>
-                  )}
-                  {mensajeExtra && (
-                    <p
-                      className={`text-xs ${
-                        mensajeExtra.ok ? 'text-cyan-brand' : 'text-red-400'
+              {abierto && (
+                <div className="mt-3">
+                  {plan && (
+                    <div
+                      className={`flex items-center justify-between rounded-xl px-3 py-2 mb-2 ${
+                        necesitaRenovar
+                          ? 'bg-yellow-400/10 border border-yellow-400/30'
+                          : 'bg-white/[0.03]'
                       }`}
                     >
-                      {mensajeExtra.mensaje}
-                    </p>
+                      <p
+                        className={`text-xs ${
+                          necesitaRenovar ? 'text-yellow-300' : 'text-white/40'
+                        }`}
+                      >
+                        {u.fecha_ultima_renovacion
+                          ? necesitaRenovar
+                            ? `Última renovación: ${u.fecha_ultima_renovacion} (vencida)`
+                            : `Al día · próxima renovación ${fechaProximaRenovacion}`
+                          : 'Sin renovación registrada'}
+                      </p>
+                      {necesitaRenovar ? (
+                        <button
+                          onClick={async () => {
+                            const resultado = await confirmarRenovacion(u.id);
+                            if (!resultado?.ok) {
+                              alert(
+                                resultado?.mensaje ||
+                                  'No se pudo confirmar el pago.'
+                              );
+                            }
+                          }}
+                          className="bg-cyan-brand text-ink text-xs font-semibold px-2.5 py-1.5 rounded-md whitespace-nowrap transition-transform active:scale-95"
+                        >
+                          {u.fecha_ultima_renovacion
+                            ? 'Renovar plan'
+                            : 'Confirmar pago'}
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          title={`Disponible desde el ${fechaProximaRenovacion}`}
+                          className="bg-white/5 text-white/30 text-xs font-semibold px-2.5 py-1.5 rounded-md whitespace-nowrap cursor-not-allowed"
+                        >
+                          Renovar plan
+                        </button>
+                      )}
+                    </div>
                   )}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleAgregarSesiones(u.id)}
-                      className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
-                    >
-                      {Number(cantidadExtra) < 0 ? 'Restar' : 'Agregar'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAgregandoSesionesId(null);
-                        setCantidadExtra('');
-                        setMensajeExtra(null);
-                      }}
-                      className="flex-1 bg-white/10 text-white rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setAgregandoSesionesId(u.id)}
-                  className="flex items-center gap-1 text-cyan-brand text-xs font-medium mb-2"
-                >
-                  <Zap size={12} />
-                  Agregar sesiones
-                  {u.sesiones_extra > 0
-                    ? ` (+${u.sesiones_extra} ya agregadas)`
-                    : ''}
-                </button>
-              )}
 
-              <select
-                value={u.plan_id || ''}
-                onChange={(e) => asignarPlan(u.id, e.target.value)}
-                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors mb-3"
-              >
-                <option value="">Sin plan asignado</option>
-                {Object.values(planes).map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nombre}
-                  </option>
-                ))}
-              </select>
+                  {editandoEste ? (
+                    <div className="bg-black/20 border border-white/10 rounded-xl p-3 mb-2 flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="text-white/40 text-xs mb-1 block">
+                            Duración (días)
+                          </label>
+                          <input
+                            type="number"
+                            value={formPlan.dias}
+                            onChange={(e) =>
+                              setFormPlan({ ...formPlan, dias: e.target.value })
+                            }
+                            placeholder={String(diasRenovacion)}
+                            className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-white/40 text-xs mb-1 block">
+                            Monto ($)
+                          </label>
+                          <input
+                            type="number"
+                            value={formPlan.monto}
+                            onChange={(e) =>
+                              setFormPlan({
+                                ...formPlan,
+                                monto: e.target.value,
+                              })
+                            }
+                            placeholder={
+                              plan
+                                ? String(plan.valor_con_iva)
+                                : 'Sin plan base'
+                            }
+                            className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-white/40 text-xs mb-1 block">
+                            Sesiones
+                          </label>
+                          <input
+                            type="number"
+                            value={formPlan.sesiones}
+                            onChange={(e) =>
+                              setFormPlan({
+                                ...formPlan,
+                                sesiones: e.target.value,
+                              })
+                            }
+                            placeholder={
+                              !plan || plan.cantidad_sesiones === null
+                                ? 'Ilimitado'
+                                : String(plan.cantidad_sesiones)
+                            }
+                            className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-white/30 text-xs">
+                        {plan
+                          ? 'Deja vacío para usar los valores normales del plan.'
+                          : 'Este usuario no tiene un plan base — completa al menos las sesiones para que le aparezcan disponibles.'}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => guardarEdicionPlan(u.id)}
+                          className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
+                        >
+                          Guardar
+                        </button>
+                        <button
+                          onClick={() => setEditandoPlanId(null)}
+                          className="flex-1 bg-white/10 text-white rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => abrirEdicionPlan(u)}
+                      className="flex items-center gap-1 text-cyan-brand text-xs font-medium mb-2"
+                    >
+                      <Pencil size={12} />
+                      {u.plan_dias_personalizado ||
+                      u.plan_monto_personalizado ||
+                      u.plan_sesiones_personalizado
+                        ? `Personalizado: ${
+                            u.plan_dias_personalizado || diasRenovacion
+                          } días · $${(
+                            u.plan_monto_personalizado ||
+                            plan?.valor_con_iva ||
+                            0
+                          ).toLocaleString('es-CL')} · ${
+                            u.plan_sesiones_personalizado ||
+                            plan?.cantidad_sesiones ||
+                            'Ilimitado'
+                          } sesiones`
+                        : 'Editar duración / monto / sesiones'}
+                    </button>
+                  )}
 
-              {confirmandoAccionId === u.id ? (
-                <div className="bg-black/20 border border-white/10 rounded-xl p-3 flex flex-col gap-2">
-                  <p className="text-white/70 text-xs">
-                    {u.estado === 'inactivo'
-                      ? '¿Reactivar esta cuenta?'
-                      : '¿Desactivar esta cuenta? No podrá iniciar sesión ni reservar clases, pero su historial se conserva.'}
-                  </p>
-                  <div className="flex gap-2">
+                  {agregandoSesionesId === u.id ? (
+                    <div className="bg-black/20 border border-white/10 rounded-xl p-3 mb-2 flex flex-col gap-2">
+                      <label className="text-white/40 text-xs block">
+                        ¿Cuántas sesiones agregar? (usa negativo para restar,
+                        ej: -2)
+                      </label>
+                      <input
+                        type="number"
+                        value={cantidadExtra}
+                        onChange={(e) => setCantidadExtra(e.target.value)}
+                        placeholder="Ej: 2"
+                        className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
+                      />
+                      {u.sesiones_extra > 0 && (
+                        <p className="text-white/30 text-xs">
+                          Ya tiene {u.sesiones_extra} sesión(es) extra
+                          acumulada(s).
+                        </p>
+                      )}
+                      {mensajeExtra && (
+                        <p
+                          className={`text-xs ${
+                            mensajeExtra.ok ? 'text-cyan-brand' : 'text-red-400'
+                          }`}
+                        >
+                          {mensajeExtra.mensaje}
+                        </p>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleAgregarSesiones(u.id)}
+                          className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
+                        >
+                          {Number(cantidadExtra) < 0 ? 'Restar' : 'Agregar'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setAgregandoSesionesId(null);
+                            setCantidadExtra('');
+                            setMensajeExtra(null);
+                          }}
+                          className="flex-1 bg-white/10 text-white rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
                     <button
-                      onClick={() => {
-                        if (u.estado === 'inactivo') reactivarUsuario(u.id);
-                        else desactivarUsuario(u.id);
-                        setConfirmandoAccionId(null);
-                      }}
-                      className={`flex-1 font-semibold rounded-lg py-2 text-xs transition-transform active:scale-[0.98] ${
-                        u.estado === 'inactivo'
-                          ? 'bg-cyan-brand text-ink'
-                          : 'bg-yellow-500/80 text-ink'
-                      }`}
+                      onClick={() => setAgregandoSesionesId(u.id)}
+                      className="flex items-center gap-1 text-cyan-brand text-xs font-medium mb-2"
                     >
-                      Sí, {u.estado === 'inactivo' ? 'reactivar' : 'desactivar'}
+                      <Zap size={12} />
+                      Agregar sesiones
+                      {u.sesiones_extra > 0
+                        ? ` (+${u.sesiones_extra} ya agregadas)`
+                        : ''}
                     </button>
-                    <button
-                      onClick={() => setConfirmandoAccionId(null)}
-                      className="flex-1 bg-white/10 text-white rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => setConfirmandoAccionId(u.id)}
-                    className={`flex items-center gap-1 text-xs font-medium ${
-                      u.estado === 'inactivo'
-                        ? 'text-cyan-brand'
-                        : 'text-yellow-400/80'
-                    }`}
+                  )}
+
+                  <select
+                    value={u.plan_id || ''}
+                    onChange={(e) => asignarPlan(u.id, e.target.value)}
+                    className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors mb-3"
                   >
-                    {u.estado === 'inactivo' ? (
-                      <UserCheck size={13} />
-                    ) : (
-                      <UserX size={13} />
-                    )}
-                    {u.estado === 'inactivo'
-                      ? 'Reactivar cuenta'
-                      : 'Desactivar cuenta'}
-                  </button>
-                  <button
-                    onClick={() => rechazarUsuario(u.id)}
-                    className="flex items-center gap-1 text-red-400/60 text-xs hover:text-red-400 transition-colors"
-                  >
-                    <Trash2 size={13} /> Eliminar
-                  </button>
+                    <option value="">Sin plan asignado</option>
+                    {Object.values(planes).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre}
+                      </option>
+                    ))}
+                  </select>
+
+                  {u.id === usuarioActual?.id ? (
+                    <p className="text-white/25 text-[11px]">
+                      Esta es tu cuenta — no se puede desactivar ni eliminar
+                      desde aquí.
+                    </p>
+                  ) : confirmandoAccionId === u.id ? (
+                    <div className="bg-black/20 border border-white/10 rounded-xl p-3 flex flex-col gap-2">
+                      <p className="text-white/70 text-xs">
+                        {u.estado === 'inactivo'
+                          ? '¿Reactivar esta cuenta?'
+                          : '¿Desactivar esta cuenta? No podrá iniciar sesión ni reservar clases, pero su historial se conserva.'}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            if (u.estado === 'inactivo') reactivarUsuario(u.id);
+                            else desactivarUsuario(u.id);
+                            setConfirmandoAccionId(null);
+                          }}
+                          className={`flex-1 font-semibold rounded-lg py-2 text-xs transition-transform active:scale-[0.98] ${
+                            u.estado === 'inactivo'
+                              ? 'bg-cyan-brand text-ink'
+                              : 'bg-yellow-500/80 text-ink'
+                          }`}
+                        >
+                          Sí,{' '}
+                          {u.estado === 'inactivo' ? 'reactivar' : 'desactivar'}
+                        </button>
+                        <button
+                          onClick={() => setConfirmandoAccionId(null)}
+                          className="flex-1 bg-white/10 text-white rounded-lg py-2 text-xs transition-transform active:scale-[0.98]"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={() => setConfirmandoAccionId(u.id)}
+                        className={`flex items-center gap-1 text-xs font-medium ${
+                          u.estado === 'inactivo'
+                            ? 'text-cyan-brand'
+                            : 'text-yellow-400/80'
+                        }`}
+                      >
+                        {u.estado === 'inactivo' ? (
+                          <UserCheck size={13} />
+                        ) : (
+                          <UserX size={13} />
+                        )}
+                        {u.estado === 'inactivo'
+                          ? 'Reactivar cuenta'
+                          : 'Desactivar cuenta'}
+                      </button>
+                      <button
+                        onClick={() => rechazarUsuario(u.id)}
+                        className="flex items-center gap-1 text-red-400/60 text-xs hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={13} /> Eliminar
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

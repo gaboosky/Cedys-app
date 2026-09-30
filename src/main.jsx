@@ -1,14 +1,33 @@
-import { StrictMode } from 'react';
+import { StrictMode, Component } from 'react';
 import { createRoot } from 'react-dom/client';
-import * as Sentry from '@sentry/react';
 import './index.css';
 import App from './App.jsx';
 
-Sentry.init({
-  dsn: 'https://7a828fe82aeab7d30a95ddebd2647dbc@o4512057187303424.ingest.us.sentry.io/4512057194381312',
-  environment: import.meta.env.MODE,
-  sendDefaultPii: false,
-});
+// Si algo se rompe dentro de la app, muestra una pantalla amable en vez de quedar en blanco.
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    console.error('Error en la app:', error, info);
+  }
+  render() {
+    if (this.state.error) {
+      const Fallback = this.props.fallback;
+      return (
+        <Fallback
+          error={this.state.error}
+          resetError={() => this.setState({ error: null })}
+        />
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function PantallaError({ error, resetError }) {
   return (
@@ -41,7 +60,7 @@ function PantallaError({ error, resetError }) {
           marginBottom: '20px',
         }}
       >
-        Ya nos avisaron del problema. Intenta de nuevo.
+        Intenta de nuevo. Si sigue pasando, avísale al gimnasio.
       </p>
       <button
         onClick={resetError}
@@ -63,9 +82,9 @@ function PantallaError({ error, resetError }) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <Sentry.ErrorBoundary fallback={PantallaError}>
+    <ErrorBoundary fallback={PantallaError}>
       <App />
-    </Sentry.ErrorBoundary>
+    </ErrorBoundary>
   </StrictMode>
 );
 

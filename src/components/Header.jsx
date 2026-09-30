@@ -107,28 +107,28 @@ export default function Header() {
     <>
       <header className="sticky top-0 z-40 bg-black border-b border-white/10 relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.6)]">
         <div
-          className="absolute -top-12 -right-12 w-52 h-52 bg-cyan-brand pointer-events-none"
+          className="absolute -top-8 -right-8 w-32 h-32 bg-cyan-brand pointer-events-none"
           style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 0)' }}
         />
         <div
-          className="absolute -top-20 -right-20 w-64 h-64 bg-cyan-brandDark pointer-events-none"
+          className="absolute -top-12 -right-12 w-40 h-40 bg-cyan-brandDark pointer-events-none"
           style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 0)' }}
         />
 
-        <div className="relative flex items-center justify-between px-3 pt-[calc(0.625rem+env(safe-area-inset-top))] pb-2">
+        <div className="relative flex items-center justify-between px-3 pt-[calc(0.3rem+env(safe-area-inset-top))] pb-0">
           <button
             onClick={() => setMenuAbierto(true)}
             className="text-white/80 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
             aria-label="Abrir menú"
           >
-            <Menu size={21} />
+            <Menu size={20} />
           </button>
           <button
             onClick={toggleNotificaciones}
             className="relative text-white/80 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
             aria-label="Notificaciones"
           >
-            <Bell size={19} />
+            <Bell size={18} />
             {noLeidas > 0 && (
               <span className="absolute top-0.5 right-0.5 bg-cyan-brand text-ink text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
                 {noLeidas > 9 ? '9+' : noLeidas}
@@ -137,24 +137,24 @@ export default function Header() {
           </button>
         </div>
 
-        <div className="relative flex justify-center pt-2 pb-2">
-          <div className="absolute w-56 h-24 bg-cyan-brand/15 blur-3xl pointer-events-none" />
+        <div className="relative flex justify-center pt-0 pb-0.5">
+          <div className="absolute w-40 h-16 bg-cyan-brand/15 blur-3xl pointer-events-none" />
           <img
             src={logoUrl || LOGO_CEDS_WORDMARK}
             alt="CED&S"
-            className="relative w-[220px] h-auto object-contain drop-shadow-[0_2px_10px_rgba(3,205,230,0.25)]"
+            className="relative w-[130px] h-auto object-contain drop-shadow-[0_2px_8px_rgba(3,205,230,0.25)]"
           />
         </div>
-        <div className="relative flex justify-center pb-3">
-          <div className="w-20 h-[5px] rounded-full bg-cyan-brand shadow-[0_0_12px_rgba(3,205,230,0.6)]" />
+        <div className="relative flex justify-center pb-1.5">
+          <div className="w-12 h-[3px] rounded-full bg-cyan-brand shadow-[0_0_10px_rgba(3,205,230,0.6)]" />
         </div>
 
-        <div className="relative pb-4 px-6 text-center">
-          <p className="font-display text-2xl text-white leading-none tracking-wide">
+        <div className="relative pb-2.5 px-6 text-center">
+          <p className="font-display text-lg text-white leading-none tracking-wide">
             {titulo}
           </p>
           {subtitulo && (
-            <p className="text-white/40 text-xs mt-1.5">{subtitulo}</p>
+            <p className="text-white/40 text-[11px] mt-1">{subtitulo}</p>
           )}
         </div>
       </header>
@@ -222,15 +222,22 @@ export default function Header() {
             <p className="text-white/40 text-xs mb-1">Sesión iniciada como</p>
             <p className="text-white text-sm mb-4">{usuarioActual.nombre}</p>
 
-            {usuarioActual.rol === 'head_coach' && (
+            {(usuarioActual.rol === 'head_coach' ||
+              usuarioActual.rol === 'coach') && (
               <div className="mb-6">
                 <p className="text-white/40 text-xs mb-1.5">Verme como</p>
                 <div className="flex bg-white/[0.04] border border-white/10 rounded-lg p-1">
-                  {[
-                    { valor: 'head_coach', label: 'Admin' },
-                    { valor: 'coach', label: 'Coach' },
-                    { valor: 'usuario', label: 'Usuario' },
-                  ].map((opcion) => (
+                  {(usuarioActual.rol === 'head_coach'
+                    ? [
+                        { valor: 'head_coach', label: 'Admin' },
+                        { valor: 'coach', label: 'Coach' },
+                        { valor: 'usuario', label: 'Usuario' },
+                      ]
+                    : [
+                        { valor: 'coach', label: 'Coach' },
+                        { valor: 'usuario', label: 'Usuario' },
+                      ]
+                  ).map((opcion) => (
                     <button
                       key={opcion.valor}
                       onClick={() => cambiarVista(opcion.valor)}

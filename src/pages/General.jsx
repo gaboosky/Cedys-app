@@ -37,7 +37,7 @@ const PREGUNTAS_FRECUENTES = [
   {
     pregunta: '¿Puedo congelar mi plan si me voy de viaje?',
     respuesta:
-      'Sí, desde tu Perfil puedes solicitar congelar tu membresía. Avisa con al menos 7 días de anticipación; se permite congelar hasta 1 mes.',
+      'Esta opción esta disponible para planes desde 3 meses. Para ello, desde tu Perfil puedes solicitar congelar tu membresía.',
   },
   {
     pregunta: '¿Qué hago si la clase que quiero está llena?',
@@ -47,7 +47,7 @@ const PREGUNTAS_FRECUENTES = [
   {
     pregunta: '¿Puedo transferirle mi plan a otra persona?',
     respuesta:
-      'Sí, los planes son transferibles. Escríbenos por WhatsApp para coordinarlo.',
+      'No, los planes son instransferibles. Escríbenos por WhatsApp para cualquier duda o caso excepcional.',
   },
 ];
 
