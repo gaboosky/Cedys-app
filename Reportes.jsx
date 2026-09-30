@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { formatearRut } from '../../lib/formato';
 import {
   Users,
   CalendarCheck,
@@ -29,10 +30,10 @@ export default function Reportes() {
     const XLSX = await import('xlsx');
 
     const filas = usuarios
-      .filter((u) => u.rol === 'usuario')
+      .filter((u) => u.estado !== 'pendiente')
       .map((u) => ({
         Nombre: u.nombre,
-        RUT: u.rut,
+        RUT: formatearRut(u.rut),
         Correo: u.correo,
         Teléfono: u.telefono || '',
         Plan: u.plan_id ? planes[u.plan_id]?.nombre || '' : 'Sin plan',
@@ -144,7 +145,7 @@ export default function Reportes() {
     const XLSX = await import('xlsx');
 
     const filas = usuarios
-      .filter((u) => u.rol === 'usuario' && u.estado === 'activo' && u.plan_id)
+      .filter((u) => u.estado === 'activo' && u.plan_id)
       .map((u) => {
         const plan = planes[u.plan_id];
         return {
@@ -180,12 +181,10 @@ export default function Reportes() {
     setGenerando(null);
   }
 
-  const totalSocios = usuarios.filter(
-    (u) => u.rol === 'usuario' && u.estado === 'activo'
-  ).length;
+  const totalSocios = usuarios.filter((u) => u.estado === 'activo').length;
   const totalReservas = reservas.length;
   const ingresoTotal = usuarios
-    .filter((u) => u.rol === 'usuario' && u.estado === 'activo' && u.plan_id)
+    .filter((u) => u.estado === 'activo' && u.plan_id)
     .reduce((acc, u) => acc + (planes[u.plan_id]?.valor_con_iva || 0), 0);
 
   return (

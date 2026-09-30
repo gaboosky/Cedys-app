@@ -142,7 +142,7 @@ export default function Header() {
           <img
             src={logoUrl || LOGO_CEDS_WORDMARK}
             alt="CED&S"
-            className="relative w-[80px] h-auto object-contain drop-shadow-[0_2px_8px_rgba(3,205,230,0.25)]"
+            className="relative w-[130px] h-auto object-contain drop-shadow-[0_2px_8px_rgba(3,205,230,0.25)]"
           />
         </div>
         <div className="relative flex justify-center pb-1.5">
@@ -222,15 +222,22 @@ export default function Header() {
             <p className="text-white/40 text-xs mb-1">Sesión iniciada como</p>
             <p className="text-white text-sm mb-4">{usuarioActual.nombre}</p>
 
-            {usuarioActual.rol === 'head_coach' && (
+            {(usuarioActual.rol === 'head_coach' ||
+              usuarioActual.rol === 'coach') && (
               <div className="mb-6">
                 <p className="text-white/40 text-xs mb-1.5">Verme como</p>
                 <div className="flex bg-white/[0.04] border border-white/10 rounded-lg p-1">
-                  {[
-                    { valor: 'head_coach', label: 'Admin' },
-                    { valor: 'coach', label: 'Coach' },
-                    { valor: 'usuario', label: 'Usuario' },
-                  ].map((opcion) => (
+                  {(usuarioActual.rol === 'head_coach'
+                    ? [
+                        { valor: 'head_coach', label: 'Admin' },
+                        { valor: 'coach', label: 'Coach' },
+                        { valor: 'usuario', label: 'Usuario' },
+                      ]
+                    : [
+                        { valor: 'coach', label: 'Coach' },
+                        { valor: 'usuario', label: 'Usuario' },
+                      ]
+                  ).map((opcion) => (
                     <button
                       key={opcion.valor}
                       onClick={() => cambiarVista(opcion.valor)}

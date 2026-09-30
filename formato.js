@@ -1,4 +1,5 @@
 export function formatearRut(valor) {
+  if (!valor) return '';
   const limpio = valor.replace(/[^0-9kK]/g, '').toUpperCase();
   if (limpio.length === 0) return '';
   if (limpio.length === 1) return limpio;

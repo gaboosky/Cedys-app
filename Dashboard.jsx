@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Users,
@@ -5,27 +6,54 @@ import {
   LayoutGrid,
   UserCheck,
   DollarSign,
-  Dumbbell,
   AlertTriangle,
+  CalendarCheck,
+  Clock,
 } from 'lucide-react';
 
 export default function Dashboard() {
-  const { usuarios, horarios, reservas, planes, usuarioRutinas } = useAuth();
-
-  const totalUsuarios = usuarios.filter(
-    (u) => u.rol === 'usuario' && u.estado === 'activo'
+  const {
+    usuarios,
+    horarios,
+    reservas,
+    planes,
+    clasesRealizadasConAlumnosEnRango,
+    solicitudesFueraPlazo,
+  } = useAuth();
+  const fueraPlazoPendientes = (solicitudesFueraPlazo || []).filter(
+    (s) => s.estado === 'pendiente'
   ).length;
-  const totalCoaches = usuarios.filter((u) => u.rol === 'coach').length;
+  const navigate = useNavigate();
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const ahora = new Date();
+  const desdeMes = `${ahora.getFullYear()}-${pad(ahora.getMonth() + 1)}-01`;
+  const hastaMes = `${ahora.getFullYear()}-${pad(ahora.getMonth() + 1)}-${pad(
+    ahora.getDate()
+  )}`;
+  const clasesRealizadasMes = clasesRealizadasConAlumnosEnRango(
+    desdeMes,
+    hastaMes
+  ).length;
+
+  const totalUsuarios = usuarios.filter((u) => u.estado === 'activo').length;
+  const totalCoaches = usuarios.filter(
+    (u) => u.rol === 'coach' || u.rol === 'head_coach'
+  ).length;
   const reservasActivas = reservas.length;
   const totalHorarios = horarios.length;
   const solicitudesPendientes = usuarios.filter(
     (u) => u.estado === 'pendiente'
   ).length;
-  const rutinasActivas = usuarioRutinas.filter((ur) => ur.activa).length;
 
   const ingresoMensualEstimado = usuarios
-    .filter((u) => u.rol === 'usuario' && u.estado === 'activo' && u.plan_id)
-    .reduce((acc, u) => acc + (planes[u.plan_id]?.valor_con_iva || 0), 0);
+    .filter((u) => u.estado === 'activo' && u.plan_id && !u.excluido_ingreso)
+    .reduce(
+      (acc, u) =>
+        acc +
+        (u.plan_monto_personalizado || planes[u.plan_id]?.valor_con_iva || 0),
+      0
+    );
 
   const planesPorVencer = usuarios.filter((u) => {
     if (!u.plan_id) return false;
@@ -36,7 +64,10 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <div className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-6 mb-6 overflow-hidden">
+      <div
+        onClick={() => navigate('/ingreso-detalle')}
+        className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-6 mb-6 overflow-hidden cursor-pointer transition-transform active:scale-[0.99]"
+      >
         <div className="absolute top-0 left-0 w-full h-1 bg-cyan-brand" />
         <div className="flex items-center gap-1.5 mb-1">
           <DollarSign size={14} className="text-cyan-brand" />
@@ -51,30 +82,62 @@ export default function Dashboard() {
           ${ingresoMensualEstimado.toLocaleString('es-CL')}
         </p>
         <p className="text-white/40 text-xs mt-2">
-          Según planes activos asignados
+          Según planes activos asignados · toca para ver el detalle
         </p>
       </div>
 
+      {fueraPlazoPendientes > 0 && (
+        <button
+          onClick={() => navigate('/usuarios#fuera-de-plazo')}
+          className="w-full flex items-center justify-between bg-yellow-400/10 border border-yellow-400/30 rounded-2xl px-4 py-3 mb-6 transition-transform active:scale-[0.99]"
+        >
+          <span className="flex items-center gap-2 text-yellow-200 text-sm font-medium">
+            <Clock size={16} />
+            {fueraPlazoPendientes} solicitud
+            {fueraPlazoPendientes !== 1 ? 'es' : ''} de hora fuera de plazo
+          </span>
+          <span className="text-yellow-200/70 text-xs">Revisar →</span>
+        </button>
+      )}
+
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <Stat icon={Users} label="Usuarios activos" value={totalUsuarios} />
-        <Stat icon={Users} label="Coaches" value={totalCoaches} />
+        <Stat
+          icon={Users}
+          label="Usuarios activos"
+          value={totalUsuarios}
+          onClick={() => navigate('/usuarios')}
+        />
+        <Stat
+          icon={Users}
+          label="Coaches"
+          value={totalCoaches}
+          onClick={() => navigate('/coaches')}
+        />
         <Stat
           icon={Calendar}
           label="Reservas activas"
           value={reservasActivas}
+          onClick={() => navigate('/reservas-activas')}
         />
         <Stat
           icon={LayoutGrid}
           label="Horarios definidos"
           value={totalHorarios}
+          onClick={() => navigate('/clases-admin')}
+        />
+        <Stat
+          icon={CalendarCheck}
+          label="Clases realizadas (mes)"
+          value={clasesRealizadasMes}
+          onClick={() => navigate('/clases-realizadas')}
         />
         <Stat
           icon={UserCheck}
           label="Solicitudes pendientes"
           value={solicitudesPendientes}
           destacar={solicitudesPendientes > 0}
+          onClick={() => navigate('/usuarios#solicitudes-pendientes')}
         />
-        <Stat icon={Dumbbell} label="Rutinas activas" value={rutinasActivas} />
       </div>
 
       {planesPorVencer.length > 0 && (
@@ -100,13 +163,19 @@ export default function Dashboard() {
   );
 }
 
-function Stat({ icon: Icon, label, value, destacar }) {
+function Stat({ icon: Icon, label, value, destacar, onClick }) {
+  const clickable = typeof onClick === 'function';
   return (
     <div
-      className={`rounded-2xl p-4 border ${
+      onClick={onClick}
+      className={`rounded-2xl p-4 border transition-transform ${
         destacar
           ? 'bg-cyan-brand/10 border-cyan-brand/30'
           : 'bg-white/[0.04] border-white/10'
+      } ${
+        clickable
+          ? 'cursor-pointer active:scale-[0.97] hover:border-white/20'
+          : ''
       }`}
     >
       <Icon

@@ -12,7 +12,16 @@ export default function Coaches() {
     rechazarUsuario,
     cambiarRol,
   } = useAuth();
-  const coaches = usuarios.filter((u) => u.rol === 'coach');
+  // El admin (head_coach) también es coach, así que aparece siempre en esta lista.
+  const coaches = usuarios
+    .filter((u) => u.rol === 'coach' || u.rol === 'head_coach')
+    .sort((a, b) =>
+      a.rol === 'head_coach'
+        ? -1
+        : b.rol === 'head_coach'
+        ? 1
+        : (a.nombre || '').localeCompare(b.nombre || '')
+    );
   const usuariosExistentes = usuarios.filter(
     (u) => u.rol === 'usuario' && u.estado === 'activo'
   );
@@ -195,7 +204,8 @@ export default function Coaches() {
               />
               <p className="text-white/30 text-xs">
                 Elige a alguien que ya tiene cuenta de usuario — no hace falta
-                volver a llenar sus datos.
+                volver a llenar sus datos. Los administradores ya son coach
+                automáticamente, por eso no aparecen aquí.
               </p>
 
               <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
@@ -272,39 +282,41 @@ export default function Coaches() {
                     placeholder="Teléfono"
                     className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
                   />
-                  <div>
-                    <label className="text-white/40 text-xs mb-1 block">
-                      Rol de esta persona
-                    </label>
-                    <div className="flex bg-black/20 border border-white/10 rounded-lg p-1">
-                      <button
-                        type="button"
-                        onClick={() => cambiarRol(c.id, 'coach')}
-                        className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                          c.rol === 'coach'
-                            ? 'bg-cyan-brand text-ink'
-                            : 'text-white/50'
-                        }`}
-                      >
-                        Coach
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => cambiarRol(c.id, 'usuario')}
-                        className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                          c.rol === 'usuario'
-                            ? 'bg-cyan-brand text-ink'
-                            : 'text-white/50'
-                        }`}
-                      >
-                        Usuario
-                      </button>
+                  {c.rol !== 'head_coach' && (
+                    <div>
+                      <label className="text-white/40 text-xs mb-1 block">
+                        Rol de esta persona
+                      </label>
+                      <div className="flex bg-black/20 border border-white/10 rounded-lg p-1">
+                        <button
+                          type="button"
+                          onClick={() => cambiarRol(c.id, 'coach')}
+                          className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                            c.rol === 'coach'
+                              ? 'bg-cyan-brand text-ink'
+                              : 'text-white/50'
+                          }`}
+                        >
+                          Coach
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => cambiarRol(c.id, 'usuario')}
+                          className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                            c.rol === 'usuario'
+                              ? 'bg-cyan-brand text-ink'
+                              : 'text-white/50'
+                          }`}
+                        >
+                          Usuario
+                        </button>
+                      </div>
+                      <p className="text-white/30 text-xs mt-1">
+                        Si lo pasas a "Usuario", desaparece de esta lista pero
+                        mantiene su cuenta completa (historial, reservas, etc).
+                      </p>
                     </div>
-                    <p className="text-white/30 text-xs mt-1">
-                      Si lo pasas a "Usuario", desaparece de esta lista pero
-                      mantiene su cuenta completa (historial, reservas, etc).
-                    </p>
-                  </div>
+                  )}
                   <div className="flex gap-2">
                     <button
                       onClick={() => guardarEdicion(c.id)}
@@ -324,9 +336,16 @@ export default function Coaches() {
                 <>
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-white font-display text-xl">
-                        {c.nombre}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-white font-display text-xl">
+                          {c.nombre}
+                        </p>
+                        {c.rol === 'head_coach' && (
+                          <span className="text-cyan-brand text-[10px] font-semibold uppercase tracking-wide bg-cyan-brand/10 px-1.5 py-0.5 rounded">
+                            Admin
+                          </span>
+                        )}
+                      </div>
                       <p className="text-white/40 text-sm mb-2">
                         {c.correo} · {c.telefono}
                       </p>
@@ -361,12 +380,14 @@ export default function Coaches() {
                         >
                           <Pencil size={16} />
                         </button>
-                        <button
-                          onClick={() => setEliminandoId(c.id)}
-                          className="text-red-400/70 p-2 hover:text-red-400 transition-transform active:scale-90"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {c.rol !== 'head_coach' && (
+                          <button
+                            onClick={() => setEliminandoId(c.id)}
+                            className="text-red-400/70 p-2 hover:text-red-400 transition-transform active:scale-90"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

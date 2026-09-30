@@ -1,8 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { reservaBloqueada } from '../lib/horarioUtils';
+import { reservaBloqueada, horaAFecha } from '../lib/horarioUtils';
 import { Check } from 'lucide-react';
+
+// Convierte un Date a "YYYY-MM-DD" usando el calendario LOCAL (no UTC).
+// fecha.toISOString() convierte a UTC y puede saltar al día siguiente en horario
+// de tarde/noche en Chile (UTC-3), guardando la reserva con la fecha equivocada.
+function soloFechaLocal(fecha) {
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+}
 
 function proximosDiasHabiles(cantidad = 7) {
   const dias = [];
@@ -23,7 +33,7 @@ function proximosDiasHabiles(cantidad = 7) {
         month: 'long',
       });
       dias.push({
-        key: fecha.toISOString().slice(0, 10),
+        key: soloFechaLocal(fecha),
         nombreDia: nombreCapitalizado,
         fechaCorta,
         esHoy: offset === 0,
@@ -42,6 +52,7 @@ export default function Horarios() {
     sesionesRestantes,
     horarioEstaCancelado,
     horasAnticipacion,
+    solicitudFueraPlazoDe,
   } = useAuth();
   const navigate = useNavigate();
   const [seleccionado, setSeleccionado] = useState(null);
@@ -109,11 +120,25 @@ export default function Horarios() {
                     const lleno = inscritos >= h.cupo_max;
                     const reservada = estaReservada(h.id, dia.key);
                     const cancelada = horarioEstaCancelado(h.id, dia.key);
+                    const cerradaPorTiempo = reservaBloqueada(
+                      dia.key,
+                      h.hora,
+                      horasAnticipacion
+                    );
                     const bloqueada =
+                      !reservada && (cerradaPorTiempo || cancelada);
+                    // Clase de hoy que ya cerró reservas pero aún no empieza: se puede entrar a pedir hora fuera de plazo.
+                    const fueraDePlazo =
                       !reservada &&
-                      (reservaBloqueada(dia.key, h.hora, horasAnticipacion) ||
-                        cancelada);
-                    const deshabilitada = (lleno || bloqueada) && !reservada;
+                      !cancelada &&
+                      cerradaPorTiempo &&
+                      dia.esHoy &&
+                      horaAFecha(dia.key, h.hora).getTime() > Date.now();
+                    const solicitudPendiente =
+                      solicitudFueraPlazoDe(h.id, dia.key)?.estado ===
+                      'pendiente';
+                    const deshabilitada =
+                      (lleno || bloqueada) && !reservada && !fueraDePlazo;
                     const estaSeleccionado = seleccionado === clave;
 
                     return (
@@ -126,8 +151,10 @@ export default function Horarios() {
                         title={
                           cancelada
                             ? 'Esta clase fue cancelada'
+                            : fueraDePlazo
+                            ? 'Reservas cerradas: puedes solicitar hora fuera de plazo'
                             : bloqueada
-                            ? 'Cierra 4 horas antes de que empiece'
+                            ? `Cierra ${horasAnticipacion} horas antes de que empiece`
                             : undefined
                         }
                         className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-200 ${
@@ -135,6 +162,10 @@ export default function Horarios() {
                             ? 'bg-cyan-brand text-ink border-cyan-brand scale-110'
                             : reservada
                             ? 'bg-cyan-brand text-ink border-cyan-brand'
+                            : solicitudPendiente
+                            ? 'bg-yellow-400/15 text-yellow-200 border-yellow-400/40'
+                            : fueraDePlazo
+                            ? 'bg-white/5 text-white/50 border-dashed border-yellow-400/40 active:scale-95'
                             : deshabilitada
                             ? 'bg-white/5 text-white/20 border-white/10 cursor-not-allowed'
                             : 'bg-white/5 text-white border-white/15 hover:border-cyan-brand/60 active:scale-95'

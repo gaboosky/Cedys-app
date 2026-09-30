@@ -1,19 +1,28 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Users, Settings, FileBarChart, ChevronRight } from 'lucide-react';
+import {
+  Users2,
+  Settings,
+  FileSpreadsheet,
+  ChevronRight,
+  Newspaper,
+} from 'lucide-react';
 
 export default function Mas() {
   const { usuarioActual, logout } = useAuth();
 
   const opciones = [
-    { to: '/usuarios', label: 'Usuarios', icon: Users },
-    { to: '/reportes', label: 'Reportes', icon: FileBarChart },
+    { to: '/general', label: 'General', icon: Newspaper },
+    { to: '/coaches', label: 'Coaches', icon: Users2 },
+    { to: '/planilla', label: 'Planilla / Histórico', icon: FileSpreadsheet },
     { to: '/configuracion', label: 'Configuración', icon: Settings },
   ];
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-10">
-      <div className="bg-white/[0.04] border border-white/10 rounded-2xl divide-y divide-white/10 mb-6">
+      <p className="font-display text-3xl text-white mb-6">Más</p>
+
+      <div className="bg-white/5 border border-white/10 rounded-2xl divide-y divide-white/10 mb-6">
         {opciones.map(({ to, label, icon: Icon }) => (
           <Link
             key={to}
