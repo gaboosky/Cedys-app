@@ -4,6 +4,7 @@ export const MEDIOS_PAGO = [
   { valor: 'transferencia', label: 'Transferencia' },
   { valor: 'efectivo', label: 'Efectivo' },
   { valor: 'tarjeta', label: 'Débito / crédito' },
+  { valor: 'mercadopago', label: 'Mercado Pago (en línea)' },
 ];
 
 export function etiquetaMedio(valor) {
@@ -61,7 +62,8 @@ export function nombreMes(mesKey, { corto = false, conAnio = true } = {}) {
 }
 
 export function formatearPesos(valor) {
-  return '$' + Math.round(Number(valor) || 0).toLocaleString('es-CL');
+  const n = Math.round(Number(valor) || 0);
+  return (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('es-CL');
 }
 
 export function totalDe(pagos) {
@@ -105,6 +107,7 @@ export const COLOR_MEDIO = {
   transferencia: '#3987e5',
   efectivo: '#d95926',
   tarjeta: '#199e70',
+  mercadopago: '#9b7be0',
 };
 
 const DIA_MS = 1000 * 60 * 60 * 24;

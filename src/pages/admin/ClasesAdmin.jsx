@@ -11,7 +11,190 @@ import {
   Users,
   X,
   UserMinus,
+  UserCog,
+  AlertTriangle,
 } from 'lucide-react';
+
+// Vista de la semana: todas las clases de lunes a sábado de un vistazo
+function VistaSemana({ onElegirDia }) {
+  const { horarios, reservas, horarioEstaCancelado, coachDeClase, ausenciaDe } = useAuth();
+  const [offset, setOffset] = useState(0);
+  const base = new Date();
+  base.setHours(12, 0, 0, 0);
+  base.setDate(base.getDate() + offset * 7);
+  const dow = base.getDay() === 0 ? 7 : base.getDay();
+  const lunes = new Date(base);
+  lunes.setDate(base.getDate() - (dow - 1));
+  const NOMBRES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const dias = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(lunes);
+    d.setDate(lunes.getDate() + i);
+    return { fecha: soloFechaLocal(d), nombre: NOMBRES[d.getDay()], num: d.getDate() };
+  });
+  const hoy = soloFechaLocal(new Date());
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-2">
+        <button onClick={() => setOffset(offset - 1)} className="text-white/50 text-sm px-2">
+          ‹ Anterior
+        </button>
+        <p className="text-white/60 text-xs">
+          {offset === 0 ? 'Esta semana' : `Semana del ${dias[0].num} al ${dias[5].num}`}
+        </p>
+        <button onClick={() => setOffset(offset + 1)} className="text-white/50 text-sm px-2">
+          Siguiente ›
+        </button>
+      </div>
+      <div className="overflow-x-auto -mx-6 px-6">
+        <div className="grid grid-cols-6 gap-2 min-w-[660px]">
+          {dias.map((d) => {
+            const clases = horarios
+              .filter((h) => (h.fecha_unica ? h.fecha_unica === d.fecha : h.dia === d.nombre))
+              .sort((a, b) => a.hora.localeCompare(b.hora));
+            return (
+              <div key={d.fecha} className={`rounded-xl border p-2 ${d.fecha === hoy ? 'border-cyan-brand/40 bg-cyan-brand/[0.04]' : 'border-white/10 bg-white/[0.02]'}`}>
+                <p className={`text-xs font-semibold mb-2 ${d.fecha === hoy ? 'text-cyan-brand' : 'text-white/60'}`}>
+                  {d.nombre.slice(0, 3)} {d.num}
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {clases.length === 0 && <p className="text-white/20 text-[11px]">—</p>}
+                  {clases.map((h) => {
+                    const cancelada = horarioEstaCancelado(h.id, d.fecha);
+                    const n = reservas.filter((r) => r.horario_id === h.id && r.fecha === d.fecha).length;
+                    const coach = coachDeClase(h, d.fecha);
+                    const ausencia = ausenciaDe(h.id, d.fecha);
+                    return (
+                      <button
+                        key={h.id}
+                        onClick={() => onElegirDia(d.fecha)}
+                        className={`text-left rounded-lg px-2 py-1.5 border ${
+                          cancelada
+                            ? 'border-red-500/20 bg-red-500/5'
+                            : ausencia
+                            ? 'border-yellow-400/40 bg-yellow-400/10'
+                            : 'border-white/10 bg-white/[0.04]'
+                        }`}
+                      >
+                        <p className={`text-sm font-semibold leading-tight ${cancelada ? 'text-white/30 line-through' : 'text-white'}`}>
+                          {h.hora}
+                        </p>
+                        <p className="text-white/45 text-[10px] truncate">
+                          {coach.nombre ? coach.nombre.split(' ')[0] : 'Sin coach'}
+                          {coach.esReemplazo ? ' (reemp.)' : ''}
+                        </p>
+                        <p className={`text-[10px] ${n >= h.cupo_max ? 'text-yellow-200' : 'text-cyan-brand/80'}`}>
+                          {cancelada ? 'Cancelada' : `${n}/${h.cupo_max}`}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Reemplazo de coach para un día puntual + aviso de ausencia del coach
+function PanelReemplazo({ h, fecha, coaches, onCancelarClase }) {
+  const { coachDeClase, reemplazoDe, asignarReemplazo, ausenciaDe, resolverAusencia } = useAuth();
+  const ausencia = ausenciaDe(h.id, fecha);
+  const reemplazo = reemplazoDe(h.id, fecha);
+  const [abierto, setAbierto] = useState(false);
+  const [coachId, setCoachId] = useState(reemplazo?.coach_id || '');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+
+  async function guardar(id) {
+    setGuardando(true);
+    setError('');
+    const r = await asignarReemplazo(h.id, fecha, id || null);
+    setGuardando(false);
+    if (!r.ok) return setError(r.mensaje);
+    setAbierto(false);
+  }
+
+  const mostrarPanel = abierto || ausencia;
+
+  return (
+    <div className="mt-2">
+      {reemplazo && (
+        <p className="text-[11px] text-white/60">
+          Este día la hace <span className="text-white">{reemplazo.coach_nombre}</span> (reemplazo de{' '}
+          {h.coach_nombre || 'sin coach'})
+        </p>
+      )}
+      {ausencia && (
+        <div className="mt-1.5 bg-yellow-400/10 border border-yellow-400/30 rounded-lg px-3 py-2">
+          <p className="flex items-start gap-1.5 text-yellow-100 text-xs">
+            <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+            <span>
+              {ausencia.coach_nombre} avisó que no puede hacer esta clase{ausencia.motivo ? `: ${ausencia.motivo}` : '.'}
+            </span>
+          </p>
+        </div>
+      )}
+      {mostrarPanel ? (
+        <div className="mt-2 flex flex-col gap-2">
+          <div className="flex gap-2">
+            <select
+              value={coachId}
+              onChange={(e) => setCoachId(e.target.value)}
+              className="flex-1 min-w-0 bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none focus:border-cyan-brand"
+            >
+              <option value="">Elegir coach de reemplazo</option>
+              {coaches
+                .filter((c) => c.id !== coachDeClase(h, fecha).id || reemplazo)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nombre}
+                  </option>
+                ))}
+            </select>
+            <button
+              onClick={() => guardar(coachId)}
+              disabled={!coachId || guardando}
+              className="bg-cyan-brand text-ink font-semibold rounded-lg px-3 text-xs disabled:opacity-40"
+            >
+              {guardando ? '...' : 'Asignar'}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {reemplazo && (
+              <button onClick={() => guardar(null)} className="text-white/50 text-[11px]">
+                Quitar reemplazo
+              </button>
+            )}
+            {ausencia && (
+              <>
+                <button onClick={onCancelarClase} className="text-yellow-300/90 text-[11px]">
+                  Cancelar la clase
+                </button>
+                <button onClick={() => resolverAusencia(ausencia.id)} className="text-white/40 text-[11px]">
+                  Ignorar aviso
+                </button>
+              </>
+            )}
+            {!ausencia && (
+              <button onClick={() => setAbierto(false)} className="text-white/40 text-[11px]">
+                Cerrar
+              </button>
+            )}
+          </div>
+          {error && <p className="text-red-400 text-xs">{error}</p>}
+        </div>
+      ) : (
+        <button onClick={() => setAbierto(true)} className="mt-1 flex items-center gap-1 text-white/40 text-[11px] hover:text-white/70">
+          <UserCog size={12} /> {reemplazo ? 'Cambiar reemplazo' : 'Reemplazo este día'}
+        </button>
+      )}
+    </div>
+  );
+}
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const DIAS_INDICE = {
@@ -145,6 +328,7 @@ export default function ClasesAdmin() {
   const [guardando, setGuardando] = useState(false);
 
   const [diaAbierto, setDiaAbierto] = useState(0);
+  const [vista, setVista] = useState('lista'); // lista | semana
   const [editandoId, setEditandoId] = useState(null);
   const [formEdicion, setFormEdicion] = useState({});
   const [cancelandoClave, setCancelandoClave] = useState(null);
@@ -314,7 +498,34 @@ export default function ClasesAdmin() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <div className="flex justify-end gap-2 mb-6">
+      <div className="flex bg-white/[0.04] border border-white/10 rounded-xl p-1 mb-4">
+        {[
+          { valor: 'lista', label: 'Próximos días' },
+          { valor: 'semana', label: 'Vista semanal' },
+        ].map((op) => (
+          <button
+            key={op.valor}
+            onClick={() => setVista(op.valor)}
+            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+              vista === op.valor ? 'bg-cyan-brand text-ink' : 'text-white/50'
+            }`}
+          >
+            {op.label}
+          </button>
+        ))}
+      </div>
+
+      {vista === 'semana' && (
+        <VistaSemana
+          onElegirDia={(fecha) => {
+            const i = dias.findIndex((d) => d.key === fecha);
+            setVista('lista');
+            if (i >= 0) setDiaAbierto(i);
+          }}
+        />
+      )}
+
+      <div className={`flex justify-end gap-2 mb-6 ${vista === 'semana' ? 'hidden' : ''}`}>
         <button
           onClick={() => {
             setMostrarFormFija(!mostrarFormFija);
@@ -500,7 +711,7 @@ export default function ClasesAdmin() {
         </form>
       )}
 
-      <div className="flex flex-col gap-2">
+      <div className={`flex flex-col gap-2 ${vista === 'semana' ? 'hidden' : ''}`}>
         {dias.map((dia, index) => {
           const horariosDelDia = horarios
             .filter((h) => horarioAplicaEnFecha(h, dia.key, dia.nombreDia))
@@ -740,6 +951,15 @@ export default function ClasesAdmin() {
                                 </div>
                               ) : null}
                             </div>
+
+                            {!cancelada && (
+                              <PanelReemplazo
+                                h={h}
+                                fecha={dia.key}
+                                coaches={coaches}
+                                onCancelarClase={() => abrirCancelacion(h.id, dia.key)}
+                              />
+                            )}
 
                             {verInscritosClave === claveCancel && (
                               <div className="mt-2 pt-2 border-t border-white/10">

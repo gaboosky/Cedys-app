@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { subirImagen } from '../lib/storage';
+import { EvaluacionPendiente } from '../components/EvaluarClase';
+import SaludoCumpleanos from '../components/SaludoCumpleanos';
 import {
   MessageCircle,
   Plus,
@@ -77,6 +79,7 @@ function FormularioNoticia({
   onGuardar,
   onCancelar,
   textoBoton,
+  conAviso,
 }) {
   const [form, setForm] = useState(valorInicial);
   const [subiendoImagen, setSubiendoImagen] = useState(false);
@@ -145,6 +148,18 @@ function FormularioNoticia({
         </label>
       )}
 
+      {conAviso && (
+        <label className="flex items-center gap-2 text-white/70 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={!!form.avisar}
+            onChange={(e) => setForm((prev) => ({ ...prev, avisar: e.target.checked }))}
+            className="w-4 h-4 accent-cyan-500"
+          />
+          Avisar a todos al celular
+        </label>
+      )}
+
       <div className="flex gap-2">
         <button
           onClick={() => onGuardar(form)}
@@ -170,6 +185,8 @@ export default function General() {
     crearNoticia,
     eliminarNoticia,
     actualizarNoticia,
+    usuarios,
+    enviarAvisoMasivo,
   } = useAuth();
   const esAdmin = usuarioActual.rol === 'head_coach';
 
@@ -179,7 +196,14 @@ export default function General() {
 
   function handleCrearNoticia(datos) {
     if (!datos.titulo || !datos.contenido) return;
-    crearNoticia(datos);
+    const { avisar, ...noticia } = datos;
+    crearNoticia(noticia);
+    if (avisar) {
+      enviarAvisoMasivo(
+        usuarios.filter((u) => u.estado === 'activo' && u.id !== usuarioActual.id).map((u) => u.id),
+        `Nueva noticia: ${noticia.titulo}`
+      );
+    }
     setMostrarForm(false);
   }
 
@@ -204,6 +228,8 @@ export default function General() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
+      <SaludoCumpleanos />
+      <EvaluacionPendiente />
       {/* Muro de noticias */}
       <div className="flex items-center justify-between mb-3">
         <p className="text-white/40 text-xs uppercase tracking-wide">
@@ -224,10 +250,11 @@ export default function General() {
 
       {mostrarForm && (
         <FormularioNoticia
-          valorInicial={{ titulo: '', contenido: '', imagen_url: '' }}
+          valorInicial={{ titulo: '', contenido: '', imagen_url: '', avisar: true }}
           onGuardar={handleCrearNoticia}
           onCancelar={() => setMostrarForm(false)}
           textoBoton="Publicar"
+          conAviso
         />
       )}
 

@@ -18,6 +18,28 @@ function mismaLlave(suscripcion) {
   return a.length === b.length && a.every((x, i) => x === b[i]);
 }
 
+// Saca un texto entendible del error que devuelve la función enviar-push.
+async function detalleError(error, data) {
+  if (data?.error) return data.error;
+  if (!error) return 'respuesta inesperada del servidor';
+  try {
+    const respuesta = error.context;
+    if (respuesta && typeof respuesta.text === 'function') {
+      const texto = await respuesta.text();
+      if (respuesta.status === 404) return 'no existe la función "enviar-push" en Supabase (revisa el nombre).';
+      try {
+        const json = JSON.parse(texto);
+        return json.error || json.message || json.msg || texto;
+      } catch {
+        return `${respuesta.status} ${texto}`.slice(0, 200);
+      }
+    }
+  } catch {
+    // sin detalle
+  }
+  return error.message || 'error desconocido';
+}
+
 export function pushDisponible() {
   return 'serviceWorker' in navigator && 'PushManager' in window;
 }
@@ -71,14 +93,20 @@ export async function activarNotificacionesPush(usuarioId) {
   const { data, error: errorPrueba } = await supabase.functions.invoke('enviar-push', {
     body: { usuario_id: usuarioId, mensaje: '¡Listo! Las notificaciones están activadas.' },
   });
-  if (errorPrueba || !data?.ok)
+  if (errorPrueba || !data?.ok) {
+    const detalle = await detalleError(errorPrueba, data);
     return {
       ok: false,
-      mensaje:
-        'Tu celular quedó activado, pero el servidor no pudo mandar la notificación de prueba (revisar la función enviar-push en Supabase).',
+      mensaje: `Tu celular quedó activado, pero el servidor no pudo mandar la prueba. Detalle: ${detalle}`,
     };
+  }
   if (!data.enviadas)
-    return { ok: false, mensaje: 'Se activó, pero la notificación de prueba no se pudo entregar. Intenta de nuevo.' };
+    return {
+      ok: false,
+      mensaje: `Se activó, pero la prueba no se pudo entregar (${data.suscripciones ?? 0} dispositivos). ${
+        (data.errores || []).join(' · ') || 'Intenta de nuevo.'
+      }`,
+    };
   return { ok: true, mensaje: 'Notificaciones activadas. Te debería llegar una de prueba.' };
 }
 

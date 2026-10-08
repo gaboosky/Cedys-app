@@ -12,7 +12,24 @@ import {
   Bell,
   Hourglass,
   Send,
+  CalendarPlus,
+  Repeat,
 } from 'lucide-react';
+import { descargarIcs, eventoDeReserva } from '../lib/calendario';
+
+function sumarSemanas(fechaISO, semanas) {
+  const d = new Date(fechaISO + 'T00:00:00');
+  d.setDate(d.getDate() + 7 * semanas);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function fechaCortaDe(fechaISO) {
+  return new Date(fechaISO + 'T00:00:00').toLocaleDateString('es-CL', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
 
 export default function HorarioDetalle() {
   const { horarioId, fecha } = useParams();
@@ -32,7 +49,13 @@ export default function HorarioDetalle() {
     listaEsperaDe,
     solicitudFueraPlazoDe,
     solicitarFueraDePlazo,
+    motivoNoPuedeReservar,
+    reservarVarias,
+    infoGimnasio,
+    coachDeClase,
   } = useAuth();
+  const [semanasRepetir, setSemanasRepetir] = useState(4);
+  const [resultadoRepetir, setResultadoRepetir] = useState(null);
   const [mensaje, setMensaje] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const yaEnviando = useRef(false);
@@ -58,12 +81,14 @@ export default function HorarioDetalle() {
     .map((r) => usuarios.find((u) => u.id === r.usuario_id))
     .filter(Boolean);
 
-  const reservada = reservas.some(
+  const miReserva = reservas.find(
     (r) =>
       r.horario_id === horarioId &&
       r.fecha === fecha &&
       r.usuario_id === usuarioActual.id
   );
+  const reservada = !!miReserva;
+  const motivoPlan = motivoNoPuedeReservar(usuarioActual, horarioId, fecha);
   const lleno = inscritos.length >= horario.cupo_max;
   const cuposDisponibles = Math.max(0, horario.cupo_max - inscritos.length);
   const cancelada = horarioEstaCancelado(horarioId, fecha);
@@ -110,6 +135,22 @@ export default function HorarioDetalle() {
     yaEnviando.current = false;
     setMensaje(resultado);
     setTimeout(() => setMensaje(null), 4000);
+  }
+
+  async function handleRepetir() {
+    if (yaEnviando.current) return;
+    yaEnviando.current = true;
+    setEnviando(true);
+    const fechas = Array.from({ length: Number(semanasRepetir) }, (_, i) => sumarSemanas(fecha, i));
+    const r = await reservarVarias(horarioId, fechas);
+    setEnviando(false);
+    yaEnviando.current = false;
+    setResultadoRepetir(r);
+  }
+
+  function agregarAlCalendario() {
+    if (!miReserva) return;
+    descargarIcs([eventoDeReserva(miReserva, { ...horario, coach_nombre: coachDeClase(horario, fecha).nombre }, infoGimnasio.direccion)], `clase-${fecha}.ics`);
   }
 
   async function handleListaEspera() {
@@ -163,7 +204,7 @@ export default function HorarioDetalle() {
             Entrenador
           </p>
           <p className="text-white text-sm font-medium mt-0.5">
-            {horario.coach_nombre || 'Por confirmar'}
+            {coachDeClase(horario, fecha).nombre || 'Por confirmar'}
           </p>
         </div>
         <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4">
@@ -221,13 +262,26 @@ export default function HorarioDetalle() {
       )}
 
       {reservada ? (
-        <div className="w-full flex items-center justify-center gap-2 bg-cyan-brand/15 border border-cyan-brand/30 text-cyan-brand rounded-2xl py-4 font-medium">
-          <Check size={18} /> Ya tienes esta reserva
+        <div className="flex flex-col gap-2">
+          <div className="w-full flex items-center justify-center gap-2 bg-cyan-brand/15 border border-cyan-brand/30 text-cyan-brand rounded-2xl py-4 font-medium">
+            <Check size={18} /> Ya tienes esta reserva
+          </div>
+          <button
+            onClick={agregarAlCalendario}
+            className="w-full flex items-center justify-center gap-2 bg-white/[0.06] border border-white/10 text-white/80 rounded-2xl py-3 text-sm"
+          >
+            <CalendarPlus size={16} /> Agregar a mi calendario
+          </button>
         </div>
       ) : cancelada ? (
         <div className="w-full text-center bg-yellow-400/10 border border-yellow-400/30 text-yellow-200 rounded-2xl py-4 text-sm px-4">
           Esta clase fue cancelada
           {mensajeCancelacion ? `: ${mensajeCancelacion}` : ' para esta fecha.'}
+        </div>
+      ) : motivoPlan ? (
+        <div className="w-full flex items-start gap-2 bg-yellow-400/10 border border-yellow-400/30 text-yellow-100 rounded-2xl py-4 px-4 text-sm">
+          <AlertCircle size={18} className="shrink-0 text-yellow-300" />
+          <span>{motivoPlan}</span>
         </div>
       ) : bloqueada ? (
         solicitud?.estado === 'pendiente' ? (
@@ -293,6 +347,55 @@ export default function HorarioDetalle() {
         >
           {enviando ? 'Reservando...' : '✓ CONFIRMAR RESERVA'}
         </button>
+      )}
+
+      {/* Reserva recurrente: solo horarios fijos que se repiten cada semana */}
+      {!horario.fecha_unica && !cancelada && !motivoPlan && !(bloqueada && !reservada) && (
+        <div className="mt-4 bg-white/[0.04] border border-white/10 rounded-2xl p-4">
+          <p className="flex items-center gap-2 text-white text-sm font-semibold">
+            <Repeat size={15} className="text-cyan-brand" /> Repetir cada semana
+          </p>
+          <p className="text-white/40 text-xs mt-1">
+            Reserva este mismo horario ({diaSemana} {horario.hora}) varias semanas seguidas. Se saltan las semanas
+            llenas o canceladas.
+          </p>
+          <div className="flex gap-2 mt-3">
+            <select
+              value={semanasRepetir}
+              onChange={(e) => {
+                setSemanasRepetir(e.target.value);
+                setResultadoRepetir(null);
+              }}
+              className="bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-brand"
+            >
+              {[2, 4, 6, 8].map((n) => (
+                <option key={n} value={n} className="bg-ink">
+                  {n} semanas
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleRepetir}
+              disabled={enviando}
+              className="flex-1 bg-white/10 text-white font-semibold rounded-xl py-2.5 text-sm disabled:opacity-50 active:scale-[0.98]"
+            >
+              {enviando ? 'Reservando...' : `Reservar ${semanasRepetir} semanas`}
+            </button>
+          </div>
+          {resultadoRepetir && (
+            <div className="mt-3 flex flex-col gap-1">
+              <p className="text-cyan-brand text-xs font-semibold">
+                {resultadoRepetir.reservadas} clase{resultadoRepetir.reservadas !== 1 ? 's' : ''} nueva
+                {resultadoRepetir.reservadas !== 1 ? 's' : ''} reservada{resultadoRepetir.reservadas !== 1 ? 's' : ''}
+              </p>
+              {resultadoRepetir.detalle.map((d) => (
+                <p key={d.fecha} className={`text-xs ${d.ok ? 'text-white/60' : 'text-red-300/80'}`}>
+                  {d.ok ? '✓' : '✕'} {fechaCortaDe(d.fecha)} · {d.motivo}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

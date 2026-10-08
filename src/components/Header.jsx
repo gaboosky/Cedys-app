@@ -9,7 +9,7 @@ import {
   Settings,
   Dumbbell,
   FileBarChart,
-  MessageSquare, Wallet, RefreshCw } from 'lucide-react';
+  MessageSquare, Wallet, RefreshCw, MapPin, Receipt, Megaphone, History, HandCoins, CalendarCheck, UserX } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LOGO_CEDS_WORDMARK } from '../assets/logoWordmark';
 
@@ -31,6 +31,13 @@ const TITULOS = {
   '/notas-coach': 'Nota de Coach',
   '/finanzas': 'Finanzas',
   '/renovaciones': 'Renovaciones',
+  '/pruebas': 'Sesiones de prueba',
+  '/seguimiento': 'Alumnos en riesgo',
+  '/gimnasio': 'El gimnasio',
+  '/gastos': 'Gastos',
+  '/pago-coaches': 'Pago a coaches',
+  '/avisos': 'Avisos',
+  '/actividad': 'Historial de cambios',
   '/ingreso-detalle': 'Ingresos',
   '/ingresos-graficos': 'Gráficos de ingresos',
   '/clases-realizadas': 'Clases realizadas',
@@ -55,10 +62,16 @@ const SUBTITULOS = {
   '/configuracion': 'Ajustes de la app',
   '/finanzas': 'Resumen financiero del gimnasio',
   '/renovaciones': 'Renueva planes y edita pagos',
+  '/pruebas': 'Personas que quieren probar',
+  '/seguimiento': 'Escríbeles antes de que se vayan',
+  '/gimnasio': 'Contacto, horario y reglamento',
+  '/gastos': 'Registra los gastos del gimnasio',
+  '/pago-coaches': 'Clases realizadas y pago del mes',
+  '/avisos': 'Envía avisos al celular de tus alumnos',
+  '/actividad': 'Quién hizo cada cambio y cuándo',
   '/ingreso-detalle': 'Pagos, proyección y cobros del mes',
   '/ingresos-graficos': 'Evolución mensual de tus ingresos',
   '/mas': 'Más opciones',
-  '/planilla': 'Historial y seguimiento',
   '/general': 'Noticias y novedades del gym',
   '/mi-rutina': 'Tu plan de entrenamiento',
   '/progreso': 'Tu evolución en el tiempo',
@@ -278,6 +291,20 @@ export default function Header() {
                 <User size={18} />
                 Mi Perfil
               </NavLink>
+              <NavLink
+                to="/gimnasio"
+                onClick={() => setMenuAbierto(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    isActive
+                      ? 'bg-cyan-brand/15 text-cyan-brand'
+                      : 'text-white/70 hover:bg-white/5'
+                  }`
+                }
+              >
+                <MapPin size={18} />
+                El gimnasio
+              </NavLink>
 
               {usuarioActual.rol === 'head_coach' && (
                 <>
@@ -308,6 +335,90 @@ export default function Header() {
                   >
                     <RefreshCw size={18} />
                     Renovaciones
+                  </NavLink>
+                  <NavLink
+                    to="/pruebas"
+                    onClick={() => setMenuAbierto(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'text-white/70 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <CalendarCheck size={18} />
+                    Sesiones de prueba
+                  </NavLink>
+                  <NavLink
+                    to="/seguimiento"
+                    onClick={() => setMenuAbierto(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'text-white/70 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <UserX size={18} />
+                    Alumnos en riesgo
+                  </NavLink>
+                  <NavLink
+                    to="/gastos"
+                    onClick={() => setMenuAbierto(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'text-white/70 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <Receipt size={18} />
+                    Gastos
+                  </NavLink>
+                  <NavLink
+                    to="/pago-coaches"
+                    onClick={() => setMenuAbierto(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'text-white/70 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <HandCoins size={18} />
+                    Pago a coaches
+                  </NavLink>
+                  <NavLink
+                    to="/avisos"
+                    onClick={() => setMenuAbierto(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'text-white/70 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <Megaphone size={18} />
+                    Avisos a alumnos
+                  </NavLink>
+                  <NavLink
+                    to="/actividad"
+                    onClick={() => setMenuAbierto(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'text-white/70 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <History size={18} />
+                    Historial de cambios
                   </NavLink>
                   <NavLink
                     to="/coaches"

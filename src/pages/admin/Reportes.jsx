@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { formatearRut } from '../../lib/formato';
-import { Users, CalendarCheck, DollarSign, Download, CalendarX, CalendarRange, Dumbbell } from 'lucide-react';
-import { normalizarEjercicio, variacionPct } from '../../lib/cargas';
+import { Users, CalendarCheck, DollarSign, Download, CalendarX, CalendarRange, Dumbbell, UserCog } from 'lucide-react';
+import { claveRegistro, variacionPct } from '../../lib/cargas';
 import GraficoBarrasMes from '../../components/GraficoBarrasMes';
 import {
   MEDIOS_PAGO, TIPOS_PAGO, etiquetaMedio, hoyLocalISO, mesDe, mesActualKey, sumarMeses,
@@ -41,7 +41,7 @@ const ATAJOS = [
 ];
 
 export default function Reportes() {
-  const { usuarios, planes, reservas, horarios, pagos, registrosPeso = [] } = useAuth();
+  const { usuarios, planes, reservas, horarios, pagos, registrosPeso = [], clasesRealizadasConAlumnosEnRango, finalizacionDe, coachDeClase } = useAuth();
   const [generando, setGenerando] = useState(null);
 
   const [atajo, setAtajo] = useState('mes');
@@ -128,6 +128,51 @@ export default function Reportes() {
     const libro = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(libro, hoja, 'Socios');
     XLSX.writeFile(libro, `socios-ceds-${hoyLocalISO()}.xlsx`);
+    setGenerando(null);
+  }
+
+  // Clases realizadas en el período, agrupadas por coach (sirve para pagar a los coaches)
+  const clasesPeriodo = clasesRealizadasConAlumnosEnRango(desde, hasta > hoyLocalISO() ? hoyLocalISO() : hasta);
+  const porCoach = clasesPeriodo.reduce((acc, o) => {
+    const fin = finalizacionDe(o.horario.id, o.fecha);
+    const nombre = fin?.coach_nombre || coachDeClase(o.horario, o.fecha).nombre || 'Sin coach';
+    (acc[nombre] = acc[nombre] || []).push({ ...o, fin });
+    return acc;
+  }, {});
+
+  async function exportarCoaches() {
+    setGenerando('coaches');
+    const XLSX = await import('xlsx');
+    const resumen = Object.entries(porCoach)
+      .map(([coach, lista]) => ({
+        Coach: coach,
+        'Clases realizadas': lista.length,
+        'Alumnos atendidos': lista.reduce(
+          (acc, o) =>
+            acc +
+            (o.fin
+              ? o.fin.presentes
+              : reservas.filter((r) => r.horario_id === o.horario.id && r.fecha === o.fecha && r.asistio === true).length),
+          0
+        ),
+      }))
+      .sort((a, b) => b['Clases realizadas'] - a['Clases realizadas']);
+    const detalle = Object.entries(porCoach)
+      .flatMap(([coach, lista]) =>
+        lista.map((o) => ({
+          Coach: coach,
+          Fecha: o.fecha,
+          Hora: o.horario.hora,
+          Presentes: o.fin ? o.fin.presentes : '',
+          Ausentes: o.fin ? o.fin.ausentes : '',
+          Comentario: o.fin?.comentario || '',
+        }))
+      )
+      .sort((a, b) => a.Coach.localeCompare(b.Coach) || a.Fecha.localeCompare(b.Fecha) || a.Hora.localeCompare(b.Hora));
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(resumen.length ? resumen : [{ Coach: 'Sin clases' }]), 'Resumen');
+    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(detalle.length ? detalle : [{ Coach: 'Sin clases' }]), 'Detalle');
+    XLSX.writeFile(libro, `clases-por-coach-${sufijoArchivo}.xlsx`);
     setGenerando(null);
   }
 
@@ -263,7 +308,7 @@ export default function Reportes() {
     // Hoja 1: cada registro, con la variación respecto al registro anterior del mismo ejercicio
     const ultimoPorClave = {};
     const filasRegistros = ordenados.map((r) => {
-      const clave = `${r.usuario_id}|${normalizarEjercicio(r.ejercicio)}`;
+      const clave = `${r.usuario_id}|${claveRegistro(r)}`;
       const anterior = ultimoPorClave[clave];
       ultimoPorClave[clave] = r;
       const base =
@@ -272,6 +317,8 @@ export default function Reportes() {
       return {
         Fecha: new Date(r.creado_en).toLocaleDateString('es-CL'),
         Alumno: nombreUsuario(r.usuario_id),
+        Semana: r.semana ?? '',
+        Día: r.dia || '',
         Ejercicio: r.ejercicio,
         'Peso anterior (kg)': base === null ? '' : base,
         'Peso nuevo (kg)': Number(r.peso),
@@ -282,7 +329,7 @@ export default function Reportes() {
     // Hoja 2: resumen por alumno y ejercicio (primer y último peso del período)
     const grupos = {};
     for (const r of ordenados) {
-      const clave = `${r.usuario_id}|${normalizarEjercicio(r.ejercicio)}`;
+      const clave = `${r.usuario_id}|${claveRegistro(r)}`;
       if (!grupos[clave]) grupos[clave] = [];
       grupos[clave].push(r);
     }
@@ -296,6 +343,8 @@ export default function Reportes() {
         const pct = comparable ? variacionPct(ultimo.peso, inicio) : null;
         return {
           Alumno: nombreUsuario(primero.usuario_id),
+          Semana: ultimo.semana ?? primero.semana ?? '',
+          Día: ultimo.dia || primero.dia || '',
           Ejercicio: ultimo.ejercicio,
           'Peso inicial (kg)': inicio,
           'Último peso (kg)': Number(ultimo.peso),
@@ -305,7 +354,13 @@ export default function Reportes() {
           'Última fecha': new Date(ultimo.creado_en).toLocaleDateString('es-CL'),
         };
       })
-      .sort((a, b) => a.Alumno.localeCompare(b.Alumno) || a.Ejercicio.localeCompare(b.Ejercicio));
+      .sort(
+        (a, b) =>
+          a.Alumno.localeCompare(b.Alumno) ||
+          (Number(a.Semana) || 999) - (Number(b.Semana) || 999) ||
+          String(a.Día).localeCompare(String(b.Día)) ||
+          a.Ejercicio.localeCompare(b.Ejercicio)
+      );
 
     // Hoja 3: promedio de variación por alumno
     const porAlumno = {};
@@ -388,7 +443,7 @@ export default function Reportes() {
           </div>
         </div>
         <p className="text-white/30 text-[11px] mt-2">
-          Se aplica a ingresos, asistencia, horas canceladas y cargas: del {formatoFecha(desde)} al {formatoFecha(hasta)}.
+          Se aplica a ingresos, asistencia, clases por coach, horas canceladas y cargas: del {formatoFecha(desde)} al {formatoFecha(hasta)}.
         </p>
       </div>
 
@@ -406,6 +461,17 @@ export default function Reportes() {
           detalle={`${reservasRango.length} reserva${reservasRango.length !== 1 ? 's' : ''} en el período`}
           onDescargar={exportarAsistencia}
           generando={generando === 'asistencia'}
+        />
+        <TarjetaReporte
+          icono={UserCog}
+          titulo="Clases por coach"
+          detalle={`${clasesPeriodo.length} clase${clasesPeriodo.length !== 1 ? 's' : ''} realizadas · ${
+            Object.entries(porCoach)
+              .map(([c, l]) => `${c.split(' ')[0]}: ${l.length}`)
+              .join(', ') || 'sin clases'
+          }`}
+          onDescargar={exportarCoaches}
+          generando={generando === 'coaches'}
         />
         <TarjetaReporte
           icono={CalendarX}

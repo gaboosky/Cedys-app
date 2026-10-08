@@ -9,7 +9,29 @@ import {
   vencimientoDe,
   TIPOS_PAGO,
 } from '../../lib/ingresos';
-import { Search, RefreshCw, Pencil, History, X, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, RefreshCw, Pencil, History, X, Trash2, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
+
+function fechaLargaSinAnio(fechaISO) {
+  return new Date(fechaISO + 'T00:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'long' });
+}
+
+// Link de WhatsApp con un recordatorio de pago listo para enviar
+function linkRecordatorio(u, v, monto, plan, gimnasio) {
+  const numero = String(u.telefono || '').replace(/\D/g, '');
+  if (!numero) return null;
+  const nombre = (u.nombre || '').split(' ')[0];
+  const cuando = !v
+    ? 'tienes pendiente el pago de tu plan'
+    : v.dias < 0
+    ? `tu plan venció el ${fechaLargaSinAnio(v.vence)}`
+    : v.dias === 0
+    ? 'tu plan vence hoy'
+    : `tu plan vence el ${fechaLargaSinAnio(v.vence)}`;
+  const texto = `Hola ${nombre}! Te escribimos de ${gimnasio || 'CED&S'} 💪 Te recordamos que ${cuando}${
+    plan ? ` (${plan.nombre}` : ''
+  }${plan && monto ? `, ${formatearPesos(monto)})` : plan ? ')' : ''}. Puedes renovarlo por transferencia o en el gimnasio. ¡Gracias!`;
+  return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+}
 
 function fechaCorta(fechaISO) {
   if (!fechaISO) return '—';
@@ -207,7 +229,7 @@ function Historial({ pagosAlumno, onEditar }) {
 }
 
 export default function Renovaciones() {
-  const { usuarios, planes, pagos, diasRenovacion } = useAuth();
+  const { usuarios, planes, pagos, diasRenovacion, infoGimnasio } = useAuth();
   const [filtro, setFiltro] = useState('renovar');
   const [busqueda, setBusqueda] = useState('');
   const [renovando, setRenovando] = useState(null); // usuario
@@ -359,6 +381,18 @@ export default function Renovaciones() {
                   >
                     <Pencil size={14} /> Editar pago
                   </button>
+                  {estado !== 'al_dia' && linkRecordatorio(u, v, montoPlanDe(u, planes), plan, infoGimnasio?.nombre) && (
+                    <a
+                      href={linkRecordatorio(u, v, montoPlanDe(u, planes), plan, infoGimnasio?.nombre)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center bg-[#25D366]/15 border border-[#25D366]/40 text-[#7ee2a5] rounded-lg px-3 py-2"
+                      aria-label="Recordar pago por WhatsApp"
+                      title="Recordar pago por WhatsApp"
+                    >
+                      <MessageCircle size={15} />
+                    </a>
+                  )}
                   <button
                     onClick={() => setHistorialAbierto(historialAqui ? null : u.id)}
                     className="flex items-center justify-center gap-1 bg-white/[0.06] text-white/70 rounded-lg px-3 py-2 text-sm"

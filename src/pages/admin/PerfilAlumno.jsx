@@ -154,7 +154,7 @@ export default function PerfilAlumno() {
     setGuardandoPeso(true);
     const resultado = await agregarProgresoAdmin(usuario.id, {
       peso_kg: Number(pesoNuevo),
-      fecha: new Date().toISOString().slice(0, 10),
+      fecha: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
     });
     if (resultado.ok) {
       setProgreso((prev) => [resultado.data, ...(prev || [])]);
@@ -331,6 +331,12 @@ export default function PerfilAlumno() {
               }
             />
             <Dato label="Teléfono" valor={usuario.telefono} />
+            {usuario.obs_salud && (
+              <div className="mt-1 bg-red-500/10 border border-red-400/30 rounded-lg px-3 py-2">
+                <p className="text-red-200/80 text-[10px] uppercase tracking-wide">OBS del alumno</p>
+                <p className="text-white/90 text-sm whitespace-pre-line">{usuario.obs_salud}</p>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -663,9 +669,10 @@ function ProgresoCargas({ registros, usuarioId }) {
       ) : (
         <div className="flex flex-col gap-1.5">
           {visibles.map((r) => (
-            <div key={r.ejercicio} className="flex items-center justify-between gap-3 bg-black/20 rounded-lg px-3 py-2">
+            <div key={r.clave} className="flex items-center justify-between gap-3 bg-black/20 rounded-lg px-3 py-2">
               <div className="min-w-0">
                 <p className="text-white text-sm truncate">{r.ejercicio}</p>
+                {r.sesion && <p className="text-cyan-brand/70 text-[11px]">{r.sesion}</p>}
                 <p className="text-white/35 text-[11px]">
                   {r.registros} cambio{r.registros !== 1 ? 's' : ''} · último {fechaRegistro(r.fechaUltimo)}
                 </p>

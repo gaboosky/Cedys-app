@@ -3,7 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import {
   Users2,
   Settings,
-  FileSpreadsheet,
+  Megaphone,
+  History,
+  Receipt,
+  HandCoins,
   ChevronRight,
   Newspaper,
   Wallet,
@@ -17,8 +20,11 @@ export default function Mas() {
     { to: '/general', label: 'General', icon: Newspaper },
     { to: '/finanzas', label: 'Finanzas', icon: Wallet },
     { to: '/renovaciones', label: 'Renovaciones', icon: RefreshCw },
+    { to: '/gastos', label: 'Gastos', icon: Receipt },
+    { to: '/pago-coaches', label: 'Pago a coaches', icon: HandCoins },
+    { to: '/avisos', label: 'Avisos a alumnos', icon: Megaphone },
     { to: '/coaches', label: 'Coaches', icon: Users2 },
-    { to: '/planilla', label: 'Planilla / Histórico', icon: FileSpreadsheet },
+    { to: '/actividad', label: 'Historial de cambios', icon: History },
     { to: '/configuracion', label: 'Configuración', icon: Settings },
   ];
 

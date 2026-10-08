@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subirImagen } from '../lib/storage';
+import CargasRutina from '../components/CargasRutina';
 import {
   Plus,
   X,
@@ -27,7 +28,7 @@ function formatFecha(fechaISO) {
 }
 
 export default function Progreso() {
-  const { usuarioActual, obtenerProgreso, agregarProgreso, eliminarProgreso } =
+  const { usuarioActual, obtenerProgreso, agregarProgreso, eliminarProgreso, registrosPeso } =
     useAuth();
   const [entradas, setEntradas] = useState(null);
   const [mostrarForm, setMostrarForm] = useState(false);
@@ -36,7 +37,7 @@ export default function Progreso() {
   const [eliminandoId, setEliminandoId] = useState(null);
 
   const [form, setForm] = useState({
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
     peso_kg: '',
     notas: '',
     foto_url: '',
@@ -102,7 +103,7 @@ export default function Progreso() {
     setMensaje(resultado);
     if (resultado.ok) {
       setForm({
-        fecha: new Date().toISOString().slice(0, 10),
+        fecha: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
         peso_kg: '',
         notas: '',
         foto_url: '',
@@ -165,12 +166,14 @@ export default function Progreso() {
                 ) : (
                   <TrendingUp size={14} />
                 )}
-                {Math.abs(diferencia)} kg
+                {String(Math.round(Math.abs(diferencia) * 10) / 10).replace(".", ",")} kg
               </span>
             )}
           </div>
         </div>
       )}
+
+      <CargasRutina registros={registrosPeso} usuarioId={usuarioActual.id} />
 
       {mostrarForm && (
         <form

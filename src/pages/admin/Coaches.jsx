@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, HandCoins, ChevronRight } from 'lucide-react';
 import { formatearTelefono } from '../../lib/formato';
 
 export default function Coaches() {
@@ -103,6 +104,15 @@ export default function Coaches() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
+      <Link
+        to="/pago-coaches"
+        className="flex items-center justify-between bg-cyan-brand/[0.07] border border-cyan-brand/30 rounded-2xl px-4 py-3 mb-4"
+      >
+        <span className="flex items-center gap-2 text-white text-sm">
+          <HandCoins size={17} className="text-cyan-brand" /> Clases realizadas y pago del mes
+        </span>
+        <ChevronRight size={16} className="text-cyan-brand/70" />
+      </Link>
       <div className="flex justify-end mb-6">
         <button
           onClick={() => {

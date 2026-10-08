@@ -11,6 +11,7 @@ import {
   Clock,
   Calendar,
 } from 'lucide-react';
+import { InsigniaEvaluacion, EvaluacionesDeClase } from '../../components/EvaluarClase';
 
 function capitalizar(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -216,12 +217,17 @@ export default function ClasesRealizadas() {
     marcarAsistencia,
     finalizacionDe,
     reabrirClase,
+    evaluacionesDeClase,
   } = useAuth();
 
   const [abierta, setAbierta] = useState(null);
-  const [filtro, setFiltro] = useState('semana'); // 'semana' | 'mes' | 'seleccionar'
+  const [filtro, setFiltro] = useState(() =>
+    window.location.hash === '#por-finalizar' ? 'mes' : 'semana'
+  ); // 'semana' | 'mes' | 'seleccionar'
   const [mesSeleccionado, setMesSeleccionado] = useState(OPCIONES_MES[0].valor);
-  const [vista, setVista] = useState('realizadas'); // 'realizadas' | 'pendientes' | 'sinAlumnos'
+  const [vista, setVista] = useState(() =>
+    window.location.hash === '#por-finalizar' ? 'pendientes' : 'realizadas'
+  ); // 'realizadas' | 'pendientes' | 'sinAlumnos'
   const [reabriendo, setReabriendo] = useState(null);
 
   const { desde, hasta } = useMemo(() => {
@@ -402,9 +408,12 @@ export default function ClasesRealizadas() {
                                 </span>
                               )}
                             </p>
-                            <p className="text-white/40 text-xs">
-                              {fin?.coach_nombre || o.horario.coach_nombre || 'Sin coach'} · {asistieron}/
-                              {inscritos.length} asistieron
+                            <p className="text-white/40 text-xs flex items-center gap-2 flex-wrap">
+                              <span>
+                                {fin?.coach_nombre || o.horario.coach_nombre || 'Sin coach'} · {asistieron}/
+                                {inscritos.length} asistieron
+                              </span>
+                              <InsigniaEvaluacion lista={evaluacionesDeClase(o.horario.id, fecha)} />
                             </p>
                           </div>
                         </div>
@@ -426,6 +435,12 @@ export default function ClasesRealizadas() {
                           {fin.registrada_por && (
                             <p className="text-white/30 text-[11px] mt-0.5">Finalizada por {fin.registrada_por}</p>
                           )}
+                        </div>
+                      )}
+
+                      {abiertaAqui && (
+                        <div className="mt-2">
+                          <EvaluacionesDeClase horarioId={o.horario.id} fecha={fecha} conNombres />
                         </div>
                       )}
 

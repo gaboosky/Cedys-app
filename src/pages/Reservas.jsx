@@ -9,7 +9,113 @@ import {
   Check,
   User,
   CalendarCheck,
+  CalendarPlus,
+  XCircle,
+  HelpCircle,
 } from 'lucide-react';
+import { descargarIcs, eventoDeReserva } from '../lib/calendario';
+import EvaluarClase, { EvaluacionPendiente, sePuedeEvaluar } from '../components/EvaluarClase';
+
+const pad = (n) => String(n).padStart(2, '0');
+function isoLocal(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// Día, número y mes de una reserva a partir de su fecha ("2026-10-08")
+function partesFecha(fechaISO) {
+  const d = new Date(fechaISO + 'T00:00:00');
+  return {
+    dia_semana: d.toLocaleDateString('es-CL', { weekday: 'long' }),
+    dia_numero: d.getDate(),
+    mes: d.toLocaleDateString('es-CL', { month: 'long' }),
+  };
+}
+
+// Semana de lunes a sábado que contiene la fecha dada
+function diasDeLaSemana(base) {
+  const d = new Date(base);
+  const dow = d.getDay() === 0 ? 7 : d.getDay();
+  d.setDate(d.getDate() - (dow - 1));
+  return Array.from({ length: 7 }, (_, i) => {
+    const x = new Date(d);
+    x.setDate(d.getDate() + i);
+    return x;
+  });
+}
+
+function VistaSemanal({ reservas, onElegirDia, diaElegido }) {
+  const [offset, setOffset] = useState(0);
+  const base = new Date();
+  base.setDate(base.getDate() + offset * 7);
+  const dias = diasDeLaSemana(base);
+  const hoy = isoLocal(new Date());
+  const porFecha = reservas.reduce((acc, r) => {
+    acc[r.fecha] = (acc[r.fecha] || 0) + 1;
+    return acc;
+  }, {});
+  const titulo = `${dias[0].getDate()} ${dias[0].toLocaleDateString('es-CL', { month: 'short' })} – ${dias[6].getDate()} ${dias[6].toLocaleDateString('es-CL', { month: 'short' })}`;
+
+  return (
+    <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-3 mb-6">
+      <div className="flex items-center justify-between mb-2 px-1">
+        <button onClick={() => setOffset(offset - 1)} className="text-white/40 text-sm px-2" aria-label="Semana anterior">
+          ‹
+        </button>
+        <p className="text-white/60 text-xs">{offset === 0 ? 'Esta semana' : titulo}</p>
+        <button onClick={() => setOffset(offset + 1)} className="text-white/40 text-sm px-2" aria-label="Semana siguiente">
+          ›
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {dias.map((d) => {
+          const key = isoLocal(d);
+          const n = porFecha[key] || 0;
+          const esHoy = key === hoy;
+          const elegido = diaElegido === key;
+          return (
+            <button
+              key={key}
+              onClick={() => onElegirDia(elegido ? null : key)}
+              className={`flex flex-col items-center rounded-xl py-2 transition-colors ${
+                elegido ? 'bg-cyan-brand text-ink' : esHoy ? 'bg-white/10 text-white' : 'text-white/60'
+              }`}
+            >
+              <span className="text-[10px] uppercase">
+                {d.toLocaleDateString('es-CL', { weekday: 'short' }).slice(0, 2)}
+              </span>
+              <span className="text-sm font-semibold">{d.getDate()}</span>
+              <span
+                className={`w-1.5 h-1.5 rounded-full mt-1 ${
+                  n > 0 ? (elegido ? 'bg-ink' : 'bg-cyan-brand') : 'bg-transparent'
+                }`}
+              />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function EstadoAsistencia({ asistio }) {
+  if (asistio === true)
+    return (
+      <span className="flex items-center gap-1 text-cyan-brand text-xs">
+        <CalendarCheck size={15} /> Asististe
+      </span>
+    );
+  if (asistio === false)
+    return (
+      <span className="flex items-center gap-1 text-red-300 text-xs">
+        <XCircle size={15} /> No asististe
+      </span>
+    );
+  return (
+    <span className="flex items-center gap-1 text-white/35 text-xs">
+      <HelpCircle size={15} /> Sin marcar
+    </span>
+  );
+}
 
 function PanelCancelacion({
   tardia,
@@ -64,11 +170,15 @@ export default function Reservas() {
     usuarioActual,
     cancelarReserva,
     horasAnticipacion,
+    infoGimnasio,
+    coachDeClase,
   } = useAuth();
+  const [diaElegido, setDiaElegido] = useState(null);
   const navigate = useNavigate();
   const [tab, setTab] = useState('proximas');
   const [confirmando, setConfirmando] = useState(null);
   const [cancelando, setCancelando] = useState(false);
+  const [mesFiltro, setMesFiltro] = useState(() => isoLocal(new Date()).slice(0, 7)); // 'AAAA-MM' o 'todos'
 
   const ahora = Date.now();
 
@@ -76,7 +186,12 @@ export default function Reservas() {
     .filter((r) => r.usuario_id === usuarioActual.id)
     .map((r) => ({
       ...r,
-      horario: horarios.find((h) => h.id === r.horario_id),
+      ...partesFecha(r.fecha),
+      horario: (() => {
+        const h = horarios.find((x) => x.id === r.horario_id);
+        // Si ese día hay un coach de reemplazo, se muestra ese
+        return h ? { ...h, coach_nombre: coachDeClase(h, r.fecha).nombre } : null;
+      })(),
     }))
     .filter((r) => r.horario);
 
@@ -103,8 +218,27 @@ export default function Reservas() {
     setConfirmando(null);
   }
 
-  const proxima = proximas[0];
-  const resto = proximas.slice(1);
+  const proximasVisibles = diaElegido ? proximas.filter((r) => r.fecha === diaElegido) : proximas;
+  const proxima = proximasVisibles[0];
+  const resto = proximasVisibles.slice(1);
+
+  // Filtro por mes en "Utilizadas": el mes actual + los meses en que tiene clases
+  const mesActual = isoLocal(new Date()).slice(0, 7);
+  const mesesDisponibles = [...new Set([mesActual, ...utilizadas.map((r) => r.fecha.slice(0, 7))])].sort().reverse();
+  const nombreMes = (m) => {
+    const t = new Date(m + '-15T12:00:00').toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  };
+  const delMes = mesFiltro === 'todos' ? utilizadas : utilizadas.filter((r) => r.fecha.slice(0, 7) === mesFiltro);
+  const asistidasMes = delMes.filter((r) => r.asistio === true).length;
+  const faltasMes = delMes.filter((r) => r.asistio === false).length;
+
+  function exportarTodas() {
+    descargarIcs(
+      proximas.map((r) => eventoDeReserva(r, r.horario, infoGimnasio?.direccion)),
+      'mis-clases-cedys.ics'
+    );
+  }
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
@@ -136,6 +270,20 @@ export default function Reservas() {
 
       {tab === 'proximas' && (
         <>
+          <EvaluacionPendiente />
+          <VistaSemanal reservas={proximas} diaElegido={diaElegido} onElegirDia={setDiaElegido} />
+          {proximas.length > 0 && (
+            <button
+              onClick={exportarTodas}
+              className="w-full flex items-center justify-center gap-2 bg-white/[0.06] border border-white/10 text-white/80 rounded-xl py-2.5 text-sm mb-5"
+            >
+              <CalendarPlus size={15} />{' '}
+              {proximas.length === 1 ? 'Agregar mi clase al calendario' : `Agregar mis ${proximas.length} clases al calendario`}
+            </button>
+          )}
+          {diaElegido && proximasVisibles.length === 0 && proximas.length > 0 && (
+            <p className="text-white/40 text-sm text-center py-6">No tienes clases reservadas ese día.</p>
+          )}
           {proximas.length === 0 && (
             <div className="text-center py-16">
               <Calendar size={40} className="text-white/15 mx-auto mb-4" />
@@ -276,6 +424,44 @@ export default function Reservas() {
 
       {tab === 'utilizadas' && (
         <>
+          {utilizadas.length > 0 && (
+            <>
+              <select
+                value={mesFiltro}
+                onChange={(e) => setMesFiltro(e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-brand mb-3"
+              >
+                {mesesDisponibles.map((m) => (
+                  <option key={m} value={m} className="bg-ink">
+                    {nombreMes(m)}
+                  </option>
+                ))}
+                <option value="todos" className="bg-ink">
+                  Todos los meses
+                </option>
+              </select>
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-3">
+                  <p className="text-white/40 text-[11px] uppercase tracking-wide">Reservadas</p>
+                  <p className="text-white font-display text-2xl leading-tight">{delMes.length}</p>
+                  <p className="text-white/35 text-[11px]">clases</p>
+                </div>
+                <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-3">
+                  <p className="text-white/40 text-[11px] uppercase tracking-wide">Asististe</p>
+                  <p className="text-cyan-brand font-display text-2xl leading-tight">{asistidasMes}</p>
+                  <p className="text-white/35 text-[11px]">clases</p>
+                </div>
+                <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-3">
+                  <p className="text-white/40 text-[11px] uppercase tracking-wide">Faltaste</p>
+                  <p className="text-white font-display text-2xl leading-tight">{faltasMes}</p>
+                  <p className="text-white/35 text-[11px]">clases</p>
+                </div>
+              </div>
+              {delMes.length === 0 && (
+                <p className="text-white/35 text-sm text-center py-8">No tuviste clases en {nombreMes(mesFiltro).toLowerCase()}.</p>
+              )}
+            </>
+          )}
           {utilizadas.length === 0 && (
             <div className="text-center py-16">
               <CalendarCheck size={40} className="text-white/15 mx-auto mb-4" />
@@ -286,10 +472,10 @@ export default function Reservas() {
           )}
 
           <div className="flex flex-col gap-2">
-            {utilizadas.map((r) => (
+            {delMes.map((r) => (
               <div
                 key={r.id}
-                className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 opacity-70"
+                className="bg-white/[0.03] border border-white/10 rounded-2xl p-4"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -303,8 +489,9 @@ export default function Reservas() {
                       {r.horario.coach_nombre}
                     </p>
                   </div>
-                  <CalendarCheck size={18} className="text-white/20" />
+                  <EstadoAsistencia asistio={r.asistio} />
                 </div>
+                {sePuedeEvaluar(r, r.horario.hora) && <EvaluarClase reserva={r} />}
               </div>
             ))}
           </div>

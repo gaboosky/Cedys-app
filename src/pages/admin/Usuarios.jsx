@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import FormularioPago from '../../components/FormularioPago';
 import {
   Check, X, Plus, Snowflake, Search, RefreshCw, ChevronDown, MoreVertical,
-  UserCog, CreditCard, Layers, Zap, UserX, UserCheck, Trash2, Download, FileBarChart,
+  UserCog, CreditCard, Layers, Zap, UserX, UserCheck, Trash2, Download, FileBarChart, Pencil,
 } from 'lucide-react';
 import { formatearRut, formatearTelefono } from '../../lib/formato';
 import { fechaVenceDe } from '../../lib/ingresos';
@@ -295,7 +295,7 @@ export default function Usuarios() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setFiltro(filtro === 'renovaciones' ? 'todos' : 'renovaciones')}
+              onClick={() => navigate('/renovaciones')}
               className={`flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border transition-colors ${
                 filtro === 'renovaciones'
                   ? 'bg-yellow-400/15 border-yellow-400/40 text-yellow-100'
@@ -444,15 +444,20 @@ export default function Usuarios() {
                   <p className="text-white/40 text-xs mb-3">
                     {formatearRut(u.rut)} · {u.correo} · {u.telefono}
                   </p>
+                  {u.obs_salud && (
+                    <p className="text-red-200/90 text-xs -mt-2 mb-3 whitespace-pre-line">
+                      <span className="font-semibold">OBS:</span> {u.obs_salud}
+                    </p>
+                  )}
                   <div className="flex gap-2">
                     <button
-                      onClick={() => aprobarUsuario(u.id)}
+                      onClick={() => abrir('aprobar', u)}
                       className="flex-1 flex items-center justify-center gap-1 bg-cyan-brand text-ink text-sm font-semibold rounded-lg py-2"
                     >
                       <Check size={16} /> Aprobar
                     </button>
                     <button
-                      onClick={() => rechazarUsuario(u.id)}
+                      onClick={() => abrir('rechazar', u)}
                       className="flex-1 flex items-center justify-center gap-1 bg-white/10 text-white/70 text-sm font-semibold rounded-lg py-2"
                     >
                       <X size={16} /> Rechazar
@@ -627,6 +632,7 @@ export default function Usuarios() {
                       className="absolute right-3 top-12 z-40 w-60 bg-ink border border-white/15 rounded-xl p-1 shadow-xl"
                     >
                       <ItemMenu icono={UserCog} onClick={() => navigate(`/usuarios/${u.id}`)}>Ver ficha del alumno</ItemMenu>
+                      <ItemMenu icono={Pencil} onClick={() => abrir('datos', u)}>Editar datos personales</ItemMenu>
                       {info.plan && (
                         <ItemMenu icono={CreditCard} onClick={() => abrir('cobrar', u)}>
                           {info.vence ? 'Registrar pago / renovar' : 'Cobrar primer pago'}
@@ -727,6 +733,42 @@ export default function Usuarios() {
         </Modal>
       )}
 
+      {dialogo?.tipo === 'aprobar' && (
+        <DialogoAprobar
+          usuario={dialogo.usuario}
+          planes={planesOrdenados}
+          asignarPlan={asignarPlan}
+          aprobarUsuario={aprobarUsuario}
+          onCerrar={() => setDialogo(null)}
+        />
+      )}
+
+      {dialogo?.tipo === 'rechazar' && (
+        <Modal titulo="Rechazar registro" subtitulo={dialogo.usuario.nombre} onCerrar={() => setDialogo(null)}>
+          <p className="text-white/70 text-sm mb-4">
+            Se borrará la solicitud y su cuenta. Si fue un error, la persona tendrá que registrarse de nuevo.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                await rechazarUsuario(dialogo.usuario.id);
+                setDialogo(null);
+              }}
+              className="flex-1 bg-red-500/80 text-white font-semibold rounded-lg py-2.5 text-sm"
+            >
+              Sí, rechazar
+            </button>
+            <button onClick={() => setDialogo(null)} className="flex-1 bg-white/10 text-white rounded-lg py-2.5 text-sm">
+              Cancelar
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {dialogo?.tipo === 'datos' && (
+        <DialogoDatos usuario={dialogo.usuario} actualizarPerfil={actualizarPerfil} onCerrar={() => setDialogo(null)} />
+      )}
+
       {dialogo?.tipo === 'nuevo' && (
         <DialogoNuevo crearUsuarioConPassword={crearUsuarioConPassword} onCerrar={() => setDialogo(null)} />
       )}
@@ -761,6 +803,147 @@ function ItemMenu({ icono: Icono, onClick, peligro, children }) {
     >
       <Icono size={15} className="shrink-0" /> {children}
     </button>
+  );
+}
+
+// Aprobar un registro en un solo paso: plan + (opcional) primer pago
+function DialogoAprobar({ usuario, planes, asignarPlan, aprobarUsuario, onCerrar }) {
+  const { usuarios } = useAuth();
+  const [planId, setPlanId] = useState('');
+  const [paso, setPaso] = useState(1);
+  const [guardando, setGuardando] = useState(false);
+  const actualizado = usuarios.find((u) => u.id === usuario.id) || usuario;
+
+  async function aprobar() {
+    setGuardando(true);
+    if (planId) await asignarPlan(usuario.id, planId);
+    await aprobarUsuario(usuario.id);
+    setGuardando(false);
+    if (planId) setPaso(2);
+    else onCerrar();
+  }
+
+  if (paso === 2) {
+    return (
+      <Modal titulo="Primer pago" subtitulo={`${usuario.nombre} · cuenta aprobada`} onCerrar={onCerrar}>
+        <p className="text-white/50 text-xs mb-3">Registra su primer pago ahora, o hazlo después desde Renovaciones.</p>
+        <FormularioPago
+          usuarioFijo={{ ...actualizado, plan_id: planId }}
+          soloRenovacion
+          onCancelar={onCerrar}
+          onListo={onCerrar}
+        />
+        <button onClick={onCerrar} className="w-full text-white/50 text-xs mt-3">
+          Lo registro después
+        </button>
+      </Modal>
+    );
+  }
+
+  return (
+    <Modal titulo="Aprobar registro" subtitulo={usuario.nombre} onCerrar={onCerrar}>
+      <p className="text-white/40 text-xs mb-3">
+        {formatearRut(usuario.rut)} · {usuario.correo} · {usuario.telefono}
+      </p>
+      {usuario.obs_salud && (
+        <p className="bg-red-500/10 border border-red-400/30 rounded-lg px-3 py-2 text-red-100 text-xs mb-3 whitespace-pre-line">
+          <span className="font-semibold">OBS:</span> {usuario.obs_salud}
+        </p>
+      )}
+      <label className="text-white/40 text-xs mb-1 block">Plan que contrató</label>
+      <select value={planId} onChange={(e) => setPlanId(e.target.value)} className={`${inputClase} mb-1`}>
+        <option value="" className="bg-ink">Asignar plan después</option>
+        {planes.map((p) => (
+          <option key={p.id} value={p.id} className="bg-ink">
+            {p.nombre}
+          </option>
+        ))}
+      </select>
+      <p className="text-white/35 text-[11px] mb-4">
+        Sin plan, el alumno podrá entrar a la app pero no reservar clases.
+      </p>
+      <div className="flex gap-2">
+        <button onClick={aprobar} disabled={guardando} className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2.5 text-sm disabled:opacity-50">
+          {guardando ? 'Aprobando...' : planId ? 'Aprobar y cobrar' : 'Aprobar'}
+        </button>
+        <button onClick={onCerrar} className="flex-1 bg-white/10 text-white rounded-lg py-2.5 text-sm">
+          Cancelar
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// Editar datos personales del alumno (el correo de acceso no se cambia desde aquí)
+function DialogoDatos({ usuario, actualizarPerfil, onCerrar }) {
+  const [form, setForm] = useState({
+    nombre: usuario.nombre || '',
+    rut: usuario.rut || '',
+    telefono: usuario.telefono || '',
+    fecha_nacimiento: usuario.fecha_nacimiento || '',
+    nacionalidad: usuario.nacionalidad || '',
+  });
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+
+  async function guardar() {
+    if (!form.nombre.trim()) return setError('El nombre no puede quedar vacío.');
+    setGuardando(true);
+    const r = await actualizarPerfil(usuario.id, {
+      nombre: form.nombre.trim(),
+      rut: form.rut.trim() || null,
+      telefono: form.telefono.trim() || null,
+      fecha_nacimiento: form.fecha_nacimiento || null,
+      nacionalidad: form.nacionalidad.trim() || null,
+    });
+    setGuardando(false);
+    if (r && r.ok === false) return setError(r.mensaje);
+    onCerrar();
+  }
+
+  return (
+    <Modal titulo="Datos personales" subtitulo={usuario.nombre} onCerrar={onCerrar}>
+      <div className="flex flex-col gap-3">
+        <div>
+          <label className="text-white/40 text-xs mb-1 block">Nombre completo</label>
+          <input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className={inputClase} />
+        </div>
+        <div>
+          <label className="text-white/40 text-xs mb-1 block">RUT</label>
+          <input value={form.rut} onChange={(e) => setForm({ ...form, rut: e.target.value })} className={inputClase} />
+        </div>
+        <div>
+          <label className="text-white/40 text-xs mb-1 block">Teléfono</label>
+          <input value={form.telefono} onChange={(e) => setForm({ ...form, telefono: formatearTelefono(e.target.value) })} className={inputClase} />
+        </div>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <label className="text-white/40 text-xs mb-1 block">Fecha de nacimiento</label>
+            <input type="date" value={form.fecha_nacimiento} onChange={(e) => setForm({ ...form, fecha_nacimiento: e.target.value })} className={inputClase} />
+          </div>
+          <div className="flex-1">
+            <label className="text-white/40 text-xs mb-1 block">Nacionalidad</label>
+            <input value={form.nacionalidad} onChange={(e) => setForm({ ...form, nacionalidad: e.target.value })} className={inputClase} />
+          </div>
+        </div>
+        <div>
+          <label className="text-white/40 text-xs mb-1 block">Correo de acceso</label>
+          <p className="text-white/70 text-sm">{usuario.correo}</p>
+          <p className="text-white/30 text-[11px]">
+            El correo con que inicia sesión no se puede cambiar desde aquí. Si está mal, se cambia en Supabase → Authentication → Users.
+          </p>
+        </div>
+        {error && <p className="text-red-400 text-xs">{error}</p>}
+        <div className="flex gap-2">
+          <button onClick={guardar} disabled={guardando} className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2.5 text-sm disabled:opacity-50">
+            {guardando ? 'Guardando...' : 'Guardar'}
+          </button>
+          <button onClick={onCerrar} className="flex-1 bg-white/10 text-white rounded-lg py-2.5 text-sm">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

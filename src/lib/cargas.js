@@ -76,24 +76,45 @@ export function mensajeProgreso(nuevo, anterior) {
 }
 
 // Resumen por ejercicio de un alumno: primer y último peso, variación y cantidad de registros.
+// Clave de un registro: el ejercicio específico de la rutina (semana + día + ejercicio).
+// Si un registro antiguo no tiene el ejercicio, se agrupa por nombre.
+export function claveRegistro(r) {
+  return r.ejercicio_id ? `id:${r.ejercicio_id}` : `n:${normalizarEjercicio(r.ejercicio)}`;
+}
+
+// "Semana 2 · Día 1" (o "" si no se sabe)
+export function etiquetaSesion(r) {
+  const partes = [];
+  if (r?.semana !== null && r?.semana !== undefined) partes.push(`Semana ${r.semana}`);
+  if (r?.dia) partes.push(r.dia);
+  return partes.join(' · ');
+}
+
+// Resumen por ejercicio de la rutina (cada semana y día por separado, porque los pesos varían según estos)
 export function resumenPorEjercicio(registros, usuarioId) {
   const grupos = {};
   for (const r of registros) {
     if (r.usuario_id !== usuarioId) continue;
-    const clave = normalizarEjercicio(r.ejercicio);
+    const clave = claveRegistro(r);
     if (!grupos[clave]) grupos[clave] = [];
     grupos[clave].push(r);
   }
-  return Object.values(grupos)
-    .map((lista) => {
+  return Object.entries(grupos)
+    .map(([clave, lista]) => {
       const orden = [...lista].sort((a, b) => (a.creado_en || '').localeCompare(b.creado_en || ''));
       const primero = orden[0];
       const ultimo = orden[orden.length - 1];
       // Punto de partida: el peso que tenía la rutina antes del primer cambio (si se conoce)
       const inicio = primero.peso_anterior !== null && primero.peso_anterior !== undefined ? Number(primero.peso_anterior) : Number(primero.peso);
       const hayComparacion = orden.length > 1 || (primero.peso_anterior !== null && primero.peso_anterior !== undefined);
+      const conSesion = orden.find((x) => x.semana !== null && x.semana !== undefined) || ultimo;
       return {
+        clave,
         ejercicio: ultimo.ejercicio,
+        semana: conSesion.semana ?? null,
+        dia: conSesion.dia ?? null,
+        diaOrden: conSesion.dia_orden ?? null,
+        sesion: etiquetaSesion(conSesion),
         primero: inicio,
         ultimo: Number(ultimo.peso),
         variacion: hayComparacion ? variacionPct(ultimo.peso, inicio) : null,
@@ -101,9 +122,16 @@ export function resumenPorEjercicio(registros, usuarioId) {
         cambios: hayComparacion,
         fechaPrimero: primero.creado_en,
         fechaUltimo: ultimo.creado_en,
+        lista: orden,
       };
     })
-    .sort((a, b) => (b.fechaUltimo || '').localeCompare(a.fechaUltimo || ''));
+    .sort(
+      (a, b) =>
+        (a.semana ?? 999) - (b.semana ?? 999) ||
+        (a.diaOrden ?? 999) - (b.diaOrden ?? 999) ||
+        String(a.dia || '').localeCompare(String(b.dia || '')) ||
+        (b.fechaUltimo || '').localeCompare(a.fechaUltimo || '')
+    );
 }
 
 // Último cambio de peso de un ejercicio específico de la rutina.

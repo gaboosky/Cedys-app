@@ -1,26 +1,57 @@
 import { useState } from 'react';
+import { CalendarCheck, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+
+const INPUT =
+  'w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 outline-none focus:border-cyan-brand transition-colors';
+
+function leerCorreoGuardado() {
+  try {
+    return localStorage.getItem('cedys_ultimo_correo') || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+const PRUEBA_VACIA = { nombre: '', telefono: '', correo: '', preferencia: '', comentario: '' };
+
+// Datos que pueden venir en el link: ?ref= (amigo que recomienda) y, en el link de registro
+// que manda el admin después de la sesión de prueba, ?p= (solicitud) &n= &t= &c= (nombre, teléfono, correo).
+function leerParametros() {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    return { ref: q.get('ref') || '', p: q.get('p') || '', n: q.get('n') || '', t: q.get('t') || '', c: q.get('c') || '' };
+  } catch (e) {
+    return { ref: '', p: '', n: '', t: '', c: '' };
+  }
+}
 
 const LINK_TERMINOS =
   'https://docs.google.com/forms/d/e/1FAIpQLSfUWWCQPOlvTI5a7tVhAqOti3aYzLIp7N2Np9wAubf5pgxFHQ/viewform';
 
-export default function Login() {
-  const { login, error, setError, registrarUsuario, solicitarRecuperacion } =
+export default function Login({ inicial = 'login' }) {
+  const { login, error, setError, registrarUsuario, solicitarRecuperacion, enviarSolicitudPrueba } =
     useAuth();
-  const [modo, setModo] = useState('login'); // 'login' | 'registro' | 'recuperar'
-  const [correo, setCorreo] = useState('');
+  const [modo, setModo] = useState(inicial); // 'login' | 'registro' | 'recuperar' | 'prueba'
+  const [correo, setCorreo] = useState(leerCorreoGuardado);
+  const [mantener, setMantener] = useState(true);
+  const [params] = useState(leerParametros);
+  const [prueba, setPrueba] = useState(PRUEBA_VACIA);
+  const [mensajePrueba, setMensajePrueba] = useState(null);
   const [password, setPassword] = useState('');
   const [enviando, setEnviando] = useState(false);
 
   const [mensajeRegistro, setMensajeRegistro] = useState(null);
-  const [form, setForm] = useState({
-    nombre: '',
+  const [form, setForm] = useState(() => ({
+    nombre: params.n,
     rut: '',
-    correo: '',
-    telefono: '',
+    correo: params.c,
+    telefono: params.t,
     nacionalidad: '',
     fecha_nacimiento: '',
-  });
+    obs_salud: '',
+  }));
+
   const [passwordRegistro, setPasswordRegistro] = useState('');
   const [passwordConfirma, setPasswordConfirma] = useState('');
   const [aceptoTerminos, setAceptoTerminos] = useState(false);
@@ -31,8 +62,22 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault();
     setEnviando(true);
-    await login(correo, password);
+    try {
+      localStorage.setItem('cedys_ultimo_correo', correo.trim());
+    } catch (err) {
+      // sin almacenamiento disponible
+    }
+    await login(correo, password, mantener);
     setEnviando(false);
+  }
+
+  async function handlePrueba(e) {
+    e.preventDefault();
+    setEnviando(true);
+    const resultado = await enviarSolicitudPrueba({ ...prueba, referido_por: params.ref });
+    setEnviando(false);
+    setMensajePrueba(resultado);
+    if (resultado.ok) setPrueba(PRUEBA_VACIA);
   }
 
   function cambiarModo(nuevoModo) {
@@ -40,6 +85,8 @@ export default function Login() {
     setError('');
     setMensajeRegistro(null);
     setMensajeRecuperar(null);
+    setMensajePrueba(null);
+    if (window.location.pathname !== '/') window.history.replaceState(null, '', '/');
   }
 
   async function handleRegistro(e) {
@@ -67,7 +114,7 @@ export default function Login() {
     }
     setEnviando(true);
     const resultado = await registrarUsuario(
-      { ...form, acepto_terminos: true },
+      { ...form, acepto_terminos: true, origen_prueba_id: params.p || null },
       passwordRegistro
     );
     setEnviando(false);
@@ -80,6 +127,7 @@ export default function Login() {
         telefono: '',
         nacionalidad: '',
         fecha_nacimiento: '',
+        obs_salud: '',
       });
       setPasswordRegistro('');
       setPasswordConfirma('');
@@ -107,6 +155,84 @@ export default function Login() {
       </div>
 
       {modo === 'login' && (
+        <button
+          type="button"
+          onClick={() => cambiarModo('prueba')}
+          className="mb-6 w-full flex items-center gap-3 bg-cyan-brand/10 border border-cyan-brand/40 rounded-2xl px-4 py-3.5 text-left hover:bg-cyan-brand/15 transition-colors"
+        >
+          <span className="w-10 h-10 rounded-full bg-cyan-brand/20 flex items-center justify-center shrink-0">
+            <CalendarCheck size={20} className="text-cyan-brand" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-white font-semibold text-sm">Pide tu sesión de prueba</span>
+            <span className="block text-white/50 text-xs">¿Primera vez en CED&amp;S? Déjanos tus datos y te contactamos.</span>
+          </span>
+          <ChevronRight size={18} className="text-cyan-brand shrink-0" />
+        </button>
+      )}
+
+      {modo === 'prueba' && (
+        <form onSubmit={handlePrueba} className="flex flex-col gap-3">
+          <div className="mb-1">
+            <p className="text-white text-lg font-semibold">Sesión de prueba</p>
+            <p className="text-white/50 text-sm">
+              Completa tus datos y te contactaremos para agendar tu primera clase.
+            </p>
+            {params.ref && (
+              <p className="text-cyan-brand text-sm mt-1">🙌 Te invitó un amigo que entrena con nosotros.</p>
+            )}
+          </div>
+          <input
+            value={prueba.nombre}
+            onChange={(e) => setPrueba({ ...prueba, nombre: e.target.value })}
+            placeholder="Nombre y apellido"
+            className={INPUT}
+            required
+          />
+          <input
+            type="tel"
+            value={prueba.telefono}
+            onChange={(e) => setPrueba({ ...prueba, telefono: e.target.value })}
+            placeholder="Teléfono / WhatsApp"
+            className={INPUT}
+            required
+          />
+          <input
+            type="email"
+            value={prueba.correo}
+            onChange={(e) => setPrueba({ ...prueba, correo: e.target.value })}
+            placeholder="Correo (opcional)"
+            className={INPUT}
+          />
+          <input
+            value={prueba.preferencia}
+            onChange={(e) => setPrueba({ ...prueba, preferencia: e.target.value })}
+            placeholder="Días u horario que te acomodan"
+            className={INPUT}
+          />
+          <textarea
+            value={prueba.comentario}
+            onChange={(e) => setPrueba({ ...prueba, comentario: e.target.value })}
+            placeholder="Cuéntanos tu objetivo o algo importante (lesión, enfermedad, etc.) — opcional"
+            rows={3}
+            className={INPUT + ' resize-none'}
+          />
+          {mensajePrueba && (
+            <p className={`text-sm ${mensajePrueba.ok ? 'text-cyan-brand' : 'text-red-400'}`}>
+              {mensajePrueba.mensaje}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={enviando}
+            className="mt-1 bg-cyan-brand text-ink font-semibold rounded-lg py-3 hover:bg-cyan-brandLight transition-colors disabled:opacity-50"
+          >
+            {enviando ? 'Enviando...' : 'Pedir sesión de prueba'}
+          </button>
+        </form>
+      )}
+
+      {modo === 'login' && (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
             <label className="text-white/60 text-sm mb-1 block">Correo</label>
@@ -132,12 +258,22 @@ export default function Login() {
             />
           </div>
 
+          <label className="flex items-center gap-2 text-white/60 text-sm select-none">
+            <input
+              type="checkbox"
+              checked={mantener}
+              onChange={(e) => setMantener(e.target.checked)}
+              className="w-4 h-4 accent-cyan-brand"
+            />
+            Mantener sesión iniciada
+          </label>
+
           {error && <p className="text-red-400 text-sm">{error}</p>}
 
           <button
             type="submit"
             disabled={enviando}
-            className="mt-2 bg-cyan-brand text-ink font-semibold rounded-lg py-3 hover:bg-cyan-brandLight transition-colors disabled:opacity-50"
+            className="mt-1 bg-cyan-brand text-ink font-semibold rounded-lg py-3 hover:bg-cyan-brandLight transition-colors disabled:opacity-50"
           >
             {enviando ? 'Entrando...' : 'Entrar'}
           </button>
@@ -186,6 +322,11 @@ export default function Login() {
 
       {modo === 'registro' && (
         <form onSubmit={handleRegistro} className="flex flex-col gap-3">
+          {params.p && (
+            <p className="text-cyan-brand text-sm mb-1">
+              ¡Qué bueno que te quedas con nosotros! Completa tus datos para crear tu cuenta.
+            </p>
+          )}
           <input
             value={form.nombre}
             onChange={(e) => setForm({ ...form, nombre: e.target.value })}
@@ -251,6 +392,19 @@ export default function Login() {
             className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 outline-none focus:border-cyan-brand transition-colors"
             required
           />
+          <div>
+            <label className="text-white/40 text-xs mb-1 block">
+              OBS (opcional): algo que tu coach deba saber
+            </label>
+            <textarea
+              value={form.obs_salud}
+              onChange={(e) => setForm({ ...form, obs_salud: e.target.value })}
+              placeholder="Ej: enfermedad, lesión u otro dato importante"
+              rows={3}
+              maxLength={500}
+              className={INPUT + ' resize-none'}
+            />
+          </div>
 
           <label className="flex items-start gap-2 text-white/60 text-xs">
             <input
@@ -300,6 +454,14 @@ export default function Login() {
           >
             ¿No tienes cuenta?{' '}
             <span className="text-cyan-brand">Regístrate</span>
+          </button>
+        )}
+        {modo === 'prueba' && (
+          <button
+            onClick={() => cambiarModo('login')}
+            className="text-white/50 text-sm hover:text-white transition-colors inline-flex items-center gap-1"
+          >
+            <ArrowLeft size={14} /> Volver a <span className="text-cyan-brand">iniciar sesión</span>
           </button>
         )}
         {(modo === 'registro' || modo === 'recuperar') && (

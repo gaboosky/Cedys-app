@@ -6,6 +6,7 @@ import Header from './components/Header';
 import InstalarApp from './components/InstalarApp';
 import Bienvenida from './components/Bienvenida';
 import Login from './pages/Login';
+import NuevaContrasena from './pages/NuevaContrasena';
 
 // Carga perezosa: cada pantalla se descarga solo cuando el usuario entra a ella,
 // en vez de bajar toda la app de una sola vez.
@@ -38,7 +39,14 @@ const IngresoDetalle = lazy(() => import('./pages/admin/IngresoDetalle'));
 const IngresosGraficos = lazy(() => import('./pages/admin/IngresosGraficos'));
 const Finanzas = lazy(() => import('./pages/admin/Finanzas'));
 const Renovaciones = lazy(() => import('./pages/admin/Renovaciones'));
+const Gimnasio = lazy(() => import('./pages/Gimnasio'));
+const Gastos = lazy(() => import('./pages/admin/Gastos'));
+const Avisos = lazy(() => import('./pages/admin/Avisos'));
+const Actividad = lazy(() => import('./pages/admin/Actividad'));
+const PagoCoaches = lazy(() => import('./pages/admin/PagoCoaches'));
 const ClasesRealizadas = lazy(() => import('./pages/admin/ClasesRealizadas'));
+const SolicitudesPrueba = lazy(() => import('./pages/admin/SolicitudesPrueba'));
+const Seguimiento = lazy(() => import('./pages/admin/Seguimiento'));
 
 function CargandoPantalla() {
   return (
@@ -73,6 +81,7 @@ function AppShell() {
         <Routes>
           {/* Usuario */}
           <Route path="/perfil" element={<Perfil />} />
+          <Route path="/gimnasio" element={<Gimnasio />} />
           <Route path="/horarios" element={<Horarios />} />
           <Route
             path="/horarios/:horarioId/:fecha"
@@ -92,7 +101,13 @@ function AppShell() {
           <Route path="/ingresos-graficos" element={<IngresosGraficos />} />
           <Route path="/finanzas" element={<Finanzas />} />
           <Route path="/renovaciones" element={<Renovaciones />} />
+          <Route path="/gastos" element={<Gastos />} />
+          <Route path="/avisos" element={<Avisos />} />
+          <Route path="/actividad" element={<Actividad />} />
+          <Route path="/pago-coaches" element={<PagoCoaches />} />
           <Route path="/clases-realizadas" element={<ClasesRealizadas />} />
+          <Route path="/pruebas" element={<SolicitudesPrueba />} />
+          <Route path="/seguimiento" element={<Seguimiento />} />
           <Route path="/clases-admin" element={<ClasesAdmin />} />
           <Route path="/planes" element={<Planes />} />
           <Route path="/coaches" element={<Coaches />} />
@@ -130,9 +145,30 @@ function AppShell() {
   );
 }
 
+// Pantalla de inicio mientras se recupera la sesión guardada
+// (así no aparece el login por un instante a quien ya había entrado).
+function Arrancando() {
+  return (
+    <div className="min-h-screen bg-ink flex flex-col items-center justify-center gap-5">
+      <p className="text-white text-2xl font-bold tracking-wide">
+        CED<span className="text-cyan-brand">&amp;</span>S
+      </p>
+      <div className="w-8 h-8 border-2 border-cyan-brand/30 border-t-cyan-brand rounded-full animate-spin" />
+    </div>
+  );
+}
+
 function Root() {
-  const { usuarioActual } = useAuth();
-  return usuarioActual ? <AppShell /> : <Login />;
+  const { usuarioActual, iniciando } = useAuth();
+  // El link de "Olvidé mi contraseña" abre esta pantalla, haya o no sesión.
+  if (window.location.pathname === '/nueva-contrasena') return <NuevaContrasena />;
+  if (iniciando) return <Arrancando />;
+  // cedys.cl/prueba abre directo el formulario de sesión de prueba y cedys.cl/registro el de registro
+  if (!usuarioActual) {
+    const ruta = window.location.pathname;
+    return <Login inicial={ruta === '/prueba' ? 'prueba' : ruta === '/registro' ? 'registro' : 'login'} />;
+  }
+  return <AppShell />;
 }
 
 export default function App() {

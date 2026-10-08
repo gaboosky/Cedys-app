@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { DollarSign, CalendarDays, TrendingUp, UserX, CalendarClock, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { DollarSign, CalendarDays, TrendingUp, UserX, CalendarClock, ChevronRight, ChevronDown, ChevronUp, Receipt, PiggyBank } from 'lucide-react';
 import GraficoBarrasMes from '../../components/GraficoBarrasMes';
 import BarrasHorizontales from '../../components/BarrasHorizontales';
 import GraficoDona from '../../components/GraficoDona';
@@ -64,7 +64,7 @@ function Indicador({ icono: Icono, etiqueta, valor, detalle, destacado, onClick 
 
 export default function Finanzas() {
   const navigate = useNavigate();
-  const { usuarios, planes, pagos, reservas, horarios, horarioEstaCancelado, diasRenovacion } = useAuth();
+  const { usuarios, planes, pagos, reservas, horarios, horarioEstaCancelado, diasRenovacion, gastos } = useAuth();
 
   const [atajo, setAtajo] = useState('mes');
   const [rango, setRango] = useState(rangoAtajo('mes'));
@@ -87,6 +87,9 @@ export default function Finanzas() {
   // --- Ingresos del período ---
   const pagosPeriodo = pagos.filter((p) => p.fecha >= desde && p.fecha <= hasta);
   const ingresosPeriodo = totalDe(pagosPeriodo);
+  const gastosPeriodo = (gastos || []).filter((g) => g.fecha >= desde && g.fecha <= hasta);
+  const totalGastos = gastosPeriodo.reduce((acc, g) => acc + (Number(g.monto) || 0), 0);
+  const utilidad = ingresosPeriodo - totalGastos;
 
   // --- Reservas de la semana (lunes a domingo) ---
   const hoyFecha = new Date(hoy + 'T00:00:00');
@@ -257,6 +260,24 @@ export default function Finanzas() {
             etiqueta="% no-show"
             valor={pctNoShow === null ? '—' : `${pctNoShow}%`}
             detalle={pctNoShow === null ? 'Aún sin asistencia marcada' : `${marcadas.length - asistieron} no llegaron`}
+          />
+        </div>
+
+        {/* Gastos y utilidad */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <Indicador
+            icono={Receipt}
+            etiqueta="Gastos del período"
+            valor={formatearPesos(totalGastos)}
+            detalle={`${gastosPeriodo.length} gasto${gastosPeriodo.length !== 1 ? 's' : ''} · ver y registrar`}
+            onClick={() => navigate('/gastos')}
+          />
+          <Indicador
+            icono={PiggyBank}
+            etiqueta="Utilidad (ingresos − gastos)"
+            valor={formatearPesos(utilidad)}
+            detalle={utilidad >= 0 ? 'Resultado positivo' : 'Los gastos superan los ingresos'}
+            destacado={utilidad >= 0}
           />
         </div>
 
