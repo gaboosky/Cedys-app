@@ -19,17 +19,20 @@ const RESULTADOS = {
   ok: {
     icon: CheckCircle2,
     clase: 'bg-cyan-brand/10 border-cyan-brand/40 text-cyan-brand',
-    texto: '¡Pago recibido! Tu plan se renueva solo en unos segundos. Si aún no ves el cambio, cierra y vuelve a abrir la app.',
+    texto:
+      '¡Pago recibido! Tu plan se renueva solo en unos segundos. Si aún no ves el cambio, cierra y vuelve a abrir la app.',
   },
   pendiente: {
     icon: Clock,
     clase: 'bg-yellow-400/10 border-yellow-400/30 text-yellow-100',
-    texto: 'Tu pago quedó pendiente. Cuando Mercado Pago lo apruebe, tu plan se renovará solo y te llegará un aviso.',
+    texto:
+      'Tu pago quedó pendiente. Cuando Mercado Pago lo apruebe, tu plan se renovará solo y te llegará un aviso.',
   },
   error: {
     icon: AlertTriangle,
     clase: 'bg-red-500/10 border-red-400/30 text-red-200',
-    texto: 'El pago no se completó. Puedes intentarlo de nuevo o pagar en el gimnasio.',
+    texto:
+      'El pago no se completó. Puedes intentarlo de nuevo o pagar en el gimnasio.',
   },
 };
 
@@ -64,7 +67,9 @@ export default function PagoEnLinea({ diasParaVencer }) {
   return (
     <>
       {res && (
-        <div className={`flex items-start gap-2 border rounded-2xl px-4 py-3 mb-4 text-sm ${res.clase}`}>
+        <div
+          className={`flex items-start gap-2 border rounded-2xl px-4 py-3 mb-4 text-sm ${res.clase}`}
+        >
           <res.icon size={16} className="shrink-0 mt-0.5" /> {res.texto}
         </div>
       )}
@@ -76,12 +81,17 @@ export default function PagoEnLinea({ diasParaVencer }) {
             className="w-full flex items-center justify-center gap-2 bg-cyan-brand text-ink font-semibold rounded-2xl py-3.5 text-sm disabled:opacity-60 transition-transform active:scale-[0.98]"
           >
             <CreditCard size={17} />
-            {cargando ? 'Abriendo Mercado Pago...' : `Renovar mi plan en línea · ${formatearPesos(monto)}`}
+            {cargando
+              ? 'Abriendo Mercado Pago...'
+              : `Renovar mi plan en línea · ${formatearPesos(monto)}`}
           </button>
           <p className="text-white/35 text-[11px] text-center mt-1.5">
-            Pago seguro con Mercado Pago (tarjeta, débito o transferencia). Tu plan se renueva solo al pagar.
+            Pago seguro con Mercado Pago (tarjeta, débito o transferencia). Tu
+            plan se renueva solo al pagar.
           </p>
-          {error && <p className="text-red-400 text-xs text-center mt-1">{error}</p>}
+          {error && (
+            <p className="text-red-400 text-xs text-center mt-1">{error}</p>
+          )}
         </div>
       )}
     </>

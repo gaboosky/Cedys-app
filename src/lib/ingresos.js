@@ -99,7 +99,9 @@ export function pendientesDeCobro(usuarios, planes, diasRenovacion = 30) {
     .filter((u) => u.estado === 'activo' && u.plan_id && planes[u.plan_id])
     .filter((u) => necesitaRenovar(u, planes, diasRenovacion))
     .map((u) => ({ usuario: u, monto: montoPlanDe(u, planes) }))
-    .sort((a, b) => (a.usuario.nombre || '').localeCompare(b.usuario.nombre || ''));
+    .sort((a, b) =>
+      (a.usuario.nombre || '').localeCompare(b.usuario.nombre || '')
+    );
 }
 
 // Colores fijos por medio de pago (validados para el fondo oscuro; cada medio siempre tiene el mismo color).
@@ -128,7 +130,9 @@ export function sumarDias(fechaISO, dias) {
 
 export function duracionPlanDe(usuario, planes, diasRenovacion = 30, planId) {
   const plan = planes[planId ?? usuario?.plan_id];
-  return usuario?.plan_dias_personalizado || plan?.duracion_dias || diasRenovacion;
+  return (
+    usuario?.plan_dias_personalizado || plan?.duracion_dias || diasRenovacion
+  );
 }
 
 // Misma fecha N meses después (si el día no existe, usa el último del mes: 31 ene → 28 feb).
@@ -141,7 +145,8 @@ export function sumarMesesFecha(fechaISO, meses) {
 // Suma la duración del plan: en meses si es mensual/trimestral/etc. (30, 60, 90 días...), si no en días.
 export function sumarDuracion(fechaISO, duracionDias) {
   const meses = Math.max(1, Math.round(duracionDias / 30));
-  if (Math.abs(duracionDias - meses * 30) <= 3) return sumarMesesFecha(fechaISO, meses);
+  if (Math.abs(duracionDias - meses * 30) <= 3)
+    return sumarMesesFecha(fechaISO, meses);
   return sumarDias(fechaISO, duracionDias);
 }
 
@@ -151,7 +156,10 @@ export function fechaVenceDe(usuario, planes, diasRenovacion = 30) {
   if (!usuario) return null;
   if (usuario.fecha_vencimiento) return usuario.fecha_vencimiento;
   if (!usuario.fecha_ultima_renovacion) return null;
-  return sumarDias(usuario.fecha_ultima_renovacion, duracionPlanDe(usuario, planes, diasRenovacion));
+  return sumarDias(
+    usuario.fecha_ultima_renovacion,
+    duracionPlanDe(usuario, planes, diasRenovacion)
+  );
 }
 
 // Vencimiento sugerido para un pago nuevo: mismo día del mes que el vencimiento anterior
@@ -171,19 +179,34 @@ export function vencimientoDe(usuario, planes, diasRenovacion = 30) {
   if (!usuario.plan_id) return null;
   const vence = fechaVenceDe(usuario, planes, diasRenovacion);
   if (!vence) return null;
-  const dias = Math.round((fechaLocal(vence) - fechaLocal(hoyLocalISO())) / DIA_MS);
+  const dias = Math.round(
+    (fechaLocal(vence) - fechaLocal(hoyLocalISO())) / DIA_MS
+  );
   return { vence, dias };
 }
 
 // Alumnos con plan vigente en cada mes, calculado con los pagos de plan
 // (cada pago cubre desde su fecha hasta su fecha + la duración del plan).
-export function alumnosActivosPorMes(pagos, usuarios, planes, diasRenovacion, meses) {
+export function alumnosActivosPorMes(
+  pagos,
+  usuarios,
+  planes,
+  diasRenovacion,
+  meses
+) {
   const porUsuario = Object.fromEntries(usuarios.map((u) => [u.id, u]));
   const periodos = pagos
     .filter((p) => p.tipo !== 'manual')
     .map((p) => {
-      const dur = duracionPlanDe(porUsuario[p.usuario_id], planes, diasRenovacion, p.plan_id);
-      const hasta = p.vence ? sumarDias(p.vence, -1) : sumarDias(p.fecha, dur - 1);
+      const dur = duracionPlanDe(
+        porUsuario[p.usuario_id],
+        planes,
+        diasRenovacion,
+        p.plan_id
+      );
+      const hasta = p.vence
+        ? sumarDias(p.vence, -1)
+        : sumarDias(p.fecha, dur - 1);
       return { usuario: p.usuario_id, desde: p.fecha, hasta };
     });
   const resultado = {};
@@ -191,7 +214,11 @@ export function alumnosActivosPorMes(pagos, usuarios, planes, diasRenovacion, me
     const [anio, mes] = m.split('-').map(Number);
     const inicio = `${m}-01`;
     const fin = `${m}-${pad(new Date(anio, mes, 0).getDate())}`;
-    const activos = new Set(periodos.filter((x) => x.desde <= fin && x.hasta >= inicio).map((x) => x.usuario));
+    const activos = new Set(
+      periodos
+        .filter((x) => x.desde <= fin && x.hasta >= inicio)
+        .map((x) => x.usuario)
+    );
     resultado[m] = activos.size;
   }
   return resultado;

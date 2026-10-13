@@ -153,7 +153,9 @@ function FormularioNoticia({
           <input
             type="checkbox"
             checked={!!form.avisar}
-            onChange={(e) => setForm((prev) => ({ ...prev, avisar: e.target.checked }))}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, avisar: e.target.checked }))
+            }
             className="w-4 h-4 accent-cyan-500"
           />
           Avisar a todos al celular
@@ -200,7 +202,9 @@ export default function General() {
     crearNoticia(noticia);
     if (avisar) {
       enviarAvisoMasivo(
-        usuarios.filter((u) => u.estado === 'activo' && u.id !== usuarioActual.id).map((u) => u.id),
+        usuarios
+          .filter((u) => u.estado === 'activo' && u.id !== usuarioActual.id)
+          .map((u) => u.id),
         `Nueva noticia: ${noticia.titulo}`
       );
     }
@@ -250,7 +254,12 @@ export default function General() {
 
       {mostrarForm && (
         <FormularioNoticia
-          valorInicial={{ titulo: '', contenido: '', imagen_url: '', avisar: true }}
+          valorInicial={{
+            titulo: '',
+            contenido: '',
+            imagen_url: '',
+            avisar: true,
+          }}
           onGuardar={handleCrearNoticia}
           onCancelar={() => setMostrarForm(false)}
           textoBoton="Publicar"

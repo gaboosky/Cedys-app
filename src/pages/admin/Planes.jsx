@@ -10,7 +10,9 @@ export default function Planes() {
   async function confirmarEliminar(planId) {
     const resultado = await eliminarPlan(planId);
     setEliminando(null);
-    setErrorEliminar(resultado.ok ? null : { planId, mensaje: resultado.mensaje });
+    setErrorEliminar(
+      resultado.ok ? null : { planId, mensaje: resultado.mensaje }
+    );
   }
   const [editando, setEditando] = useState(null);
   const [form, setForm] = useState({});
@@ -307,12 +309,16 @@ export default function Planes() {
               <p className="text-white/30 text-xs mt-1">
                 {(() => {
                   const n = usuarios.filter((u) => u.plan_id === p.id).length;
-                  return n === 0 ? 'Ningún alumno con este plan' : `${n} ${n === 1 ? 'alumno' : 'alumnos'} con este plan`;
+                  return n === 0
+                    ? 'Ningún alumno con este plan'
+                    : `${n} ${n === 1 ? 'alumno' : 'alumnos'} con este plan`;
                 })()}
               </p>
             )}
             {errorEliminar?.planId === p.id && (
-              <p className="text-red-400 text-xs mt-2">{errorEliminar.mensaje}</p>
+              <p className="text-red-400 text-xs mt-2">
+                {errorEliminar.mensaje}
+              </p>
             )}
           </div>
         ))}

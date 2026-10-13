@@ -17,7 +17,12 @@ import {
   CalendarCheck,
   TrendingUp,
 } from 'lucide-react';
-import { resumenPorEjercicio, formatearKg, fechaRegistro, formatearPct } from '../../lib/cargas';
+import {
+  resumenPorEjercicio,
+  formatearKg,
+  fechaRegistro,
+  formatearPct,
+} from '../../lib/cargas';
 
 function formatearFecha(fecha) {
   if (!fecha) return '';
@@ -154,7 +159,13 @@ export default function PerfilAlumno() {
     setGuardandoPeso(true);
     const resultado = await agregarProgresoAdmin(usuario.id, {
       peso_kg: Number(pesoNuevo),
-      fecha: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
+      fecha: (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+          2,
+          '0'
+        )}-${String(d.getDate()).padStart(2, '0')}`;
+      })(),
     });
     if (resultado.ok) {
       setProgreso((prev) => [resultado.data, ...(prev || [])]);
@@ -333,13 +344,29 @@ export default function PerfilAlumno() {
             <Dato label="Teléfono" valor={usuario.telefono} />
             {usuario.obs_salud && (
               <div className="mt-1 bg-red-500/10 border border-red-400/30 rounded-lg px-3 py-2">
-                <p className="text-red-200/80 text-[10px] uppercase tracking-wide">OBS del alumno</p>
-                <p className="text-white/90 text-sm whitespace-pre-line">{usuario.obs_salud}</p>
+                <p className="text-red-200/80 text-[10px] uppercase tracking-wide">
+                  OBS del alumno
+                </p>
+                <p className="text-white/90 text-sm whitespace-pre-line">
+                  {usuario.obs_salud}
+                </p>
               </div>
             )}
           </div>
         )}
       </div>
+
+      <button
+        onClick={() => navigate(`/seguimiento-personal/${usuario.id}`)}
+        className="w-full flex items-center justify-between bg-cyan-brand/10 border border-cyan-brand/40 rounded-2xl px-4 py-3.5 mb-4 text-left"
+      >
+        <span className="text-white text-sm font-medium">
+          📏 Seguimiento personal
+        </span>
+        <span className="text-cyan-brand text-xs">
+          Objetivo, mediciones y avance →
+        </span>
+      </button>
 
       {/* --- Peso / progreso --- */}
       <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 mb-4">
@@ -643,14 +670,20 @@ function ProgresoCargas({ registros, usuarioId }) {
   const conVariacion = resumen.filter((r) => r.variacion !== null);
   const promedio =
     conVariacion.length > 0
-      ? Math.round((conVariacion.reduce((acc, r) => acc + r.variacion, 0) / conVariacion.length) * 10) / 10
+      ? Math.round(
+          (conVariacion.reduce((acc, r) => acc + r.variacion, 0) /
+            conVariacion.length) *
+            10
+        ) / 10
       : null;
   const visibles = verTodos ? resumen : resumen.slice(0, 8);
 
   return (
     <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 mt-4">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-white/40 text-xs uppercase tracking-wide">Progreso de cargas</p>
+        <p className="text-white/40 text-xs uppercase tracking-wide">
+          Progreso de cargas
+        </p>
         {promedio !== null && (
           <span
             className={`text-[11px] font-semibold rounded-full px-2 py-0.5 border ${
@@ -665,16 +698,24 @@ function ProgresoCargas({ registros, usuarioId }) {
       </div>
 
       {resumen.length === 0 ? (
-        <p className="text-white/30 text-sm">Todavía no hay cambios de peso en su rutina.</p>
+        <p className="text-white/30 text-sm">
+          Todavía no hay cambios de peso en su rutina.
+        </p>
       ) : (
         <div className="flex flex-col gap-1.5">
           {visibles.map((r) => (
-            <div key={r.clave} className="flex items-center justify-between gap-3 bg-black/20 rounded-lg px-3 py-2">
+            <div
+              key={r.clave}
+              className="flex items-center justify-between gap-3 bg-black/20 rounded-lg px-3 py-2"
+            >
               <div className="min-w-0">
                 <p className="text-white text-sm truncate">{r.ejercicio}</p>
-                {r.sesion && <p className="text-cyan-brand/70 text-[11px]">{r.sesion}</p>}
+                {r.sesion && (
+                  <p className="text-cyan-brand/70 text-[11px]">{r.sesion}</p>
+                )}
                 <p className="text-white/35 text-[11px]">
-                  {r.registros} cambio{r.registros !== 1 ? 's' : ''} · último {fechaRegistro(r.fechaUltimo)}
+                  {r.registros} cambio{r.registros !== 1 ? 's' : ''} · último{' '}
+                  {fechaRegistro(r.fechaUltimo)}
                 </p>
               </div>
               <div className="text-right shrink-0">
@@ -683,7 +724,11 @@ function ProgresoCargas({ registros, usuarioId }) {
                   {formatearKg(r.ultimo)}
                 </p>
                 {r.variacion !== null && (
-                  <p className={`text-[11px] flex items-center justify-end gap-1 ${r.variacion > 0 ? 'text-cyan-brand' : 'text-white/45'}`}>
+                  <p
+                    className={`text-[11px] flex items-center justify-end gap-1 ${
+                      r.variacion > 0 ? 'text-cyan-brand' : 'text-white/45'
+                    }`}
+                  >
                     {r.variacion > 0 && <TrendingUp size={11} />}
                     {formatearPct(r.variacion)}
                   </p>
@@ -692,7 +737,10 @@ function ProgresoCargas({ registros, usuarioId }) {
             </div>
           ))}
           {resumen.length > 8 && (
-            <button onClick={() => setVerTodos(!verTodos)} className="text-cyan-brand text-xs font-medium pt-1">
+            <button
+              onClick={() => setVerTodos(!verTodos)}
+              className="text-cyan-brand text-xs font-medium pt-1"
+            >
               {verTodos ? 'Ver menos' : `Ver los ${resumen.length} ejercicios`}
             </button>
           )}

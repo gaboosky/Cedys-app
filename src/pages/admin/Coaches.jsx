@@ -98,8 +98,9 @@ export default function Coaches() {
   }
 
   async function confirmarEliminar(coachId) {
-    await rechazarUsuario(coachId);
+    const r = await rechazarUsuario(coachId);
     setEliminandoId(null);
+    if (r?.ok === false) alert(r.mensaje);
   }
 
   return (
@@ -109,7 +110,8 @@ export default function Coaches() {
         className="flex items-center justify-between bg-cyan-brand/[0.07] border border-cyan-brand/30 rounded-2xl px-4 py-3 mb-4"
       >
         <span className="flex items-center gap-2 text-white text-sm">
-          <HandCoins size={17} className="text-cyan-brand" /> Clases realizadas y pago del mes
+          <HandCoins size={17} className="text-cyan-brand" /> Clases realizadas
+          y pago del mes
         </span>
         <ChevronRight size={16} className="text-cyan-brand/70" />
       </Link>

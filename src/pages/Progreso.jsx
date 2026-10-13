@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { subirImagen } from '../lib/storage';
 import CargasRutina from '../components/CargasRutina';
+import SeguimientoDashboard from '../components/SeguimientoDashboard';
+import HistorialMediciones from '../components/HistorialMediciones';
 import {
   Plus,
   X,
@@ -28,8 +30,25 @@ function formatFecha(fechaISO) {
 }
 
 export default function Progreso() {
-  const { usuarioActual, obtenerProgreso, agregarProgreso, eliminarProgreso, registrosPeso } =
-    useAuth();
+  const {
+    usuarioActual,
+    obtenerProgreso,
+    agregarProgreso,
+    eliminarProgreso,
+    registrosPeso,
+    planesSeguimiento,
+    mediciones,
+  } = useAuth();
+  const tieneSeguimiento =
+    (planesSeguimiento || []).some(
+      (p) => String(p.usuario_id) === String(usuarioActual.id)
+    ) ||
+    (mediciones || []).some(
+      (m) => String(m.usuario_id) === String(usuarioActual.id)
+    );
+  const misMediciones = (mediciones || [])
+    .filter((m) => String(m.usuario_id) === String(usuarioActual.id))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
   const [entradas, setEntradas] = useState(null);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -37,7 +56,13 @@ export default function Progreso() {
   const [eliminandoId, setEliminandoId] = useState(null);
 
   const [form, setForm] = useState({
-    fecha: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
+    fecha: (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+        2,
+        '0'
+      )}-${String(d.getDate()).padStart(2, '0')}`;
+    })(),
     peso_kg: '',
     notas: '',
     foto_url: '',
@@ -103,7 +128,13 @@ export default function Progreso() {
     setMensaje(resultado);
     if (resultado.ok) {
       setForm({
-        fecha: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
+        fecha: (() => {
+          const d = new Date();
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+            2,
+            '0'
+          )}-${String(d.getDate()).padStart(2, '0')}`;
+        })(),
         peso_kg: '',
         notas: '',
         foto_url: '',
@@ -132,6 +163,20 @@ export default function Progreso() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
+      {tieneSeguimiento && (
+        <div className="mb-8">
+          <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+            Mi seguimiento con mi coach
+          </p>
+          <SeguimientoDashboard usuarioId={usuarioActual.id} />
+          <div className="mt-4">
+            <HistorialMediciones lista={misMediciones} />
+          </div>
+          <p className="text-white/40 text-xs uppercase tracking-wide mt-8 -mb-3">
+            Mi registro personal
+          </p>
+        </div>
+      )}
       <div className="flex justify-end mb-6">
         <button
           onClick={() => setMostrarForm(!mostrarForm)}
@@ -166,7 +211,11 @@ export default function Progreso() {
                 ) : (
                   <TrendingUp size={14} />
                 )}
-                {String(Math.round(Math.abs(diferencia) * 10) / 10).replace(".", ",")} kg
+                {String(Math.round(Math.abs(diferencia) * 10) / 10).replace(
+                  '.',
+                  ','
+                )}{' '}
+                kg
               </span>
             )}
           </div>

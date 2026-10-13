@@ -13,7 +13,10 @@ import {
 import { fechaVenceDe } from '../lib/ingresos';
 
 function isoLocal(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function fechaLarga(fechaISO) {
@@ -27,12 +30,15 @@ function fechaLarga(fechaISO) {
 // pidiendo de a 1000 (varias páginas a la vez para que sea rápido).
 async function traerTodo(crearConsulta, tam = 1000) {
   const primera = await crearConsulta().range(0, tam - 1);
-  if (primera.error || !primera.data || primera.data.length < tam) return primera;
+  if (primera.error || !primera.data || primera.data.length < tam)
+    return primera;
   let datos = [...primera.data];
   let desde = tam;
   for (;;) {
     const paginas = await Promise.all(
-      [0, 1, 2, 3].map((i) => crearConsulta().range(desde + i * tam, desde + (i + 1) * tam - 1))
+      [0, 1, 2, 3].map((i) =>
+        crearConsulta().range(desde + i * tam, desde + (i + 1) * tam - 1)
+      )
     );
     let fin = false;
     for (const r of paginas) {
@@ -86,6 +92,8 @@ export function AuthProvider({ children }) {
   const [tarifasCoach, setTarifasCoach] = useState({});
   const [evaluaciones, setEvaluaciones] = useState([]);
   const [solicitudesPrueba, setSolicitudesPrueba] = useState([]);
+  const [planesSeguimiento, setPlanesSeguimiento] = useState([]);
+  const [mediciones, setMediciones] = useState([]);
 
   useEffect(() => {
     iniciar();
@@ -125,9 +133,14 @@ export function AuthProvider({ children }) {
         { event: '*', schema: 'public', table: 'ausencias_coach' },
         (payload) => {
           if (payload.eventType === 'DELETE') {
-            setAusenciasCoach((prev) => prev.filter((a) => a.id !== payload.old.id));
+            setAusenciasCoach((prev) =>
+              prev.filter((a) => a.id !== payload.old.id)
+            );
           } else {
-            setAusenciasCoach((prev) => [payload.new, ...prev.filter((a) => a.id !== payload.new.id)]);
+            setAusenciasCoach((prev) => [
+              payload.new,
+              ...prev.filter((a) => a.id !== payload.new.id),
+            ]);
           }
         }
       )
@@ -136,9 +149,14 @@ export function AuthProvider({ children }) {
         { event: '*', schema: 'public', table: 'reemplazos_clase' },
         (payload) => {
           if (payload.eventType === 'DELETE') {
-            setReemplazos((prev) => prev.filter((r) => r.id !== payload.old.id));
+            setReemplazos((prev) =>
+              prev.filter((r) => r.id !== payload.old.id)
+            );
           } else {
-            setReemplazos((prev) => [payload.new, ...prev.filter((r) => r.id !== payload.new.id)]);
+            setReemplazos((prev) => [
+              payload.new,
+              ...prev.filter((r) => r.id !== payload.new.id),
+            ]);
           }
         }
       )
@@ -147,7 +165,9 @@ export function AuthProvider({ children }) {
         { event: '*', schema: 'public', table: 'clases_finalizadas' },
         (payload) => {
           if (payload.eventType === 'DELETE') {
-            setClasesFinalizadas((prev) => prev.filter((c) => c.id !== payload.old.id));
+            setClasesFinalizadas((prev) =>
+              prev.filter((c) => c.id !== payload.old.id)
+            );
           } else {
             setClasesFinalizadas((prev) => [
               payload.new,
@@ -161,7 +181,9 @@ export function AuthProvider({ children }) {
         { event: 'INSERT', schema: 'public', table: 'registros_peso' },
         (payload) => {
           setRegistrosPeso((prev) =>
-            prev.some((r) => r.id === payload.new.id) ? prev : [payload.new, ...prev]
+            prev.some((r) => r.id === payload.new.id)
+              ? prev
+              : [payload.new, ...prev]
           );
         }
       )
@@ -189,7 +211,9 @@ export function AuthProvider({ children }) {
         { event: 'INSERT', schema: 'public', table: 'solicitudes_prueba' },
         (payload) => {
           setSolicitudesPrueba((prev) =>
-            prev.some((x) => x.id === payload.new.id) ? prev : [payload.new, ...prev]
+            prev.some((x) => x.id === payload.new.id)
+              ? prev
+              : [payload.new, ...prev]
           );
         }
       )
@@ -270,7 +294,10 @@ export function AuthProvider({ children }) {
     // Si al entrar la persona desmarcó "Mantener sesión iniciada", la sesión
     // se cierra cuando vuelve a abrir la app (después de haberla cerrado).
     try {
-      if (localStorage.getItem('cedys_no_mantener') === '1' && !sessionStorage.getItem('cedys_sesion_viva')) {
+      if (
+        localStorage.getItem('cedys_no_mantener') === '1' &&
+        !sessionStorage.getItem('cedys_sesion_viva')
+      ) {
         await supabase.auth.signOut();
         localStorage.removeItem('cedys_no_mantener');
       }
@@ -314,7 +341,11 @@ export function AuthProvider({ children }) {
     }
 
     // Configuración general (logo, políticas, datos del gimnasio)
-    const resConfigApp = await supabase.from('configuracion_app').select('*').eq('id', 'global').maybeSingle();
+    const resConfigApp = await supabase
+      .from('configuracion_app')
+      .select('*')
+      .eq('id', 'global')
+      .maybeSingle();
     if (resConfigApp.data) {
       setLogoUrl(resConfigApp.data.logo_url);
       setHorasAnticipacion(resConfigApp.data.horas_anticipacion ?? 4);
@@ -346,11 +377,21 @@ export function AuthProvider({ children }) {
     // Staff: un año de historia para reportes y pagos. Alumno: las clases de hoy en adelante
     // de todos (para ver cupos y quién va) + todo su propio historial.
     const desdeReservas = esStaff ? haceDias(400) : haceDias(1);
-    const sinError = (p) => p.then((r) => r, () => ({ data: null }));
+    const sinError = (p) =>
+      p.then(
+        (r) => r,
+        () => ({ data: null })
+      );
 
     const consultaReservas = () => {
-      const q = supabase.from('reservas').select('*').eq('estado', 'confirmada').order('id');
-      return esStaff ? q.gte('fecha', desdeReservas) : q.or(`fecha.gte.${desdeReservas},usuario_id.eq.${yo.id}`);
+      const q = supabase
+        .from('reservas')
+        .select('*')
+        .eq('estado', 'confirmada')
+        .order('id');
+      return esStaff
+        ? q.gte('fecha', desdeReservas)
+        : q.or(`fecha.gte.${desdeReservas},usuario_id.eq.${yo.id}`);
     };
 
     const [
@@ -379,18 +420,42 @@ export function AuthProvider({ children }) {
       resTarifas,
       resEvaluaciones,
       resPruebas,
+      resPlanesSeg,
+      resMediciones,
     ] = await Promise.all(
       [
-        esStaff ? traerTodo(() => supabase.from('usuarios').select('*').order('id')) : Promise.resolve({ data: [yo] }),
-        esStaff ? Promise.resolve({ data: [] }) : traerTodo(() => supabase.from('usuarios_publico').select('*').order('id')),
+        esStaff
+          ? traerTodo(() => supabase.from('usuarios').select('*').order('id'))
+          : Promise.resolve({ data: [yo] }),
+        esStaff
+          ? Promise.resolve({ data: [] })
+          : traerTodo(() =>
+              supabase.from('usuarios_publico').select('*').order('id')
+            ),
         supabase.from('horarios').select('*'),
         supabase.from('planes').select('*'),
         traerTodo(consultaReservas),
-        supabase.from('noticias').select('*').order('created_at', { ascending: false }).limit(40),
-        supabase.from('fotos_gym').select('*').order('created_at', { ascending: false }),
+        supabase
+          .from('noticias')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(40),
+        supabase
+          .from('fotos_gym')
+          .select('*')
+          .order('created_at', { ascending: false }),
         supabase.from('rutinas').select('*'),
-        supabase.from('usuario_rutina').select('*').order('fecha_asignacion', { ascending: false }),
-        traerTodo(() => supabase.from('horarios_cancelados').select('*').gte('fecha', haceDias(400)).order('id')),
+        supabase
+          .from('usuario_rutina')
+          .select('*')
+          .order('fecha_asignacion', { ascending: false }),
+        traerTodo(() =>
+          supabase
+            .from('horarios_cancelados')
+            .select('*')
+            .gte('fecha', haceDias(400))
+            .order('id')
+        ),
         supabase.from('congelaciones').select('*'),
         supabase
           .from('notificaciones')
@@ -398,9 +463,17 @@ export function AuthProvider({ children }) {
           .eq('usuario_id', yo.id)
           .order('creado_en', { ascending: false })
           .limit(60),
-        supabase.from('lista_espera').select('*').gte('fecha', hoyISO).order('creado_en', { ascending: true }),
+        supabase
+          .from('lista_espera')
+          .select('*')
+          .gte('fecha', hoyISO)
+          .order('creado_en', { ascending: true }),
         esStaff
-          ? supabase.from('notas_coach').select('*').order('creado_en', { ascending: false }).limit(300)
+          ? supabase
+              .from('notas_coach')
+              .select('*')
+              .order('creado_en', { ascending: false })
+              .limit(300)
           : Promise.resolve({ data: [] }),
         supabase
           .from('solicitudes_fuera_plazo')
@@ -408,11 +481,35 @@ export function AuthProvider({ children }) {
           .gte('creado_en', haceDias(30))
           .order('creado_en', { ascending: false }),
         esAdmin
-          ? traerTodo(() => supabase.from('pagos').select('*').gte('fecha', haceDias(550)).order('fecha', { ascending: false }).order('id'))
-          : supabase.from('pagos').select('*').eq('usuario_id', yo.id).order('fecha', { ascending: false }),
+          ? traerTodo(() =>
+              supabase
+                .from('pagos')
+                .select('*')
+                .gte('fecha', haceDias(550))
+                .order('fecha', { ascending: false })
+                .order('id')
+            )
+          : supabase
+              .from('pagos')
+              .select('*')
+              .eq('usuario_id', yo.id)
+              .order('fecha', { ascending: false }),
         esStaff
-          ? traerTodo(() => supabase.from('registros_peso').select('*').order('creado_en', { ascending: false }).order('id'))
-          : traerTodo(() => supabase.from('registros_peso').select('*').eq('usuario_id', yo.id).order('creado_en', { ascending: false }).order('id')),
+          ? traerTodo(() =>
+              supabase
+                .from('registros_peso')
+                .select('*')
+                .order('creado_en', { ascending: false })
+                .order('id')
+            )
+          : traerTodo(() =>
+              supabase
+                .from('registros_peso')
+                .select('*')
+                .eq('usuario_id', yo.id)
+                .order('creado_en', { ascending: false })
+                .order('id')
+            ),
         traerTodo(() =>
           supabase
             .from('clases_finalizadas')
@@ -421,17 +518,68 @@ export function AuthProvider({ children }) {
             .order('finalizada_en', { ascending: false })
             .order('id')
         ),
-        esStaff ? traerTodo(() => supabase.from('observaciones_alumno').select('*').order('usuario_id')) : Promise.resolve({ data: [] }),
-        supabase.from('ausencias_coach').select('*').gte('fecha', haceDias(60)).order('creado_en', { ascending: false }),
-        traerTodo(() => supabase.from('reemplazos_clase').select('*').gte('fecha', haceDias(400)).order('id')),
-        esAdmin ? supabase.from('gastos').select('*').order('fecha', { ascending: false }) : Promise.resolve({ data: [] }),
-        esAdmin ? supabase.from('tarifas_coach').select('*') : Promise.resolve({ data: [] }),
         esStaff
-          ? traerTodo(() => supabase.from('evaluaciones_clase').select('*').gte('fecha', haceDias(400)).order('id'))
-          : supabase.from('evaluaciones_clase').select('*').eq('usuario_id', yo.id),
-        esAdmin
-          ? supabase.from('solicitudes_prueba').select('*').order('creado_en', { ascending: false }).limit(200)
+          ? traerTodo(() =>
+              supabase
+                .from('observaciones_alumno')
+                .select('*')
+                .order('usuario_id')
+            )
           : Promise.resolve({ data: [] }),
+        supabase
+          .from('ausencias_coach')
+          .select('*')
+          .gte('fecha', haceDias(60))
+          .order('creado_en', { ascending: false }),
+        traerTodo(() =>
+          supabase
+            .from('reemplazos_clase')
+            .select('*')
+            .gte('fecha', haceDias(400))
+            .order('id')
+        ),
+        esAdmin
+          ? supabase
+              .from('gastos')
+              .select('*')
+              .order('fecha', { ascending: false })
+          : Promise.resolve({ data: [] }),
+        esAdmin
+          ? supabase.from('tarifas_coach').select('*')
+          : Promise.resolve({ data: [] }),
+        esStaff
+          ? traerTodo(() =>
+              supabase
+                .from('evaluaciones_clase')
+                .select('*')
+                .gte('fecha', haceDias(400))
+                .order('id')
+            )
+          : supabase
+              .from('evaluaciones_clase')
+              .select('*')
+              .eq('usuario_id', yo.id),
+        esAdmin
+          ? supabase
+              .from('solicitudes_prueba')
+              .select('*')
+              .order('creado_en', { ascending: false })
+              .limit(200)
+          : Promise.resolve({ data: [] }),
+        esStaff
+          ? traerTodo(() =>
+              supabase
+                .from('planes_seguimiento')
+                .select('*')
+                .order('usuario_id')
+            )
+          : supabase
+              .from('planes_seguimiento')
+              .select('*')
+              .eq('usuario_id', yo.id),
+        esStaff
+          ? traerTodo(() => supabase.from('mediciones').select('*').order('id'))
+          : supabase.from('mediciones').select('*').eq('usuario_id', yo.id),
       ].map(sinError)
     );
 
@@ -439,7 +587,8 @@ export function AuthProvider({ children }) {
     if (resFotos.data) setFotosGym(resFotos.data);
     if (resRutinas.data) setRutinas(resRutinas.data);
     if (resUsuarioRutinas.data) setUsuarioRutinas(resUsuarioRutinas.data);
-    if (resHorariosCancelados.data) setHorariosCancelados(resHorariosCancelados.data);
+    if (resHorariosCancelados.data)
+      setHorariosCancelados(resHorariosCancelados.data);
     if (resCongelaciones.data) setCongelaciones(resCongelaciones.data);
     if (resNotificaciones.data) setNotificaciones(resNotificaciones.data);
     if (resListaEspera.data) setListaEspera(resListaEspera.data);
@@ -453,10 +602,16 @@ export function AuthProvider({ children }) {
     if (resReemp.data) setReemplazos(resReemp.data);
     if (resGastos.data) setGastos(resGastos.data);
     if (resTarifas.data) {
-      setTarifasCoach(Object.fromEntries(resTarifas.data.map((t) => [t.coach_id, Number(t.valor_clase) || 0])));
+      setTarifasCoach(
+        Object.fromEntries(
+          resTarifas.data.map((t) => [t.coach_id, Number(t.valor_clase) || 0])
+        )
+      );
     }
     if (resEvaluaciones.data) setEvaluaciones(resEvaluaciones.data);
     if (resPruebas.data) setSolicitudesPrueba(resPruebas.data);
+    if (resPlanesSeg.data) setPlanesSeguimiento(resPlanesSeg.data);
+    if (resMediciones.data) setMediciones(resMediciones.data);
 
     // El alumno ve su ficha completa; del resto solo nombre/rol/foto (vista usuarios_publico),
     // para ver quién va a cada clase.
@@ -498,26 +653,43 @@ export function AuthProvider({ children }) {
   }
 
   async function actualizarInfoGimnasio(datos) {
-    const { error } = await supabase.from('configuracion_app').update(datos).eq('id', 'global');
-    if (error) return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
-    setInfoGimnasio((prev) => ({ ...prev, ...datos, nombre: datos.gimnasio_nombre ?? prev.nombre }));
+    const { error } = await supabase
+      .from('configuracion_app')
+      .update(datos)
+      .eq('id', 'global');
+    if (error)
+      return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+    setInfoGimnasio((prev) => ({
+      ...prev,
+      ...datos,
+      nombre: datos.gimnasio_nombre ?? prev.nombre,
+    }));
     return { ok: true, mensaje: 'Datos del gimnasio guardados.' };
   }
 
   // El alumno cambia su contraseña estando dentro de la app.
   async function cambiarContrasena(actual, nueva) {
     if (!nueva || nueva.length < 6)
-      return { ok: false, mensaje: 'La nueva contraseña debe tener al menos 6 caracteres.' };
+      return {
+        ok: false,
+        mensaje: 'La nueva contraseña debe tener al menos 6 caracteres.',
+      };
     // Se verifica la contraseña actual volviendo a iniciar sesión.
     const { error: errorActual } = await supabase.auth.signInWithPassword({
       email: usuarioActual.correo,
       password: actual,
     });
-    if (errorActual) return { ok: false, mensaje: 'La contraseña actual no es correcta.' };
+    if (errorActual)
+      return { ok: false, mensaje: 'La contraseña actual no es correcta.' };
     const { error } = await supabase.auth.updateUser({ password: nueva });
     if (error) {
-      if ((error.message || '').toLowerCase().includes('different from the old'))
-        return { ok: false, mensaje: 'La nueva contraseña debe ser distinta a la actual.' };
+      if (
+        (error.message || '').toLowerCase().includes('different from the old')
+      )
+        return {
+          ok: false,
+          mensaje: 'La nueva contraseña debe ser distinta a la actual.',
+        };
       return { ok: false, mensaje: 'No se pudo cambiar: ' + error.message };
     }
     return { ok: true, mensaje: 'Contraseña actualizada.' };
@@ -544,12 +716,17 @@ export function AuthProvider({ children }) {
         setError(
           'Tu correo todavía no está confirmado. Revisa tu bandeja (y spam) o pide al gimnasio que confirme tu cuenta.'
         );
-      } else if (texto.includes('invalid login') || texto.includes('invalid credentials')) {
+      } else if (
+        texto.includes('invalid login') ||
+        texto.includes('invalid credentials')
+      ) {
         setError(
           'Correo o contraseña incorrectos. Si no la recuerdas, usa "Olvidé mi contraseña".'
         );
       } else if (texto.includes('rate limit') || texto.includes('too many')) {
-        setError('Demasiados intentos. Espera unos minutos y vuelve a intentar.');
+        setError(
+          'Demasiados intentos. Espera unos minutos y vuelve a intentar.'
+        );
       } else {
         setError('No se pudo iniciar sesión: ' + errorAuth.message);
       }
@@ -588,9 +765,12 @@ export function AuthProvider({ children }) {
 
   async function solicitarRecuperacion(correo) {
     // El link del correo lleva a la pantalla para escribir la contraseña nueva.
-    const { error } = await supabase.auth.resetPasswordForEmail(correo.trim().toLowerCase(), {
-      redirectTo: `${window.location.origin}/nueva-contrasena`,
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      correo.trim().toLowerCase(),
+      {
+        redirectTo: `${window.location.origin}/nueva-contrasena`,
+      }
+    );
     if (error)
       return {
         ok: false,
@@ -643,14 +823,17 @@ export function AuthProvider({ children }) {
     if (!usuario) return 'Debes iniciar sesión.';
     if (usuario.estado !== 'activo')
       return 'Tu cuenta está desactivada. Contacta al gimnasio para más información.';
-    if (horarioEstaCancelado(horarioId, fecha)) return 'Esta clase fue cancelada.';
+    if (horarioEstaCancelado(horarioId, fecha))
+      return 'Esta clase fue cancelada.';
     // El staff (coach/admin) puede tomar clases sin plan.
     if (usuario.rol === 'usuario') {
       if (!usuario.plan_id)
         return 'No tienes un plan asignado. Habla con el gimnasio para activarlo.';
       const vence = fechaVenceDe(usuario, planes, diasRenovacion);
       if (vence && fecha >= vence)
-        return `Tu plan vence el ${fechaLarga(vence)}. Renuévalo para reservar clases desde esa fecha.`;
+        return `Tu plan vence el ${fechaLarga(
+          vence
+        )}. Renuévalo para reservar clases desde esa fecha.`;
       const congelado = congelaciones.find(
         (c) =>
           c.usuario_id === usuario.id &&
@@ -659,7 +842,9 @@ export function AuthProvider({ children }) {
           c.fecha_fin >= fecha
       );
       if (congelado)
-        return `Tu membresía está congelada hasta el ${fechaLarga(congelado.fecha_fin)}.`;
+        return `Tu membresía está congelada hasta el ${fechaLarga(
+          congelado.fecha_fin
+        )}.`;
     }
     return null;
   }
@@ -745,7 +930,11 @@ export function AuthProvider({ children }) {
     avisarCoachReserva(
       horario,
       fecha,
-      `${usuarioActual.nombre} reservó tu clase de las ${horario.hora} del ${fechaLarga(fecha)} (${inscritosActuales + 1}/${horario.cupo_max}).`
+      `${usuarioActual.nombre} reservó tu clase de las ${
+        horario.hora
+      } del ${fechaLarga(fecha)} (${inscritosActuales + 1}/${
+        horario.cupo_max
+      }).`
     );
 
     return { ok: true, mensaje: 'Reserva confirmada.' };
@@ -755,7 +944,8 @@ export function AuthProvider({ children }) {
   // Se salta las fechas donde no se puede y devuelve el detalle de cada una.
   async function reservarVarias(horarioId, fechas) {
     const horario = horarios.find((h) => h.id === horarioId);
-    if (!horario) return { ok: false, mensaje: 'Horario no encontrado.', detalle: [] };
+    if (!horario)
+      return { ok: false, mensaje: 'Horario no encontrado.', detalle: [] };
 
     let usadas = usuarioActual.sesiones_usadas || 0;
     const restantesInicial = sesionesRestantes(usuarioActual);
@@ -785,7 +975,10 @@ export function AuthProvider({ children }) {
         continue;
       }
       const inscritos = reservas.filter(
-        (r) => r.horario_id === horarioId && r.fecha === fecha && r.estado === 'confirmada'
+        (r) =>
+          r.horario_id === horarioId &&
+          r.fecha === fecha &&
+          r.estado === 'confirmada'
       ).length;
       if (inscritos >= horario.cupo_max) {
         detalle.push({ fecha, ok: false, motivo: 'Clase llena' });
@@ -797,7 +990,12 @@ export function AuthProvider({ children }) {
       }
       const { data, error } = await supabase
         .from('reservas')
-        .insert({ horario_id: horarioId, usuario_id: usuarioActual.id, fecha, estado: 'confirmada' })
+        .insert({
+          horario_id: horarioId,
+          usuario_id: usuarioActual.id,
+          fecha,
+          estado: 'confirmada',
+        })
         .select()
         .single();
       if (error) {
@@ -811,15 +1009,23 @@ export function AuthProvider({ children }) {
     }
 
     if (nuevas.length > 0) {
-      await supabase.from('usuarios').update({ sesiones_usadas: usadas }).eq('id', usuarioActual.id);
-      setReservas((prev) => [...prev, ...nuevas.filter((n) => !prev.some((r) => r.id === n.id))]);
+      await supabase
+        .from('usuarios')
+        .update({ sesiones_usadas: usadas })
+        .eq('id', usuarioActual.id);
+      setReservas((prev) => [
+        ...prev,
+        ...nuevas.filter((n) => !prev.some((r) => r.id === n.id)),
+      ]);
       syncUsuario({ ...usuarioActual, sesiones_usadas: usadas });
     }
     if (nuevas.length > 0) {
       avisarCoachReserva(
         horario,
         nuevas[0].fecha,
-        `${usuarioActual.nombre} reservó ${nuevas.length} clase${nuevas.length !== 1 ? 's' : ''} de las ${horario.hora} (desde el ${fechaLarga(nuevas[0].fecha)}).`
+        `${usuarioActual.nombre} reservó ${nuevas.length} clase${
+          nuevas.length !== 1 ? 's' : ''
+        } de las ${horario.hora} (desde el ${fechaLarga(nuevas[0].fecha)}).`
       );
     }
     return { ok: nuevas.length > 0, reservadas: nuevas.length, detalle };
@@ -1053,7 +1259,9 @@ export function AuthProvider({ children }) {
       avisarCoachReserva(
         horario,
         reserva.fecha,
-        `${usuarioActual?.nombre || 'Un alumno'} canceló su reserva de las ${horario.hora} del ${fechaLarga(reserva.fecha)}.`
+        `${usuarioActual?.nombre || 'Un alumno'} canceló su reserva de las ${
+          horario.hora
+        } del ${fechaLarga(reserva.fecha)}.`
       );
     }
 
@@ -1171,7 +1379,10 @@ export function AuthProvider({ children }) {
   }
 
   async function agregarSesionesExtra(usuarioId, cantidad) {
-    registrarActividad('Sesiones extra', `${usuarios.find((u) => u.id === usuarioId)?.nombre || ''} · +${cantidad}`);
+    registrarActividad(
+      'Sesiones extra',
+      `${usuarios.find((u) => u.id === usuarioId)?.nombre || ''} · +${cantidad}`
+    );
     const usuario = usuarios.find((u) => u.id === usuarioId);
     if (!usuario) return { ok: false, mensaje: 'Usuario no encontrado.' };
 
@@ -1212,23 +1423,37 @@ export function AuthProvider({ children }) {
 
   // Cierra la clase: exige asistencia marcada a todos y un comentario.
   // Una clase sin alumnos solo la puede registrar el admin (permitirSinAlumnos).
-  async function finalizarClase(horarioId, fecha, comentario, { permitirSinAlumnos = false } = {}) {
+  async function finalizarClase(
+    horarioId,
+    fecha,
+    comentario,
+    { permitirSinAlumnos = false } = {}
+  ) {
     const inscritas = reservasDeClase(horarioId, fecha);
     if (inscritas.length === 0 && !permitirSinAlumnos) {
       return {
         ok: false,
-        mensaje: 'Esta clase no tuvo alumnos inscritos, así que no cuenta como realizada. Solo el admin puede registrarla.',
+        mensaje:
+          'Esta clase no tuvo alumnos inscritos, así que no cuenta como realizada. Solo el admin puede registrarla.',
       };
     }
-    const sinMarcar = inscritas.filter((r) => r.asistio !== true && r.asistio !== false);
+    const sinMarcar = inscritas.filter(
+      (r) => r.asistio !== true && r.asistio !== false
+    );
     if (sinMarcar.length > 0) {
       return {
         ok: false,
-        mensaje: `Falta marcar la asistencia de ${sinMarcar.length} ${sinMarcar.length === 1 ? 'alumno' : 'alumnos'}.`,
+        mensaje: `Falta marcar la asistencia de ${sinMarcar.length} ${
+          sinMarcar.length === 1 ? 'alumno' : 'alumnos'
+        }.`,
       };
     }
     const texto = (comentario || '').trim();
-    if (!texto) return { ok: false, mensaje: 'Escribe un comentario (por ejemplo: Sin novedades).' };
+    if (!texto)
+      return {
+        ok: false,
+        mensaje: 'Escribe un comentario (por ejemplo: Sin novedades).',
+      };
 
     // La clase se le registra al coach a cargo del horario (aunque la cierre el admin).
     const horario = horarios.find((h) => h.id === horarioId);
@@ -1239,7 +1464,8 @@ export function AuthProvider({ children }) {
           horario_id: String(horarioId),
           fecha,
           coach_id: coachDeClase(horario, fecha).id || usuarioActual.id,
-          coach_nombre: coachDeClase(horario, fecha).nombre || usuarioActual.nombre,
+          coach_nombre:
+            coachDeClase(horario, fecha).nombre || usuarioActual.nombre,
           comentario: texto,
           presentes: inscritas.filter((r) => r.asistio === true).length,
           ausentes: inscritas.filter((r) => r.asistio === false).length,
@@ -1250,16 +1476,28 @@ export function AuthProvider({ children }) {
       )
       .select()
       .single();
-    if (error) return { ok: false, mensaje: 'No se pudo finalizar la clase: ' + error.message };
-    setClasesFinalizadas((prev) => [data, ...prev.filter((c) => c.id !== data.id)]);
+    if (error)
+      return {
+        ok: false,
+        mensaje: 'No se pudo finalizar la clase: ' + error.message,
+      };
+    setClasesFinalizadas((prev) => [
+      data,
+      ...prev.filter((c) => c.id !== data.id),
+    ]);
 
     // Si el coach deja algo distinto a "Sin novedades", se avisa al admin.
-    if (texto.toLowerCase() !== 'sin novedades' && usuarioActual.rol !== 'head_coach') {
+    if (
+      texto.toLowerCase() !== 'sin novedades' &&
+      usuarioActual.rol !== 'head_coach'
+    ) {
       const admins = usuarios.filter((u) => u.rol === 'head_coach');
       for (const admin of admins) {
         await crearNotificacion(
           admin.id,
-          `${usuarioActual.nombre} finalizó la clase de las ${horario?.hora || ''} (${fecha}): ${texto}`
+          `${usuarioActual.nombre} finalizó la clase de las ${
+            horario?.hora || ''
+          } (${fecha}): ${texto}`
         );
       }
     }
@@ -1270,8 +1508,12 @@ export function AuthProvider({ children }) {
   async function reabrirClase(horarioId, fecha) {
     const fin = finalizacionDe(horarioId, fecha);
     if (!fin) return { ok: true };
-    const { error } = await supabase.from('clases_finalizadas').delete().eq('id', fin.id);
-    if (error) return { ok: false, mensaje: 'No se pudo reabrir: ' + error.message };
+    const { error } = await supabase
+      .from('clases_finalizadas')
+      .delete()
+      .eq('id', fin.id);
+    if (error)
+      return { ok: false, mensaje: 'No se pudo reabrir: ' + error.message };
     setClasesFinalizadas((prev) => prev.filter((c) => c.id !== fin.id));
     return { ok: true };
   }
@@ -1312,7 +1554,8 @@ export function AuthProvider({ children }) {
     if (!revision.ok) return { ok: false, mensaje: revision.mensaje };
     datos = { ...datos, correo: revision.correo };
     const yaExiste = usuarios.some(
-      (u) => (u.correo || '').toLowerCase() === datos.correo.trim().toLowerCase()
+      (u) =>
+        (u.correo || '').toLowerCase() === datos.correo.trim().toLowerCase()
     );
     if (yaExiste) {
       return { ok: false, mensaje: 'Ya existe una cuenta con ese correo.' };
@@ -1338,7 +1581,8 @@ export function AuthProvider({ children }) {
       estado: 'pendiente',
       sesiones_usadas: 0,
     };
-    if (datos.origen_prueba_id) fila.origen_prueba_id = String(datos.origen_prueba_id);
+    if (datos.origen_prueba_id)
+      fila.origen_prueba_id = String(datos.origen_prueba_id);
     else delete fila.origen_prueba_id;
     let { error } = await supabase.from('usuarios').insert(fila);
     // Si alguna columna nueva aún no existe en la base, se registra igual sin ella.
@@ -1363,8 +1607,10 @@ export function AuthProvider({ children }) {
   async function enviarSolicitudPrueba(datos) {
     const nombre = (datos.nombre || '').trim();
     const telefono = (datos.telefono || '').trim();
-    if (!nombre || !telefono) return { ok: false, mensaje: 'Escribe tu nombre y teléfono.' };
-    if (telefono.replace(/\D/g, '').length < 8) return { ok: false, mensaje: 'Revisa tu número de teléfono.' };
+    if (!nombre || !telefono)
+      return { ok: false, mensaje: 'Escribe tu nombre y teléfono.' };
+    if (telefono.replace(/\D/g, '').length < 8)
+      return { ok: false, mensaje: 'Revisa tu número de teléfono.' };
     const correo = (datos.correo || '').trim();
     if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo))
       return { ok: false, mensaje: 'Revisa tu correo (o déjalo en blanco).' };
@@ -1375,22 +1621,43 @@ export function AuthProvider({ children }) {
       correo: correo || null,
       preferencia: (datos.preferencia || '').trim() || null,
       comentario: (datos.comentario || '').trim() || null,
-      ...(datos.referido_por ? { referido_por: String(datos.referido_por) } : {}),
+      ...(datos.referido_por
+        ? { referido_por: String(datos.referido_por) }
+        : {}),
     });
-    if (error) return { ok: false, mensaje: 'No se pudo enviar. Intenta de nuevo o escríbenos por WhatsApp.' };
-    return { ok: true, mensaje: '¡Listo! Te contactaremos pronto para agendar tu sesión de prueba.' };
+    if (error)
+      return {
+        ok: false,
+        mensaje:
+          'No se pudo enviar. Intenta de nuevo o escríbenos por WhatsApp.',
+      };
+    return {
+      ok: true,
+      mensaje:
+        '¡Listo! Te contactaremos pronto para agendar tu sesión de prueba.',
+    };
   }
 
   async function actualizarSolicitudPrueba(id, cambios) {
-    const { error } = await supabase.from('solicitudes_prueba').update(cambios).eq('id', id);
-    if (error) return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
-    setSolicitudesPrueba((prev) => prev.map((s) => (s.id === id ? { ...s, ...cambios } : s)));
+    const { error } = await supabase
+      .from('solicitudes_prueba')
+      .update(cambios)
+      .eq('id', id);
+    if (error)
+      return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+    setSolicitudesPrueba((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...cambios } : s))
+    );
     return { ok: true };
   }
 
   async function eliminarSolicitudPrueba(id) {
-    const { error } = await supabase.from('solicitudes_prueba').delete().eq('id', id);
-    if (error) return { ok: false, mensaje: 'No se pudo eliminar: ' + error.message };
+    const { error } = await supabase
+      .from('solicitudes_prueba')
+      .delete()
+      .eq('id', id);
+    if (error)
+      return { ok: false, mensaje: 'No se pudo eliminar: ' + error.message };
     setSolicitudesPrueba((prev) => prev.filter((s) => s.id !== id));
     return { ok: true };
   }
@@ -1400,13 +1667,19 @@ export function AuthProvider({ children }) {
   async function misReferidos() {
     const { data, error } = await supabase.rpc('mis_referidos');
     if (error || !data) return { solicitudes: 0, inscritos: 0 };
-    return { solicitudes: Number(data.solicitudes) || 0, inscritos: Number(data.inscritos) || 0 };
+    return {
+      solicitudes: Number(data.solicitudes) || 0,
+      inscritos: Number(data.inscritos) || 0,
+    };
   }
 
   // El admin regala sesiones a quien recomendó a un amigo que se inscribió.
   async function regalarSesionReferido(solicitud, cantidad = 1) {
-    const referente = usuarios.find((u) => String(u.id) === String(solicitud.referido_por));
-    if (!referente) return { ok: false, mensaje: 'No encontré al alumno que lo recomendó.' };
+    const referente = usuarios.find(
+      (u) => String(u.id) === String(solicitud.referido_por)
+    );
+    if (!referente)
+      return { ok: false, mensaje: 'No encontré al alumno que lo recomendó.' };
     // Primero se marca el regalo (solo si aún no estaba marcado), así no se regala dos veces.
     const { data: marcada, error } = await supabase
       .from('solicitudes_prueba')
@@ -1414,59 +1687,212 @@ export function AuthProvider({ children }) {
       .eq('id', solicitud.id)
       .eq('regalo_entregado', false)
       .select('id');
-    if (error) return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
-    setSolicitudesPrueba((prev) => prev.map((s) => (s.id === solicitud.id ? { ...s, regalo_entregado: true } : s)));
-    if (!marcada || marcada.length === 0) return { ok: false, mensaje: 'Ese regalo ya se había entregado.' };
+    if (error)
+      return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+    setSolicitudesPrueba((prev) =>
+      prev.map((s) =>
+        s.id === solicitud.id ? { ...s, regalo_entregado: true } : s
+      )
+    );
+    if (!marcada || marcada.length === 0)
+      return { ok: false, mensaje: 'Ese regalo ya se había entregado.' };
     const r = await agregarSesionesExtra(referente.id, cantidad);
     if (!r.ok) {
-      await supabase.from('solicitudes_prueba').update({ regalo_entregado: false }).eq('id', solicitud.id);
-      setSolicitudesPrueba((prev) => prev.map((s) => (s.id === solicitud.id ? { ...s, regalo_entregado: false } : s)));
+      await supabase
+        .from('solicitudes_prueba')
+        .update({ regalo_entregado: false })
+        .eq('id', solicitud.id);
+      setSolicitudesPrueba((prev) =>
+        prev.map((s) =>
+          s.id === solicitud.id ? { ...s, regalo_entregado: false } : s
+        )
+      );
       return r;
     }
     await crearNotificacion(
       referente.id,
-      `🎁 ¡Gracias por recomendarnos! ${solicitud.nombre} se inscribió y te regalamos ${cantidad} sesión${cantidad > 1 ? 'es' : ''} extra.`
+      `🎁 ¡Gracias por recomendarnos! ${
+        solicitud.nombre
+      } se inscribió y te regalamos ${cantidad} sesión${
+        cantidad > 1 ? 'es' : ''
+      } extra.`
     );
-    return { ok: true, mensaje: `Se regaló ${cantidad} sesión a ${referente.nombre}.` };
+    return {
+      ok: true,
+      mensaje: `Se regaló ${cantidad} sesión a ${referente.nombre}.`,
+    };
   }
 
   // ---- Seguimiento de alumnos en riesgo ----
   async function marcarContactadoSeguimiento(usuarioId) {
     const ahora = new Date().toISOString();
-    const { error } = await supabase.from('usuarios').update({ ultimo_contacto_seguimiento: ahora }).eq('id', usuarioId);
-    if (error) return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
-    setUsuarios((prev) => prev.map((u) => (u.id === usuarioId ? { ...u, ultimo_contacto_seguimiento: ahora } : u)));
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ ultimo_contacto_seguimiento: ahora })
+      .eq('id', usuarioId);
+    if (error)
+      return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+    setUsuarios((prev) =>
+      prev.map((u) =>
+        u.id === usuarioId ? { ...u, ultimo_contacto_seguimiento: ahora } : u
+      )
+    );
     return { ok: true };
   }
 
   // ---- Pago en línea (Mercado Pago) ----
   // Crea el cobro y lleva al alumno a la página de pago de Mercado Pago.
   async function pagarEnLinea() {
-    const { data, error } = await supabase.functions.invoke('crear-pago', { body: {} });
+    const { data, error } = await supabase.functions.invoke('crear-pago', {
+      body: {},
+    });
     if (error || !data?.ok || !data?.url) {
       let detalle = data?.error || '';
       try {
-        if (!detalle && error?.context?.json) detalle = (await error.context.json())?.error || '';
+        if (!detalle && error?.context?.json)
+          detalle = (await error.context.json())?.error || '';
       } catch (e) {
         // sin detalle
       }
-      return { ok: false, mensaje: detalle || 'No se pudo iniciar el pago en línea. Intenta más tarde o paga en el gimnasio.' };
+      return {
+        ok: false,
+        mensaje:
+          detalle ||
+          'No se pudo iniciar el pago en línea. Intenta más tarde o paga en el gimnasio.',
+      };
     }
     window.location.href = data.url;
     return { ok: true };
   }
 
+  // ---- Seguimiento personal (plan y mediciones; los anota coach o admin) ----
+  async function guardarPlanSeguimiento(usuarioId, datos) {
+    const num = (v) =>
+      v === '' || v === null || v === undefined
+        ? null
+        : Number(String(v).replace(',', '.'));
+    const fila = {
+      usuario_id: String(usuarioId),
+      objetivo: datos.objetivo || 'bajar_peso',
+      objetivo_detalle: (datos.objetivo_detalle || '').trim() || null,
+      fecha_inicio: datos.fecha_inicio,
+      semanas: Math.max(1, Math.min(104, parseInt(datos.semanas, 10) || 12)),
+      sesiones_semana: Math.max(
+        1,
+        Math.min(14, parseInt(datos.sesiones_semana, 10) || 3)
+      ),
+      estatura_cm: num(datos.estatura_cm),
+      peso_meta: num(datos.peso_meta),
+      grasa_meta: num(datos.grasa_meta),
+      actualizado_por: usuarioActual?.nombre || null,
+      actualizado_en: new Date().toISOString(),
+    };
+    if (!fila.fecha_inicio)
+      return { ok: false, mensaje: 'Indica la fecha de inicio.' };
+    const { data, error } = await supabase
+      .from('planes_seguimiento')
+      .upsert(fila, { onConflict: 'usuario_id' })
+      .select()
+      .single();
+    if (error)
+      return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+    setPlanesSeguimiento((prev) => [
+      data,
+      ...prev.filter((p) => String(p.usuario_id) !== String(usuarioId)),
+    ]);
+    return { ok: true, mensaje: 'Plan de seguimiento guardado.' };
+  }
+
+  async function guardarMedicion(usuarioId, datos, medicionId = null) {
+    const num = (v) =>
+      v === '' || v === null || v === undefined
+        ? null
+        : Number(String(v).replace(',', '.'));
+    const campos = [
+      'peso',
+      'grasa',
+      'musculo',
+      'cintura',
+      'cadera',
+      'pecho',
+      'brazo',
+      'muslo',
+    ];
+    const fila = {
+      usuario_id: String(usuarioId),
+      fecha: datos.fecha,
+      comentario: (datos.comentario || '').trim() || null,
+    };
+    for (const c of campos) {
+      const v = num(datos[c]);
+      if (v !== null && (!Number.isFinite(v) || v < 0 || v > 500))
+        return { ok: false, mensaje: 'Revisa los números ingresados.' };
+      fila[c] = v;
+    }
+    if (!fila.fecha) return { ok: false, mensaje: 'Indica la fecha.' };
+    if (campos.every((c) => fila[c] === null))
+      return { ok: false, mensaje: 'Anota al menos una medida.' };
+    let resp;
+    if (medicionId) {
+      resp = await supabase
+        .from('mediciones')
+        .update(fila)
+        .eq('id', medicionId)
+        .select()
+        .single();
+    } else {
+      fila.registrado_por = usuarioActual?.nombre || null;
+      resp = await supabase.from('mediciones').insert(fila).select().single();
+    }
+    if (resp.error)
+      return {
+        ok: false,
+        mensaje: 'No se pudo guardar: ' + resp.error.message,
+      };
+    setMediciones((prev) => [
+      resp.data,
+      ...prev.filter((m) => m.id !== resp.data.id),
+    ]);
+    if (!medicionId && String(usuarioId) !== String(usuarioActual?.id)) {
+      crearNotificacion(
+        usuarioId,
+        '📏 Tu coach registró una nueva medición. Revisa tu avance en Progreso.'
+      );
+    }
+    return {
+      ok: true,
+      mensaje: medicionId ? 'Medición actualizada.' : 'Medición guardada.',
+    };
+  }
+
+  async function eliminarMedicion(medicionId) {
+    const { error } = await supabase
+      .from('mediciones')
+      .delete()
+      .eq('id', medicionId);
+    if (error)
+      return { ok: false, mensaje: 'No se pudo eliminar: ' + error.message };
+    setMediciones((prev) => prev.filter((m) => m.id !== medicionId));
+    return { ok: true };
+  }
+
   // ---- Evaluación de clases por el alumno ----
   function evaluacionDe(reservaId) {
-    return evaluaciones.find((e) => String(e.reserva_id) === String(reservaId)) || null;
+    return (
+      evaluaciones.find((e) => String(e.reserva_id) === String(reservaId)) ||
+      null
+    );
   }
 
   function evaluacionesDeClase(horarioId, fecha) {
-    return evaluaciones.filter((e) => e.horario_id === horarioId && e.fecha === fecha);
+    return evaluaciones.filter(
+      (e) => e.horario_id === horarioId && e.fecha === fecha
+    );
   }
 
   async function evaluarClase(reserva, puntaje, comentario) {
-    if (!puntaje || puntaje < 1 || puntaje > 5) return { ok: false, mensaje: 'Elige de 1 a 5 estrellas.' };
+    if (!puntaje || puntaje < 1 || puntaje > 5)
+      return { ok: false, mensaje: 'Elige de 1 a 5 estrellas.' };
     const horario = horarios.find((h) => h.id === reserva.horario_id);
     const coach = horario ? coachDeClase(horario, reserva.fecha) : null;
     const fila = {
@@ -1483,8 +1909,15 @@ export function AuthProvider({ children }) {
       .upsert(fila, { onConflict: 'reserva_id' })
       .select()
       .single();
-    if (error) return { ok: false, mensaje: 'No se pudo guardar tu evaluación: ' + error.message };
-    setEvaluaciones((prev) => [data, ...prev.filter((e) => String(e.reserva_id) !== fila.reserva_id)]);
+    if (error)
+      return {
+        ok: false,
+        mensaje: 'No se pudo guardar tu evaluación: ' + error.message,
+      };
+    setEvaluaciones((prev) => [
+      data,
+      ...prev.filter((e) => String(e.reserva_id) !== fila.reserva_id),
+    ]);
     return { ok: true, mensaje: '¡Gracias por evaluar la clase!' };
   }
 
@@ -1499,7 +1932,10 @@ export function AuthProvider({ children }) {
   }
 
   async function aprobarUsuario(usuarioId) {
-    registrarActividad('Registro aprobado', usuarios.find((u) => u.id === usuarioId)?.nombre || '');
+    registrarActividad(
+      'Registro aprobado',
+      usuarios.find((u) => u.id === usuarioId)?.nombre || ''
+    );
     await supabase
       .from('usuarios')
       .update({ estado: 'activo' })
@@ -1514,7 +1950,10 @@ export function AuthProvider({ children }) {
   }
 
   async function desactivarUsuario(usuarioId) {
-    registrarActividad('Alumno desactivado', usuarios.find((u) => u.id === usuarioId)?.nombre || '');
+    registrarActividad(
+      'Alumno desactivado',
+      usuarios.find((u) => u.id === usuarioId)?.nombre || ''
+    );
     await supabase
       .from('usuarios')
       .update({ estado: 'inactivo' })
@@ -1525,7 +1964,10 @@ export function AuthProvider({ children }) {
   }
 
   async function reactivarUsuario(usuarioId) {
-    registrarActividad('Alumno reactivado', usuarios.find((u) => u.id === usuarioId)?.nombre || '');
+    registrarActividad(
+      'Alumno reactivado',
+      usuarios.find((u) => u.id === usuarioId)?.nombre || ''
+    );
     await supabase
       .from('usuarios')
       .update({ estado: 'activo' })
@@ -1569,25 +2011,47 @@ export function AuthProvider({ children }) {
       descripcion: (gasto.descripcion || '').trim() || null,
     };
     if (gasto.id) {
-      const { error } = await supabase.from('gastos').update(fila).eq('id', gasto.id);
-      if (error) return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
-      setGastos((prev) => prev.map((g) => (g.id === gasto.id ? { ...g, ...fila } : g)));
-      registrarActividad('Gasto editado', `${fila.categoria} · $${fila.monto.toLocaleString('es-CL')}`);
+      const { error } = await supabase
+        .from('gastos')
+        .update(fila)
+        .eq('id', gasto.id);
+      if (error)
+        return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+      setGastos((prev) =>
+        prev.map((g) => (g.id === gasto.id ? { ...g, ...fila } : g))
+      );
+      registrarActividad(
+        'Gasto editado',
+        `${fila.categoria} · $${fila.monto.toLocaleString('es-CL')}`
+      );
       return { ok: true };
     }
-    const { data, error } = await supabase.from('gastos').insert(fila).select().single();
-    if (error) return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+    const { data, error } = await supabase
+      .from('gastos')
+      .insert(fila)
+      .select()
+      .single();
+    if (error)
+      return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
     setGastos((prev) => [data, ...prev]);
-    registrarActividad('Gasto registrado', `${fila.categoria} · $${fila.monto.toLocaleString('es-CL')}`);
+    registrarActividad(
+      'Gasto registrado',
+      `${fila.categoria} · $${fila.monto.toLocaleString('es-CL')}`
+    );
     return { ok: true };
   }
 
   async function eliminarGasto(gastoId) {
     const g = gastos.find((x) => x.id === gastoId);
     const { error } = await supabase.from('gastos').delete().eq('id', gastoId);
-    if (error) return { ok: false, mensaje: 'No se pudo borrar: ' + error.message };
+    if (error)
+      return { ok: false, mensaje: 'No se pudo borrar: ' + error.message };
     setGastos((prev) => prev.filter((x) => x.id !== gastoId));
-    if (g) registrarActividad('Gasto eliminado', `${g.categoria} · $${Number(g.monto).toLocaleString('es-CL')}`);
+    if (g)
+      registrarActividad(
+        'Gasto eliminado',
+        `${g.categoria} · $${Number(g.monto).toLocaleString('es-CL')}`
+      );
     return { ok: true };
   }
 
@@ -1595,10 +2059,23 @@ export function AuthProvider({ children }) {
     const valorClase = Number(valor) || 0;
     const { error } = await supabase
       .from('tarifas_coach')
-      .upsert({ coach_id: coachId, valor_clase: valorClase, actualizado_en: new Date().toISOString() }, { onConflict: 'coach_id' });
-    if (error) return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+      .upsert(
+        {
+          coach_id: coachId,
+          valor_clase: valorClase,
+          actualizado_en: new Date().toISOString(),
+        },
+        { onConflict: 'coach_id' }
+      );
+    if (error)
+      return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
     setTarifasCoach((prev) => ({ ...prev, [coachId]: valorClase }));
-    registrarActividad('Valor por clase', `${usuarios.find((u) => u.id === coachId)?.nombre || ''} · $${valorClase.toLocaleString('es-CL')}`);
+    registrarActividad(
+      'Valor por clase',
+      `${
+        usuarios.find((u) => u.id === coachId)?.nombre || ''
+      } · $${valorClase.toLocaleString('es-CL')}`
+    );
     return { ok: true };
   }
 
@@ -1607,27 +2084,40 @@ export function AuthProvider({ children }) {
     const ids = [...new Set(usuarioIds)].filter(Boolean);
     const texto = (mensaje || '').trim();
     if (!texto) return { ok: false, mensaje: 'Escribe el mensaje.' };
-    if (ids.length === 0) return { ok: false, mensaje: 'No hay personas en ese grupo.' };
+    if (ids.length === 0)
+      return { ok: false, mensaje: 'No hay personas en ese grupo.' };
     const { error } = await supabase
       .from('notificaciones')
       .insert(ids.map((id) => ({ usuario_id: id, mensaje: texto })));
-    if (error) return { ok: false, mensaje: 'No se pudo enviar: ' + error.message };
+    if (error)
+      return { ok: false, mensaje: 'No se pudo enviar: ' + error.message };
     // Si yo estoy en la lista, se ve al tiro en mi campana
     if (ids.includes(usuarioActual?.id)) {
       setNotificaciones((prev) => [
-        { id: 'local-' + Date.now(), usuario_id: usuarioActual.id, mensaje: texto, leida: false, creado_en: new Date().toISOString() },
+        {
+          id: 'local-' + Date.now(),
+          usuario_id: usuarioActual.id,
+          mensaje: texto,
+          leida: false,
+          creado_en: new Date().toISOString(),
+        },
         ...prev,
       ]);
     }
     const { data } = await supabase.functions
-      .invoke('enviar-push', { body: { usuario_ids: ids, mensaje: texto, titulo } })
+      .invoke('enviar-push', {
+        body: { usuario_ids: ids, mensaje: texto, titulo },
+      })
       .catch(() => ({ data: null }));
-    registrarActividad('Aviso masivo', `${ids.length} personas · ${texto.slice(0, 80)}`);
+    registrarActividad(
+      'Aviso masivo',
+      `${ids.length} personas · ${texto.slice(0, 80)}`
+    );
     return {
       ok: true,
-      mensaje: `Aviso enviado a ${ids.length} persona${ids.length !== 1 ? 's' : ''}${
-        data?.enviadas !== undefined ? ` (${data.enviadas} celulares)` : ''
-      }.`,
+      mensaje: `Aviso enviado a ${ids.length} persona${
+        ids.length !== 1 ? 's' : ''
+      }${data?.enviadas !== undefined ? ` (${data.enviadas} celulares)` : ''}.`,
     };
   }
 
@@ -1641,7 +2131,9 @@ export function AuthProvider({ children }) {
       if (!error) setNotificaciones((prev) => [data, ...prev]);
     } else {
       // Aviso para otra persona: no se pide la fila de vuelta (no siempre se puede leer).
-      await supabase.from('notificaciones').insert({ usuario_id: usuarioId, mensaje });
+      await supabase
+        .from('notificaciones')
+        .insert({ usuario_id: usuarioId, mensaje });
     }
 
     // Además del aviso dentro de la app, intenta mandar la notificación push real
@@ -1698,11 +2190,15 @@ export function AuthProvider({ children }) {
         mensaje: 'Error al enviar la solicitud: ' + error.message,
       };
     setCongelaciones((prev) => [data, ...prev]);
-    const admins = usuarios.filter((u) => u.rol === 'head_coach' && u.id !== usuarioActual.id);
+    const admins = usuarios.filter(
+      (u) => u.rol === 'head_coach' && u.id !== usuarioActual.id
+    );
     for (const a of admins) {
       await crearNotificacion(
         a.id,
-        `${usuarioActual.nombre} pidió congelar su membresía${motivo ? `: ${motivo}` : '.'} Revísalo en Usuarios.`
+        `${usuarioActual.nombre} pidió congelar su membresía${
+          motivo ? `: ${motivo}` : '.'
+        } Revísalo en Usuarios.`
       );
     }
     return {
@@ -1736,7 +2232,13 @@ export function AuthProvider({ children }) {
     setCongelaciones((prev) =>
       prev.map((c) =>
         c.id === congelacionId
-          ? { ...c, estado: 'aprobada', dias: nDias, fecha_inicio: fechaInicio, fecha_fin: fechaFinISO }
+          ? {
+              ...c,
+              estado: 'aprobada',
+              dias: nDias,
+              fecha_inicio: fechaInicio,
+              fecha_fin: fechaFinISO,
+            }
           : c
       )
     );
@@ -1763,9 +2265,14 @@ export function AuthProvider({ children }) {
 
     await crearNotificacion(
       congelacion.usuario_id,
-      `Tu membresía fue congelada hasta el ${fechaLarga(fechaFinISO)}.${mensajeVence}`
+      `Tu membresía fue congelada hasta el ${fechaLarga(
+        fechaFinISO
+      )}.${mensajeVence}`
     );
-    registrarActividad('Congelamiento aprobado', `${alumno?.nombre || ''} · ${nDias} días`);
+    registrarActividad(
+      'Congelamiento aprobado',
+      `${alumno?.nombre || ''} · ${nDias} días`
+    );
   }
 
   async function rechazarCongelacion(congelacionId) {
@@ -1801,10 +2308,45 @@ export function AuthProvider({ children }) {
     );
   }
 
+  // Elimina la cuenta por completo (ficha, reservas, notificaciones, etc. y su acceso).
   async function rechazarUsuario(usuarioId) {
-    registrarActividad('Cuenta eliminada o rechazada', usuarios.find((u) => u.id === usuarioId)?.nombre || '');
-    await supabase.from('usuarios').delete().eq('id', usuarioId);
+    const nombre = usuarios.find((u) => u.id === usuarioId)?.nombre || '';
+    let { error } = await supabase.rpc('eliminar_usuario_completo', {
+      p_usuario_id: String(usuarioId),
+    });
+    // Si la función aún no está creada en Supabase, se intenta el borrado simple
+    if (
+      error &&
+      (error.code === 'PGRST202' ||
+        error.code === '42883' ||
+        /function/i.test(error.message || ''))
+    ) {
+      const r = await supabase
+        .from('usuarios')
+        .delete()
+        .eq('id', usuarioId)
+        .select('id');
+      error =
+        r.error ||
+        (r.data && r.data.length === 0
+          ? { message: 'La base no permitió borrarlo.' }
+          : null);
+    }
+    if (error) {
+      const texto = error.message || '';
+      return {
+        ok: false,
+        mensaje: texto.includes('No se puede eliminar')
+          ? texto
+          : 'No se pudo eliminar: ' +
+            texto +
+            ' (revisa que hayas ejecutado el archivo 16_eliminar_alumno.sql en Supabase).',
+      };
+    }
+    registrarActividad('Cuenta eliminada o rechazada', nombre);
     setUsuarios((prev) => prev.filter((u) => u.id !== usuarioId));
+    setReservas((prev) => prev.filter((r) => r.usuario_id !== usuarioId));
+    return { ok: true, mensaje: 'Cuenta eliminada.' };
   }
 
   // --- Acciones de administrador ---
@@ -1820,7 +2362,9 @@ export function AuthProvider({ children }) {
   async function marcarAsistenciaVarias(reservaIds, asistio) {
     if (!reservaIds.length) return;
     await supabase.from('reservas').update({ asistio }).in('id', reservaIds);
-    setReservas((prev) => prev.map((r) => (reservaIds.includes(r.id) ? { ...r, asistio } : r)));
+    setReservas((prev) =>
+      prev.map((r) => (reservaIds.includes(r.id) ? { ...r, asistio } : r))
+    );
   }
 
   // --- Coaches: quién hace cada clase, reemplazos, ausencias y observaciones ---
@@ -1831,17 +2375,37 @@ export function AuthProvider({ children }) {
     const r = reemplazos.find(
       (x) => String(x.horario_id) === String(horario.id) && x.fecha === fecha
     );
-    if (r) return { id: r.coach_id, nombre: r.coach_nombre || '', esReemplazo: true };
-    return { id: horario.coach_id, nombre: horario.coach_nombre || '', esReemplazo: false };
+    if (r)
+      return {
+        id: r.coach_id,
+        nombre: r.coach_nombre || '',
+        esReemplazo: true,
+      };
+    return {
+      id: horario.coach_id,
+      nombre: horario.coach_nombre || '',
+      esReemplazo: false,
+    };
   }
 
   function reemplazoDe(horarioId, fecha) {
-    return reemplazos.find((x) => String(x.horario_id) === String(horarioId) && x.fecha === fecha) || null;
+    return (
+      reemplazos.find(
+        (x) => String(x.horario_id) === String(horarioId) && x.fecha === fecha
+      ) || null
+    );
   }
 
   // El admin elige quién reemplaza al coach en un día puntual (coachId null = quitar reemplazo)
   async function asignarReemplazo(horarioId, fecha, coachId) {
-    registrarActividad('Reemplazo de coach', `${fecha} → ${coachId ? usuarios.find((u) => u.id === coachId)?.nombre || '' : 'sin reemplazo'}`);
+    registrarActividad(
+      'Reemplazo de coach',
+      `${fecha} → ${
+        coachId
+          ? usuarios.find((u) => u.id === coachId)?.nombre || ''
+          : 'sin reemplazo'
+      }`
+    );
     const horario = horarios.find((h) => h.id === horarioId);
     const actual = reemplazoDe(horarioId, fecha);
     if (!coachId) {
@@ -1855,29 +2419,49 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase
       .from('reemplazos_clase')
       .upsert(
-        { horario_id: String(horarioId), fecha, coach_id: coachId, coach_nombre: coach?.nombre || '' },
+        {
+          horario_id: String(horarioId),
+          fecha,
+          coach_id: coachId,
+          coach_nombre: coach?.nombre || '',
+        },
         { onConflict: 'horario_id,fecha' }
       )
       .select()
       .single();
-    if (error) return { ok: false, mensaje: 'No se pudo guardar el reemplazo: ' + error.message };
+    if (error)
+      return {
+        ok: false,
+        mensaje: 'No se pudo guardar el reemplazo: ' + error.message,
+      };
     setReemplazos((prev) => [data, ...prev.filter((r) => r.id !== data.id)]);
     // Avisos: al coach que reemplaza y al coach titular
     if (coachId !== usuarioActual?.id) {
       await crearNotificacion(
         coachId,
-        `Te asignaron la clase de las ${horario?.hora || ''} del ${fechaLarga(fecha)} (reemplazo).`
+        `Te asignaron la clase de las ${horario?.hora || ''} del ${fechaLarga(
+          fecha
+        )} (reemplazo).`
       );
     }
-    if (horario?.coach_id && horario.coach_id !== coachId && horario.coach_id !== usuarioActual?.id) {
+    if (
+      horario?.coach_id &&
+      horario.coach_id !== coachId &&
+      horario.coach_id !== usuarioActual?.id
+    ) {
       await crearNotificacion(
         horario.coach_id,
-        `Tu clase de las ${horario.hora} del ${fechaLarga(fecha)} la hará ${coach?.nombre || 'otro coach'}.`
+        `Tu clase de las ${horario.hora} del ${fechaLarga(fecha)} la hará ${
+          coach?.nombre || 'otro coach'
+        }.`
       );
     }
     // Si había un aviso de ausencia para esa clase, queda resuelto
     const pendientes = ausenciasCoach.filter(
-      (a) => String(a.horario_id) === String(horarioId) && a.fecha === fecha && a.estado === 'pendiente'
+      (a) =>
+        String(a.horario_id) === String(horarioId) &&
+        a.fecha === fecha &&
+        a.estado === 'pendiente'
     );
     for (const a of pendientes) await resolverAusencia(a.id);
     return { ok: true };
@@ -1896,13 +2480,21 @@ export function AuthProvider({ children }) {
       })
       .select()
       .single();
-    if (error) return { ok: false, mensaje: 'No se pudo enviar el aviso: ' + error.message };
+    if (error)
+      return {
+        ok: false,
+        mensaje: 'No se pudo enviar el aviso: ' + error.message,
+      };
     setAusenciasCoach((prev) => [data, ...prev]);
-    const admins = usuarios.filter((u) => u.rol === 'head_coach' && u.id !== usuarioActual.id);
+    const admins = usuarios.filter(
+      (u) => u.rol === 'head_coach' && u.id !== usuarioActual.id
+    );
     for (const a of admins) {
       await crearNotificacion(
         a.id,
-        `${usuarioActual.nombre} no puede hacer la clase de las ${horario?.hora || ''} del ${fechaLarga(fecha)}${
+        `${usuarioActual.nombre} no puede hacer la clase de las ${
+          horario?.hora || ''
+        } del ${fechaLarga(fecha)}${
           motivo ? `: ${motivo}` : ''
         }. Asigna un reemplazo o cancela la clase en Clases.`
       );
@@ -1913,14 +2505,22 @@ export function AuthProvider({ children }) {
   function ausenciaDe(horarioId, fecha) {
     return (
       ausenciasCoach.find(
-        (a) => String(a.horario_id) === String(horarioId) && a.fecha === fecha && a.estado === 'pendiente'
+        (a) =>
+          String(a.horario_id) === String(horarioId) &&
+          a.fecha === fecha &&
+          a.estado === 'pendiente'
       ) || null
     );
   }
 
   async function resolverAusencia(ausenciaId) {
-    await supabase.from('ausencias_coach').update({ estado: 'resuelta' }).eq('id', ausenciaId);
-    setAusenciasCoach((prev) => prev.map((a) => (a.id === ausenciaId ? { ...a, estado: 'resuelta' } : a)));
+    await supabase
+      .from('ausencias_coach')
+      .update({ estado: 'resuelta' })
+      .eq('id', ausenciaId);
+    setAusenciasCoach((prev) =>
+      prev.map((a) => (a.id === ausenciaId ? { ...a, estado: 'resuelta' } : a))
+    );
   }
 
   function observacionDe(usuarioId) {
@@ -1934,30 +2534,54 @@ export function AuthProvider({ children }) {
       actualizado_por: usuarioActual.nombre,
       actualizado_en: new Date().toISOString(),
     };
-    const { error } = await supabase.from('observaciones_alumno').upsert(fila, { onConflict: 'usuario_id' });
-    if (error) return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
-    setObservaciones((prev) => [fila, ...prev.filter((o) => o.usuario_id !== usuarioId)]);
+    const { error } = await supabase
+      .from('observaciones_alumno')
+      .upsert(fila, { onConflict: 'usuario_id' });
+    if (error)
+      return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+    setObservaciones((prev) => [
+      fila,
+      ...prev.filter((o) => o.usuario_id !== usuarioId),
+    ]);
     return { ok: true, mensaje: 'Observación guardada.' };
   }
 
   // El coach agrega a un alumno que llegó sin reservar: queda presente y se le descuenta la sesión.
   async function agregarAlumnoAClase(horarioId, fecha, usuarioId) {
     const ya = reservas.find(
-      (r) => r.horario_id === horarioId && r.fecha === fecha && r.usuario_id === usuarioId && r.estado === 'confirmada'
+      (r) =>
+        r.horario_id === horarioId &&
+        r.fecha === fecha &&
+        r.usuario_id === usuarioId &&
+        r.estado === 'confirmada'
     );
     if (ya) return { ok: false, mensaje: 'Ese alumno ya está en la clase.' };
     const alumno = usuarios.find((u) => u.id === usuarioId);
     if (!alumno) return { ok: false, mensaje: 'Alumno no encontrado.' };
     const { data, error } = await supabase
       .from('reservas')
-      .insert({ horario_id: horarioId, usuario_id: usuarioId, fecha, estado: 'confirmada', asistio: true })
+      .insert({
+        horario_id: horarioId,
+        usuario_id: usuarioId,
+        fecha,
+        estado: 'confirmada',
+        asistio: true,
+      })
       .select()
       .single();
-    if (error) return { ok: false, mensaje: 'No se pudo agregar: ' + error.message };
+    if (error)
+      return { ok: false, mensaje: 'No se pudo agregar: ' + error.message };
     setReservas((prev) => [...prev, data]);
     const nuevas = (alumno.sesiones_usadas || 0) + 1;
-    await supabase.from('usuarios').update({ sesiones_usadas: nuevas }).eq('id', usuarioId);
-    setUsuarios((prev) => prev.map((u) => (u.id === usuarioId ? { ...u, sesiones_usadas: nuevas } : u)));
+    await supabase
+      .from('usuarios')
+      .update({ sesiones_usadas: nuevas })
+      .eq('id', usuarioId);
+    setUsuarios((prev) =>
+      prev.map((u) =>
+        u.id === usuarioId ? { ...u, sesiones_usadas: nuevas } : u
+      )
+    );
     return { ok: true, mensaje: `${alumno.nombre} agregado a la clase.` };
   }
 
@@ -2137,7 +2761,11 @@ export function AuthProvider({ children }) {
   // Semana (número), día (nombre) y orden del día de un ejercicio de la rutina
   async function semanaYDiaDe(ejercicioId) {
     try {
-      const { data: ej } = await supabase.from('rutina_ejercicios').select('dia_id').eq('id', ejercicioId).single();
+      const { data: ej } = await supabase
+        .from('rutina_ejercicios')
+        .select('dia_id')
+        .eq('id', ejercicioId)
+        .single();
       if (!ej) return null;
       const { data: dia } = await supabase
         .from('rutina_dias')
@@ -2145,14 +2773,29 @@ export function AuthProvider({ children }) {
         .eq('id', ej.dia_id)
         .single();
       if (!dia) return null;
-      const { data: sem } = await supabase.from('rutina_semanas').select('numero').eq('id', dia.semana_id).single();
-      return { semana: sem?.numero ?? null, dia: dia.nombre || null, dia_orden: dia.orden ?? null };
+      const { data: sem } = await supabase
+        .from('rutina_semanas')
+        .select('numero')
+        .eq('id', dia.semana_id)
+        .single();
+      return {
+        semana: sem?.numero ?? null,
+        dia: dia.nombre || null,
+        dia_orden: dia.orden ?? null,
+      };
     } catch {
       return null;
     }
   }
 
-  async function registrarPeso({ ejercicioId, rutinaId, ejercicio, peso, pesoAnterior, nota }) {
+  async function registrarPeso({
+    ejercicioId,
+    rutinaId,
+    ejercicio,
+    peso,
+    pesoAnterior,
+    nota,
+  }) {
     const valor = Number(String(peso).replace(',', '.'));
     if (!Number.isFinite(valor) || valor < 0) {
       return { ok: false, mensaje: 'Ingresa un peso válido.' };
@@ -2166,11 +2809,17 @@ export function AuthProvider({ children }) {
         .update({ peso_referencia: pesoTexto })
         .eq('id', ejercicioId)
         .select('id');
-      if (errorRutina) return { ok: false, mensaje: 'No se pudo cambiar el peso: ' + errorRutina.message };
+      if (errorRutina)
+        return {
+          ok: false,
+          mensaje: 'No se pudo cambiar el peso: ' + errorRutina.message,
+        };
       if (!filasRutina || filasRutina.length === 0) {
         // Supabase no dejó modificar la rutina (permisos). El historial igual guarda el peso nuevo,
         // y la app muestra siempre el último peso registrado.
-        console.warn('No se pudo actualizar rutina_ejercicios (revisar permisos en Supabase).');
+        console.warn(
+          'No se pudo actualizar rutina_ejercicios (revisar permisos en Supabase).'
+        );
       }
     }
 
@@ -2197,13 +2846,26 @@ export function AuthProvider({ children }) {
       .single();
     if (error && sesion && /semana|dia/i.test(error.message || '')) {
       // Si todavía no se agregaron las columnas nuevas en Supabase, se guarda igual sin ellas
-      ({ data, error } = await supabase.from('registros_peso').insert(fila).select().single());
+      ({ data, error } = await supabase
+        .from('registros_peso')
+        .insert(fila)
+        .select()
+        .single());
     }
     if (error) {
       // El peso de la rutina ya quedó cambiado; solo falló el historial.
-      return { ok: true, pesoTexto, registro: null, aviso: 'El peso se cambió, pero no se pudo guardar el historial: ' + error.message };
+      return {
+        ok: true,
+        pesoTexto,
+        registro: null,
+        aviso:
+          'El peso se cambió, pero no se pudo guardar el historial: ' +
+          error.message,
+      };
     }
-    setRegistrosPeso((prev) => (prev.some((r) => r.id === data.id) ? prev : [data, ...prev]));
+    setRegistrosPeso((prev) =>
+      prev.some((r) => r.id === data.id) ? prev : [data, ...prev]
+    );
     return { ok: true, pesoTexto, registro: data };
   }
 
@@ -2215,7 +2877,10 @@ export function AuthProvider({ children }) {
       const dias = await obtenerDias(semana.id);
       const diasConEjercicios = [];
       for (const dia of dias) {
-        diasConEjercicios.push({ ...dia, ejercicios: await obtenerEjercicios(dia.id) });
+        diasConEjercicios.push({
+          ...dia,
+          ejercicios: await obtenerEjercicios(dia.id),
+        });
       }
       resultado.push({ ...semana, dias: diasConEjercicios });
     }
@@ -2286,7 +2951,10 @@ export function AuthProvider({ children }) {
 
   function hoyLocalISO() {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      '0'
+    )}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   function montoPlanDe(usuario) {
@@ -2295,8 +2963,22 @@ export function AuthProvider({ children }) {
     return Number(usuario.plan_monto_personalizado || plan?.valor_con_iva || 0);
   }
 
-  async function registrarPago({ usuarioId, monto, medio, fecha, tipo, nota, planId, vence }) {
-    registrarActividad('Pago registrado', `${usuarios.find((u) => u.id === usuarioId)?.nombre || ''} · $${Number(monto || 0).toLocaleString('es-CL')}`);
+  async function registrarPago({
+    usuarioId,
+    monto,
+    medio,
+    fecha,
+    tipo,
+    nota,
+    planId,
+    vence,
+  }) {
+    registrarActividad(
+      'Pago registrado',
+      `${usuarios.find((u) => u.id === usuarioId)?.nombre || ''} · $${Number(
+        monto || 0
+      ).toLocaleString('es-CL')}`
+    );
     const usuario = usuarios.find((u) => u.id === usuarioId);
     const fila = {
       usuario_id: usuarioId,
@@ -2308,11 +2990,20 @@ export function AuthProvider({ children }) {
       nota: nota || null,
     };
     if (vence) fila.vence = vence;
-    const { data, error } = await supabase.from('pagos').insert(fila).select().single();
+    const { data, error } = await supabase
+      .from('pagos')
+      .insert(fila)
+      .select()
+      .single();
     if (error) {
-      return { ok: false, mensaje: 'No se pudo registrar el pago: ' + error.message };
+      return {
+        ok: false,
+        mensaje: 'No se pudo registrar el pago: ' + error.message,
+      };
     }
-    setPagos((prev) => (prev.some((p) => p.id === data.id) ? prev : [data, ...prev]));
+    setPagos((prev) =>
+      prev.some((p) => p.id === data.id) ? prev : [data, ...prev]
+    );
     return { ok: true, pago: data, mensaje: 'Pago registrado.' };
   }
 
@@ -2321,7 +3012,9 @@ export function AuthProvider({ children }) {
   async function confirmarRenovacion(usuarioId, opciones = {}) {
     const usuario = usuarios.find((u) => u.id === usuarioId);
     const fechaPago = opciones.fecha || hoyLocalISO();
-    const tipo = usuario?.fecha_ultima_renovacion ? 'renovacion' : 'primer_pago';
+    const tipo = usuario?.fecha_ultima_renovacion
+      ? 'renovacion'
+      : 'primer_pago';
 
     const resultadoPago = await registrarPago({
       usuarioId,
@@ -2334,7 +3027,10 @@ export function AuthProvider({ children }) {
     });
     if (!resultadoPago.ok) return resultadoPago;
 
-    const cambiosUsuario = { sesiones_usadas: 0, fecha_ultima_renovacion: fechaPago };
+    const cambiosUsuario = {
+      sesiones_usadas: 0,
+      fecha_ultima_renovacion: fechaPago,
+    };
     if (opciones.vence) cambiosUsuario.fecha_vencimiento = opciones.vence;
 
     const { error } = await supabase
@@ -2347,15 +3043,14 @@ export function AuthProvider({ children }) {
       await supabase.from('pagos').delete().eq('id', resultadoPago.pago.id);
       setPagos((prev) => prev.filter((p) => p.id !== resultadoPago.pago.id));
       console.error('confirmarRenovacion falló:', error);
-      return { ok: false, mensaje: 'No se pudo confirmar el pago: ' + error.message };
+      return {
+        ok: false,
+        mensaje: 'No se pudo confirmar el pago: ' + error.message,
+      };
     }
 
     setUsuarios((prev) =>
-      prev.map((u) =>
-        u.id === usuarioId
-          ? { ...u, ...cambiosUsuario }
-          : u
-      )
+      prev.map((u) => (u.id === usuarioId ? { ...u, ...cambiosUsuario } : u))
     );
     await crearNotificacion(
       usuarioId,
@@ -2365,19 +3060,36 @@ export function AuthProvider({ children }) {
   }
 
   async function actualizarPago(pagoId, cambios) {
-    { const pg = pagos.find((x) => x.id === pagoId); if (pg) registrarActividad('Pago editado', `${usuarios.find((u) => u.id === pg.usuario_id)?.nombre || ''} · ${pg.fecha}`); }
+    {
+      const pg = pagos.find((x) => x.id === pagoId);
+      if (pg)
+        registrarActividad(
+          'Pago editado',
+          `${usuarios.find((u) => u.id === pg.usuario_id)?.nombre || ''} · ${
+            pg.fecha
+          }`
+        );
+    }
     const limpio = { ...cambios };
     if (limpio.monto !== undefined) limpio.monto = Number(limpio.monto) || 0;
     const pagoAntes = pagos.find((p) => p.id === pagoId);
-    const { error } = await supabase.from('pagos').update(limpio).eq('id', pagoId);
-    if (error) return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
-    setPagos((prev) => prev.map((p) => (p.id === pagoId ? { ...p, ...limpio } : p)));
+    const { error } = await supabase
+      .from('pagos')
+      .update(limpio)
+      .eq('id', pagoId);
+    if (error)
+      return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+    setPagos((prev) =>
+      prev.map((p) => (p.id === pagoId ? { ...p, ...limpio } : p))
+    );
 
     // Si es el último pago de plan del alumno, su vencimiento y fecha de renovación
     // se actualizan también (así lo que se ve en Alumnos y Renovaciones calza).
     if (pagoAntes && pagoAntes.tipo !== 'manual') {
       const ultimo = pagos
-        .filter((p) => p.usuario_id === pagoAntes.usuario_id && p.tipo !== 'manual')
+        .filter(
+          (p) => p.usuario_id === pagoAntes.usuario_id && p.tipo !== 'manual'
+        )
         .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))[0];
       const usuario = usuarios.find((u) => u.id === pagoAntes.usuario_id);
       if (ultimo?.id === pagoId && usuario) {
@@ -2393,7 +3105,9 @@ export function AuthProvider({ children }) {
             .eq('id', usuario.id);
           if (!errorUsuario) {
             setUsuarios((prev) =>
-              prev.map((u) => (u.id === usuario.id ? { ...u, ...cambiosUsuario } : u))
+              prev.map((u) =>
+                u.id === usuario.id ? { ...u, ...cambiosUsuario } : u
+              )
             );
           }
         }
@@ -2405,18 +3119,37 @@ export function AuthProvider({ children }) {
   // Borra un pago. Si era el pago que renovó el plan del alumno, su renovación
   // vuelve a la anterior (o queda sin pago), así le reaparece el botón de cobrar.
   async function eliminarPago(pagoId) {
-    { const pg = pagos.find((x) => x.id === pagoId); if (pg) registrarActividad('Pago eliminado', `${usuarios.find((u) => u.id === pg.usuario_id)?.nombre || ''} · $${Number(pg.monto).toLocaleString('es-CL')} · ${pg.fecha}`); }
+    {
+      const pg = pagos.find((x) => x.id === pagoId);
+      if (pg)
+        registrarActividad(
+          'Pago eliminado',
+          `${
+            usuarios.find((u) => u.id === pg.usuario_id)?.nombre || ''
+          } · $${Number(pg.monto).toLocaleString('es-CL')} · ${pg.fecha}`
+        );
+    }
     const pago = pagos.find((p) => p.id === pagoId);
     if (!pago) return { ok: false, mensaje: 'Pago no encontrado.' };
 
     const { error } = await supabase.from('pagos').delete().eq('id', pagoId);
-    if (error) return { ok: false, mensaje: 'No se pudo borrar: ' + error.message };
+    if (error)
+      return { ok: false, mensaje: 'No se pudo borrar: ' + error.message };
     setPagos((prev) => prev.filter((p) => p.id !== pagoId));
 
     const usuario = usuarios.find((u) => u.id === pago.usuario_id);
-    if (usuario && pago.tipo !== 'manual' && usuario.fecha_ultima_renovacion === pago.fecha) {
+    if (
+      usuario &&
+      pago.tipo !== 'manual' &&
+      usuario.fecha_ultima_renovacion === pago.fecha
+    ) {
       const anteriores = pagos
-        .filter((p) => p.id !== pagoId && p.usuario_id === usuario.id && p.tipo !== 'manual')
+        .filter(
+          (p) =>
+            p.id !== pagoId &&
+            p.usuario_id === usuario.id &&
+            p.tipo !== 'manual'
+        )
         .sort((a, b) => b.fecha.localeCompare(a.fecha));
       const restaurar = {
         fecha_ultima_renovacion: anteriores[0]?.fecha || null,
@@ -2431,7 +3164,12 @@ export function AuthProvider({ children }) {
   }
 
   async function asignarPlan(usuarioId, planId) {
-    registrarActividad('Plan cambiado', `${usuarios.find((u) => u.id === usuarioId)?.nombre || ''} → ${planes[planId]?.nombre || 'sin plan'}`);
+    registrarActividad(
+      'Plan cambiado',
+      `${usuarios.find((u) => u.id === usuarioId)?.nombre || ''} → ${
+        planes[planId]?.nombre || 'sin plan'
+      }`
+    );
     await supabase
       .from('usuarios')
       .update({ plan_id: planId || null, sesiones_usadas: 0 })
@@ -2532,21 +3270,48 @@ export function AuthProvider({ children }) {
   }
 
   async function editarClase(horarioId, datos) {
-    { const h = horarios.find((x) => x.id === horarioId); registrarActividad('Clase editada', h ? `${h.fecha_unica || h.dia} ${h.hora}` : ''); }
+    {
+      const h = horarios.find((x) => x.id === horarioId);
+      registrarActividad(
+        'Clase editada',
+        h ? `${h.fecha_unica || h.dia} ${h.hora}` : ''
+      );
+    }
     const antes = horarios.find((h) => h.id === horarioId);
     await supabase.from('horarios').update(datos).eq('id', horarioId);
     setHorarios((prev) =>
       prev.map((h) => (h.id === horarioId ? { ...h, ...datos } : h))
     );
     const despues = { ...antes, ...datos };
-    const desc = `${despues.fecha_unica ? fechaLarga(despues.fecha_unica) : `los ${String(despues.dia || '').toLowerCase()}`} a las ${despues.hora}`;
-    if (antes && datos.coach_id !== undefined && datos.coach_id !== antes.coach_id) {
+    const desc = `${
+      despues.fecha_unica
+        ? fechaLarga(despues.fecha_unica)
+        : `los ${String(despues.dia || '').toLowerCase()}`
+    } a las ${despues.hora}`;
+    if (
+      antes &&
+      datos.coach_id !== undefined &&
+      datos.coach_id !== antes.coach_id
+    ) {
       if (datos.coach_id && datos.coach_id !== usuarioActual?.id)
-        await crearNotificacion(datos.coach_id, `Te asignaron la clase de ${desc}.`);
+        await crearNotificacion(
+          datos.coach_id,
+          `Te asignaron la clase de ${desc}.`
+        );
       if (antes.coach_id && antes.coach_id !== usuarioActual?.id)
-        await crearNotificacion(antes.coach_id, `Ya no estás a cargo de la clase de ${desc}.`);
-    } else if (antes?.coach_id && antes.coach_id !== usuarioActual?.id && (datos.hora !== antes.hora || datos.dia !== antes.dia)) {
-      await crearNotificacion(antes.coach_id, `Tu clase cambió: ahora es ${desc}.`);
+        await crearNotificacion(
+          antes.coach_id,
+          `Ya no estás a cargo de la clase de ${desc}.`
+        );
+    } else if (
+      antes?.coach_id &&
+      antes.coach_id !== usuarioActual?.id &&
+      (datos.hora !== antes.hora || datos.dia !== antes.dia)
+    ) {
+      await crearNotificacion(
+        antes.coach_id,
+        `Tu clase cambió: ahora es ${desc}.`
+      );
     }
   }
 
@@ -2665,7 +3430,9 @@ export function AuthProvider({ children }) {
   // Ya pasaron y nadie se inscribió (no cuentan, salvo que el admin las registre).
   function clasesSinAlumnosEnRango(desdeISO, hastaISO) {
     return clasesRealizadasEnRango(desdeISO, hastaISO).filter(
-      (o) => !finalizacionDe(o.horario.id, o.fecha) && !tuvoAlumnos(o.horario.id, o.fecha)
+      (o) =>
+        !finalizacionDe(o.horario.id, o.fecha) &&
+        !tuvoAlumnos(o.horario.id, o.fecha)
     );
   }
 
@@ -2677,7 +3444,13 @@ export function AuthProvider({ children }) {
   }
 
   async function cancelarHorarioFecha(horarioId, fecha, mensaje) {
-    { const h = horarios.find((x) => x.id === horarioId); registrarActividad('Clase cancelada', `${fecha} ${h?.hora || ''}${mensaje ? ' · ' + mensaje : ''}`); }
+    {
+      const h = horarios.find((x) => x.id === horarioId);
+      registrarActividad(
+        'Clase cancelada',
+        `${fecha} ${h?.hora || ''}${mensaje ? ' · ' + mensaje : ''}`
+      );
+    }
     await supabase
       .from('horarios_cancelados')
       .insert({ horario_id: horarioId, fecha, mensaje });
@@ -2692,7 +3465,9 @@ export function AuthProvider({ children }) {
     if (coachClase.id && coachClase.id !== usuarioActual?.id) {
       await crearNotificacion(
         coachClase.id,
-        `Se canceló tu clase de las ${horarioCancelado?.hora || ''} del ${fechaLarga(fecha)}.${mensaje ? ' ' + mensaje : ''}`
+        `Se canceló tu clase de las ${
+          horarioCancelado?.hora || ''
+        } del ${fechaLarga(fecha)}.${mensaje ? ' ' + mensaje : ''}`
       );
     }
 
@@ -2754,7 +3529,10 @@ export function AuthProvider({ children }) {
   }
 
   async function crearClase(nueva) {
-    registrarActividad('Clase creada', `${nueva.fecha_unica || nueva.dia} ${nueva.hora}`);
+    registrarActividad(
+      'Clase creada',
+      `${nueva.fecha_unica || nueva.dia} ${nueva.hora}`
+    );
     const { data, error } = await supabase
       .from('horarios')
       .insert(nueva)
@@ -2769,14 +3547,24 @@ export function AuthProvider({ children }) {
     if (data.coach_id && data.coach_id !== usuarioActual?.id) {
       await crearNotificacion(
         data.coach_id,
-        `Te asignaron una clase nueva: ${data.fecha_unica ? fechaLarga(data.fecha_unica) : `los ${String(data.dia).toLowerCase()}`} a las ${data.hora}.`
+        `Te asignaron una clase nueva: ${
+          data.fecha_unica
+            ? fechaLarga(data.fecha_unica)
+            : `los ${String(data.dia).toLowerCase()}`
+        } a las ${data.hora}.`
       );
     }
     return { ok: true, mensaje: 'Clase creada correctamente.' };
   }
 
   async function eliminarClase(horarioId) {
-    { const h = horarios.find((x) => x.id === horarioId); registrarActividad('Clase eliminada', h ? `${h.fecha_unica || h.dia} ${h.hora}` : ''); }
+    {
+      const h = horarios.find((x) => x.id === horarioId);
+      registrarActividad(
+        'Clase eliminada',
+        h ? `${h.fecha_unica || h.dia} ${h.hora}` : ''
+      );
+    }
     await supabase.from('horarios').delete().eq('id', horarioId);
     setHorarios((prev) => prev.filter((h) => h.id !== horarioId));
   }
@@ -2797,11 +3585,17 @@ export function AuthProvider({ children }) {
     if (conPlan.length > 0) {
       return {
         ok: false,
-        mensaje: `No se puede eliminar: ${conPlan.length} ${conPlan.length === 1 ? 'alumno tiene' : 'alumnos tienen'} este plan. Cámbiales el plan primero.`,
+        mensaje: `No se puede eliminar: ${conPlan.length} ${
+          conPlan.length === 1 ? 'alumno tiene' : 'alumnos tienen'
+        } este plan. Cámbiales el plan primero.`,
       };
     }
     const { error } = await supabase.from('planes').delete().eq('id', planId);
-    if (error) return { ok: false, mensaje: 'No se pudo eliminar el plan: ' + error.message };
+    if (error)
+      return {
+        ok: false,
+        mensaje: 'No se pudo eliminar el plan: ' + error.message,
+      };
     setPlanes((prev) => {
       const copia = { ...prev };
       delete copia[planId];
@@ -2913,6 +3707,11 @@ export function AuthProvider({ children }) {
         actualizarSolicitudPrueba,
         eliminarSolicitudPrueba,
         misReferidos,
+        planesSeguimiento,
+        mediciones,
+        guardarPlanSeguimiento,
+        guardarMedicion,
+        eliminarMedicion,
         regalarSesionReferido,
         marcarContactadoSeguimiento,
         pagarEnLinea,

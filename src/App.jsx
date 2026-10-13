@@ -46,7 +46,7 @@ const Actividad = lazy(() => import('./pages/admin/Actividad'));
 const PagoCoaches = lazy(() => import('./pages/admin/PagoCoaches'));
 const ClasesRealizadas = lazy(() => import('./pages/admin/ClasesRealizadas'));
 const SolicitudesPrueba = lazy(() => import('./pages/admin/SolicitudesPrueba'));
-const Seguimiento = lazy(() => import('./pages/admin/Seguimiento'));
+const SeguimientoPersonal = lazy(() => import('./pages/SeguimientoPersonal'));
 
 function CargandoPantalla() {
   return (
@@ -58,6 +58,7 @@ function CargandoPantalla() {
 
 function inicioSegunRol(rol) {
   if (rol === 'head_coach') return '/dashboard';
+  if (rol === 'coach') return '/mis-clases';
   return '/general';
 }
 
@@ -107,7 +108,14 @@ function AppShell() {
           <Route path="/pago-coaches" element={<PagoCoaches />} />
           <Route path="/clases-realizadas" element={<ClasesRealizadas />} />
           <Route path="/pruebas" element={<SolicitudesPrueba />} />
-          <Route path="/seguimiento" element={<Seguimiento />} />
+          <Route
+            path="/seguimiento"
+            element={<Navigate to="/renovaciones?tab=sin_venir" replace />}
+          />
+          <Route
+            path="/seguimiento-personal/:usuarioId"
+            element={<SeguimientoPersonal />}
+          />
           <Route path="/clases-admin" element={<ClasesAdmin />} />
           <Route path="/planes" element={<Planes />} />
           <Route path="/coaches" element={<Coaches />} />
@@ -161,12 +169,23 @@ function Arrancando() {
 function Root() {
   const { usuarioActual, iniciando } = useAuth();
   // El link de "Olvidé mi contraseña" abre esta pantalla, haya o no sesión.
-  if (window.location.pathname === '/nueva-contrasena') return <NuevaContrasena />;
+  if (window.location.pathname === '/nueva-contrasena')
+    return <NuevaContrasena />;
   if (iniciando) return <Arrancando />;
   // cedys.cl/prueba abre directo el formulario de sesión de prueba y cedys.cl/registro el de registro
   if (!usuarioActual) {
     const ruta = window.location.pathname;
-    return <Login inicial={ruta === '/prueba' ? 'prueba' : ruta === '/registro' ? 'registro' : 'login'} />;
+    return (
+      <Login
+        inicial={
+          ruta === '/prueba'
+            ? 'prueba'
+            : ruta === '/registro'
+            ? 'registro'
+            : 'login'
+        }
+      />
+    );
   }
   return <AppShell />;
 }

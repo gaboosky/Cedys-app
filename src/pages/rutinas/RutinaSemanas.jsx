@@ -1,14 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { ArrowLeft, ChevronRight, ExternalLink, Dumbbell, Download } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronRight,
+  ExternalLink,
+  Dumbbell,
+  Download,
+} from 'lucide-react';
 import { descargarRutinaExcel } from '../../lib/excelRutinaExport';
 import { pesoVigente } from '../../lib/cargas';
 
 export default function RutinaSemanas() {
   const { rutinaId } = useParams();
   const navigate = useNavigate();
-  const { rutinas, obtenerSemanas, obtenerRutinaCompleta, registrosPeso } = useAuth();
+  const { rutinas, obtenerSemanas, obtenerRutinaCompleta, registrosPeso } =
+    useAuth();
   const [semanas, setSemanas] = useState(null);
   const [descargando, setDescargando] = useState(false);
 
@@ -21,7 +28,10 @@ export default function RutinaSemanas() {
         ...semana,
         dias: semana.dias.map((dia) => ({
           ...dia,
-          ejercicios: dia.ejercicios.map((ej) => ({ ...ej, peso_referencia: pesoVigente(ej, registrosPeso).texto })),
+          ejercicios: dia.ejercicios.map((ej) => ({
+            ...ej,
+            peso_referencia: pesoVigente(ej, registrosPeso).texto,
+          })),
         })),
       }));
       await descargarRutinaExcel(rutina?.nombre, conPesos);
@@ -66,7 +76,10 @@ export default function RutinaSemanas() {
             disabled={descargando}
             className="flex items-center gap-1 text-cyan-brand text-xs font-medium disabled:opacity-50 transition-transform active:scale-[0.98]"
           >
-            <Download size={12} /> {descargando ? 'Generando Excel...' : 'Descargar Excel (pesos actualizados)'}
+            <Download size={12} />{' '}
+            {descargando
+              ? 'Generando Excel...'
+              : 'Descargar Excel (pesos actualizados)'}
           </button>
           {rutina?.link_googlesheet && (
             <a

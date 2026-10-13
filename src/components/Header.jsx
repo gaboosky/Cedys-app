@@ -9,9 +9,21 @@ import {
   Settings,
   Dumbbell,
   FileBarChart,
-  MessageSquare, Wallet, RefreshCw, MapPin, Receipt, Megaphone, History, HandCoins, CalendarCheck, UserX } from 'lucide-react';
+  MessageSquare,
+  Wallet,
+  RefreshCw,
+  MapPin,
+  Receipt,
+  Megaphone,
+  History,
+  HandCoins,
+  CalendarCheck,
+  UserX,
+  Search,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LOGO_CEDS_WORDMARK } from '../assets/logoWordmark';
+import BuscadorRapido from './BuscadorRapido';
 
 const TITULOS = {
   '/perfil': 'Mi Perfil',
@@ -30,7 +42,7 @@ const TITULOS = {
   '/terminos': 'Términos y Condiciones',
   '/notas-coach': 'Nota de Coach',
   '/finanzas': 'Finanzas',
-  '/renovaciones': 'Renovaciones',
+  '/renovaciones': 'Por contactar',
   '/pruebas': 'Sesiones de prueba',
   '/seguimiento': 'Alumnos en riesgo',
   '/gimnasio': 'El gimnasio',
@@ -61,7 +73,7 @@ const SUBTITULOS = {
   '/coaches': 'Tu equipo de entrenadores',
   '/configuracion': 'Ajustes de la app',
   '/finanzas': 'Resumen financiero del gimnasio',
-  '/renovaciones': 'Renueva planes y edita pagos',
+  '/renovaciones': 'Renovaciones y alumnos que no vienen',
   '/pruebas': 'Personas que quieren probar',
   '/seguimiento': 'Escríbeles antes de que se vayan',
   '/gimnasio': 'Contacto, horario y reglamento',
@@ -87,9 +99,45 @@ function formatearFechaNotif(fechaISO) {
   });
 }
 
+// Menú del admin, ordenado por secciones
+const MENU_ADMIN = [
+  {
+    titulo: 'Alumnos',
+    items: [
+      { to: '/renovaciones', label: 'Por contactar', icon: RefreshCw },
+      { to: '/pruebas', label: 'Sesiones de prueba', icon: CalendarCheck },
+    ],
+  },
+  {
+    titulo: 'Dinero',
+    items: [
+      { to: '/finanzas', label: 'Finanzas', icon: Wallet },
+      { to: '/gastos', label: 'Gastos', icon: Receipt },
+      { to: '/pago-coaches', label: 'Pago a coaches', icon: HandCoins },
+      { to: '/reportes', label: 'Reportes', icon: FileBarChart },
+    ],
+  },
+  {
+    titulo: 'Comunicación',
+    items: [
+      { to: '/avisos', label: 'Avisos a alumnos', icon: Megaphone },
+      { to: '/notas-coach', label: 'Notas de coaches', icon: MessageSquare },
+    ],
+  },
+  {
+    titulo: 'Gimnasio',
+    items: [
+      { to: '/coaches', label: 'Coaches', icon: Users },
+      { to: '/configuracion', label: 'Configuración', icon: Settings },
+      { to: '/actividad', label: 'Historial de cambios', icon: History },
+    ],
+  },
+];
+
 export default function Header() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [notifAbiertas, setNotifAbiertas] = useState(false);
+  const [buscando, setBuscando] = useState(false);
   const location = useLocation();
   const {
     usuarioActual,
@@ -103,15 +151,20 @@ export default function Header() {
 
   const esDetalleHorario = location.pathname.startsWith('/horarios/');
   const esRutina = location.pathname.startsWith('/rutinas/');
+  const esSegPersonal = location.pathname.startsWith('/seguimiento-personal/');
 
   const titulo = esDetalleHorario
     ? 'Detalle del horario'
+    : esSegPersonal
+    ? 'Seguimiento personal'
     : esRutina
     ? 'Mi Rutina'
     : TITULOS[location.pathname] || 'CED&S';
 
   const subtitulo = esDetalleHorario
     ? 'Revisa el detalle antes de reservar'
+    : esSegPersonal
+    ? 'Objetivo, mediciones y avance'
     : esRutina
     ? 'Tu plan de entrenamiento'
     : SUBTITULOS[location.pathname];
@@ -145,18 +198,29 @@ export default function Header() {
           >
             <Menu size={20} />
           </button>
-          <button
-            onClick={toggleNotificaciones}
-            className="relative text-white/80 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
-            aria-label="Notificaciones"
-          >
-            <Bell size={18} />
-            {noLeidas > 0 && (
-              <span className="absolute top-0.5 right-0.5 bg-cyan-brand text-ink text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
-                {noLeidas > 9 ? '9+' : noLeidas}
-              </span>
+          <div className="flex items-center gap-0.5">
+            {rolEfectivo !== 'usuario' && (
+              <button
+                onClick={() => setBuscando(true)}
+                className="text-white/80 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
+                aria-label="Buscar alumno"
+              >
+                <Search size={18} />
+              </button>
             )}
-          </button>
+            <button
+              onClick={toggleNotificaciones}
+              className="relative text-white/80 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
+              aria-label="Notificaciones"
+            >
+              <Bell size={18} />
+              {noLeidas > 0 && (
+                <span className="absolute top-0.5 right-0.5 bg-cyan-brand text-ink text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                  {noLeidas > 9 ? '9+' : noLeidas}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="relative flex justify-center pt-0 pb-0.5">
@@ -180,6 +244,8 @@ export default function Header() {
           )}
         </div>
       </header>
+
+      {buscando && <BuscadorRapido onCerrar={() => setBuscando(false)} />}
 
       {notifAbiertas && (
         <div className="fixed inset-0 z-50 flex justify-end">
@@ -306,178 +372,31 @@ export default function Header() {
                 El gimnasio
               </NavLink>
 
-              {usuarioActual.rol === 'head_coach' && (
-                <>
-                  <NavLink
-                    to="/finanzas"
-                    onClick={() => setMenuAbierto(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-cyan-brand/15 text-cyan-brand'
-                          : 'text-white/70 hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <Wallet size={18} />
-                    Finanzas
-                  </NavLink>
-                  <NavLink
-                    to="/renovaciones"
-                    onClick={() => setMenuAbierto(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-cyan-brand/15 text-cyan-brand'
-                          : 'text-white/70 hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <RefreshCw size={18} />
-                    Renovaciones
-                  </NavLink>
-                  <NavLink
-                    to="/pruebas"
-                    onClick={() => setMenuAbierto(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-cyan-brand/15 text-cyan-brand'
-                          : 'text-white/70 hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <CalendarCheck size={18} />
-                    Sesiones de prueba
-                  </NavLink>
-                  <NavLink
-                    to="/seguimiento"
-                    onClick={() => setMenuAbierto(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-cyan-brand/15 text-cyan-brand'
-                          : 'text-white/70 hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <UserX size={18} />
-                    Alumnos en riesgo
-                  </NavLink>
-                  <NavLink
-                    to="/gastos"
-                    onClick={() => setMenuAbierto(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-cyan-brand/15 text-cyan-brand'
-                          : 'text-white/70 hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <Receipt size={18} />
-                    Gastos
-                  </NavLink>
-                  <NavLink
-                    to="/pago-coaches"
-                    onClick={() => setMenuAbierto(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-cyan-brand/15 text-cyan-brand'
-                          : 'text-white/70 hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <HandCoins size={18} />
-                    Pago a coaches
-                  </NavLink>
-                  <NavLink
-                    to="/avisos"
-                    onClick={() => setMenuAbierto(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-cyan-brand/15 text-cyan-brand'
-                          : 'text-white/70 hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <Megaphone size={18} />
-                    Avisos a alumnos
-                  </NavLink>
-                  <NavLink
-                    to="/actividad"
-                    onClick={() => setMenuAbierto(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-cyan-brand/15 text-cyan-brand'
-                          : 'text-white/70 hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <History size={18} />
-                    Historial de cambios
-                  </NavLink>
-                  <NavLink
-                    to="/coaches"
-                    onClick={() => setMenuAbierto(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-cyan-brand/15 text-cyan-brand'
-                          : 'text-white/70 hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <Users size={18} />
-                    Coach
-                  </NavLink>
-                  <NavLink
-                    to="/configuracion"
-                    onClick={() => setMenuAbierto(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-cyan-brand/15 text-cyan-brand'
-                          : 'text-white/70 hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <Settings size={18} />
-                    Configuración
-                  </NavLink>
-                  <NavLink
-                    to="/reportes"
-                    onClick={() => setMenuAbierto(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-cyan-brand/15 text-cyan-brand'
-                          : 'text-white/70 hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <FileBarChart size={18} />
-                    Reportes
-                  </NavLink>
-                  <NavLink
-                    to="/notas-coach"
-                    onClick={() => setMenuAbierto(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        isActive
-                          ? 'bg-cyan-brand/15 text-cyan-brand'
-                          : 'text-white/70 hover:bg-white/5'
-                      }`
-                    }
-                  >
-                    <MessageSquare size={18} />
-                    Nota de Coach
-                  </NavLink>
-                </>
-              )}
+              {usuarioActual.rol === 'head_coach' &&
+                MENU_ADMIN.map((grupo) => (
+                  <div key={grupo.titulo} className="mt-3">
+                    <p className="text-white/30 text-[10px] font-semibold uppercase tracking-[0.15em] px-3 mb-1">
+                      {grupo.titulo}
+                    </p>
+                    {grupo.items.map(({ to, label, icon: Icono }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        onClick={() => setMenuAbierto(false)}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                            isActive
+                              ? 'bg-cyan-brand/15 text-cyan-brand'
+                              : 'text-white/70 hover:bg-white/5'
+                          }`
+                        }
+                      >
+                        <Icono size={18} />
+                        {label}
+                      </NavLink>
+                    ))}
+                  </div>
+                ))}
             </nav>
 
             <button

@@ -15,12 +15,19 @@ function fechaHora(iso) {
 
 function diaDe(iso) {
   const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function tituloDia(clave) {
   const d = new Date(clave + 'T12:00:00');
-  const t = d.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+  const t = d.toLocaleDateString('es-CL', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
@@ -35,7 +42,9 @@ export default function Actividad() {
     obtenerActividad(500).then(setRegistros);
   }, []);
 
-  const personas = [...new Set((registros || []).map((r) => r.actor_nombre).filter(Boolean))];
+  const personas = [
+    ...new Set((registros || []).map((r) => r.actor_nombre).filter(Boolean)),
+  ];
   const texto = busqueda.trim().toLowerCase();
   const visibles = (registros || []).filter(
     (r) =>
@@ -57,7 +66,10 @@ export default function Actividad() {
 
       <div className="flex gap-2 mb-5">
         <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30"
+          />
           <input
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
@@ -71,7 +83,9 @@ export default function Actividad() {
             onChange={(e) => setPersona(e.target.value)}
             className="bg-white/[0.04] border border-white/10 rounded-xl px-2 text-white text-sm outline-none"
           >
-            <option value="" className="bg-ink">Todos</option>
+            <option value="" className="bg-ink">
+              Todos
+            </option>
             {personas.map((p) => (
               <option key={p} value={p} className="bg-ink">
                 {p}
@@ -81,26 +95,38 @@ export default function Actividad() {
         )}
       </div>
 
-      {registros === null && <p className="text-white/30 text-sm">Cargando...</p>}
+      {registros === null && (
+        <p className="text-white/30 text-sm">Cargando...</p>
+      )}
       {registros && visibles.length === 0 && (
         <p className="text-white/30 text-sm text-center py-10">
-          {registros.length === 0 ? 'Todavía no hay cambios registrados.' : 'No hay resultados.'}
+          {registros.length === 0
+            ? 'Todavía no hay cambios registrados.'
+            : 'No hay resultados.'}
         </p>
       )}
 
       <div className="flex flex-col gap-5">
         {Object.entries(porDia).map(([dia, lista]) => (
           <div key={dia}>
-            <p className="text-white/40 text-xs uppercase tracking-wide mb-2">{tituloDia(dia)}</p>
+            <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+              {tituloDia(dia)}
+            </p>
             <div className="bg-white/[0.04] border border-white/10 rounded-2xl divide-y divide-white/10">
               {lista.map((r) => (
                 <div key={r.id} className="px-4 py-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-white text-sm">{r.accion}</p>
-                    <p className="text-white/35 text-[11px] shrink-0">{fechaHora(r.creado_en).split(', ').pop()}</p>
+                    <p className="text-white/35 text-[11px] shrink-0">
+                      {fechaHora(r.creado_en).split(', ').pop()}
+                    </p>
                   </div>
-                  {r.detalle && <p className="text-white/55 text-xs">{r.detalle}</p>}
-                  <p className="text-white/30 text-[11px]">por {r.actor_nombre || 'sistema'}</p>
+                  {r.detalle && (
+                    <p className="text-white/55 text-xs">{r.detalle}</p>
+                  )}
+                  <p className="text-white/30 text-[11px]">
+                    por {r.actor_nombre || 'sistema'}
+                  </p>
                 </div>
               ))}
             </div>

@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import FormularioPago from '../../components/FormularioPago';
 import {
@@ -9,10 +10,30 @@ import {
   vencimientoDe,
   TIPOS_PAGO,
 } from '../../lib/ingresos';
-import { Search, RefreshCw, Pencil, History, X, Trash2, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
+import {
+  Search,
+  RefreshCw,
+  Pencil,
+  History,
+  X,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  MessageCircle,
+  Check,
+} from 'lucide-react';
+import {
+  alumnosEnRiesgo,
+  contactadoReciente,
+  diasDesdeContacto,
+  numeroWhatsapp,
+} from '../../lib/seguimiento';
 
 function fechaLargaSinAnio(fechaISO) {
-  return new Date(fechaISO + 'T00:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'long' });
+  return new Date(fechaISO + 'T00:00:00').toLocaleDateString('es-CL', {
+    day: 'numeric',
+    month: 'long',
+  });
 }
 
 // Link de WhatsApp con un recordatorio de pago listo para enviar
@@ -27,9 +48,11 @@ function linkRecordatorio(u, v, monto, plan, gimnasio) {
     : v.dias === 0
     ? 'tu plan vence hoy'
     : `tu plan vence el ${fechaLargaSinAnio(v.vence)}`;
-  const texto = `Hola ${nombre}! Te escribimos de ${gimnasio || 'CED&S'} 💪 Te recordamos que ${cuando}${
-    plan ? ` (${plan.nombre}` : ''
-  }${plan && monto ? `, ${formatearPesos(monto)})` : plan ? ')' : ''}. Puedes renovarlo por transferencia o en el gimnasio. ¡Gracias!`;
+  const texto = `Hola ${nombre}! Te escribimos de ${
+    gimnasio || 'CED&S'
+  } 💪 Te recordamos que ${cuando}${plan ? ` (${plan.nombre}` : ''}${
+    plan && monto ? `, ${formatearPesos(monto)})` : plan ? ')' : ''
+  }. Puedes renovarlo por transferencia o en el gimnasio. ¡Gracias!`;
   return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
 }
 
@@ -43,17 +66,52 @@ function fechaCorta(fechaISO) {
 }
 
 const ESTADOS = {
-  vencido: { label: 'Vencido', clase: 'bg-red-500/10 text-red-300 border-red-500/30', orden: 0 },
-  por_vencer: { label: 'Por vencer', clase: 'bg-yellow-400/10 text-yellow-200 border-yellow-400/30', orden: 1 },
-  sin_pago: { label: 'Sin pago', clase: 'bg-white/5 text-white/60 border-white/15', orden: 2 },
-  al_dia: { label: 'Al día', clase: 'bg-cyan-brand/10 text-cyan-brand border-cyan-brand/25', orden: 3 },
+  vencido: {
+    label: 'Vencido',
+    clase: 'bg-red-500/10 text-red-300 border-red-500/30',
+    orden: 0,
+  },
+  por_vencer: {
+    label: 'Por vencer',
+    clase: 'bg-yellow-400/10 text-yellow-200 border-yellow-400/30',
+    orden: 1,
+  },
+  sin_pago: {
+    label: 'Sin pago',
+    clase: 'bg-white/5 text-white/60 border-white/15',
+    orden: 2,
+  },
+  al_dia: {
+    label: 'Al día',
+    clase: 'bg-cyan-brand/10 text-cyan-brand border-cyan-brand/25',
+    orden: 3,
+  },
 };
 
 const FILTROS = [
   { valor: 'renovar', label: 'Por renovar' },
+  { valor: 'vencidos', label: 'Vencidos' },
+  { valor: 'sin_venir', label: 'Sin venir' },
   { valor: 'al_dia', label: 'Al día' },
   { valor: 'todos', label: 'Todos' },
 ];
+
+function textoContacto(u) {
+  const d = diasDesdeContacto(u);
+  if (d === null) return null;
+  if (d === 0) return 'Contactado hoy';
+  if (d === 1) return 'Contactado ayer';
+  return `Contactado hace ${d} días`;
+}
+
+function filtroInicial() {
+  try {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    return FILTROS.some((f) => f.valor === t) ? t : 'renovar';
+  } catch (e) {
+    return 'renovar';
+  }
+}
 
 function textoDias(dias) {
   if (dias === null) return '';
@@ -69,10 +127,18 @@ function Modal({ titulo, subtitulo, onCerrar, children }) {
       <div className="relative w-full sm:max-w-md max-h-[90vh] overflow-y-auto bg-ink border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="min-w-0">
-            <p className="text-white font-display text-lg leading-tight">{titulo}</p>
-            {subtitulo && <p className="text-white/40 text-xs mt-0.5">{subtitulo}</p>}
+            <p className="text-white font-display text-lg leading-tight">
+              {titulo}
+            </p>
+            {subtitulo && (
+              <p className="text-white/40 text-xs mt-0.5">{subtitulo}</p>
+            )}
           </div>
-          <button onClick={onCerrar} className="text-white/40 p-1 hover:text-white" aria-label="Cerrar">
+          <button
+            onClick={onCerrar}
+            className="text-white/40 p-1 hover:text-white"
+            aria-label="Cerrar"
+          >
             <X size={20} />
           </button>
         </div>
@@ -95,7 +161,8 @@ function EditarPago({ pago, venceInicial, onListo }) {
   const [error, setError] = useState('');
 
   async function guardar() {
-    if (!form.monto || !form.fecha) return setError('Completa el monto y la fecha.');
+    if (!form.monto || !form.fecha)
+      return setError('Completa el monto y la fecha.');
     setGuardando(true);
     const cambios = {
       monto: form.monto,
@@ -127,12 +194,21 @@ function EditarPago({ pago, venceInicial, onListo }) {
           />
         </div>
         <div>
-          <label className="text-white/40 text-xs mb-1 block">Fecha del pago</label>
-          <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} className={campo} />
+          <label className="text-white/40 text-xs mb-1 block">
+            Fecha del pago
+          </label>
+          <input
+            type="date"
+            value={form.fecha}
+            onChange={(e) => setForm({ ...form, fecha: e.target.value })}
+            className={campo}
+          />
         </div>
       </div>
       <div>
-        <label className="text-white/40 text-xs mb-1 block">Medio de pago</label>
+        <label className="text-white/40 text-xs mb-1 block">
+          Medio de pago
+        </label>
         <div className="flex gap-1.5">
           {MEDIOS_PAGO.map((m) => (
             <button
@@ -152,12 +228,23 @@ function EditarPago({ pago, venceInicial, onListo }) {
       {pago.tipo !== 'manual' && (
         <div>
           <label className="text-white/40 text-xs mb-1 block">Vence el</label>
-          <input type="date" value={form.vence} onChange={(e) => setForm({ ...form, vence: e.target.value })} className={campo} />
+          <input
+            type="date"
+            value={form.vence}
+            onChange={(e) => setForm({ ...form, vence: e.target.value })}
+            className={campo}
+          />
         </div>
       )}
       <div>
-        <label className="text-white/40 text-xs mb-1 block">Nota (opcional)</label>
-        <input value={form.nota} onChange={(e) => setForm({ ...form, nota: e.target.value })} className={campo} />
+        <label className="text-white/40 text-xs mb-1 block">
+          Nota (opcional)
+        </label>
+        <input
+          value={form.nota}
+          onChange={(e) => setForm({ ...form, nota: e.target.value })}
+          className={campo}
+        />
       </div>
       {error && <p className="text-red-400 text-xs">{error}</p>}
       <div className="flex gap-2">
@@ -168,7 +255,10 @@ function EditarPago({ pago, venceInicial, onListo }) {
         >
           {guardando ? 'Guardando...' : 'Guardar cambios'}
         </button>
-        <button onClick={onListo} className="flex-1 bg-white/10 text-white rounded-lg py-2.5 text-sm">
+        <button
+          onClick={onListo}
+          className="flex-1 bg-white/10 text-white rounded-lg py-2.5 text-sm"
+        >
           Cancelar
         </button>
       </div>
@@ -180,15 +270,24 @@ function Historial({ pagosAlumno, onEditar }) {
   const { eliminarPago } = useAuth();
   const [borrando, setBorrando] = useState(null);
 
-  if (pagosAlumno.length === 0) return <p className="text-white/35 text-xs px-4 pb-3">Sin pagos registrados.</p>;
+  if (pagosAlumno.length === 0)
+    return (
+      <p className="text-white/35 text-xs px-4 pb-3">Sin pagos registrados.</p>
+    );
 
   return (
     <div className="px-3 pb-3 flex flex-col gap-1.5">
       {pagosAlumno.map((p) => (
-        <div key={p.id} className="bg-black/25 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+        <div
+          key={p.id}
+          className="bg-black/25 rounded-lg px-3 py-2 flex items-center justify-between gap-2"
+        >
           <div className="min-w-0">
             <p className="text-white text-sm tabular-nums">
-              {formatearPesos(p.monto)} <span className="text-white/40 text-xs">· {etiquetaMedio(p.medio)}</span>
+              {formatearPesos(p.monto)}{' '}
+              <span className="text-white/40 text-xs">
+                · {etiquetaMedio(p.medio)}
+              </span>
             </p>
             <p className="text-white/40 text-[11px]">
               {fechaCorta(p.fecha)} · {TIPOS_PAGO[p.tipo] || 'Pago'}
@@ -208,16 +307,27 @@ function Historial({ pagosAlumno, onEditar }) {
               >
                 Sí
               </button>
-              <button onClick={() => setBorrando(null)} className="bg-white/10 text-white text-[11px] px-2 py-1 rounded-md">
+              <button
+                onClick={() => setBorrando(null)}
+                className="bg-white/10 text-white text-[11px] px-2 py-1 rounded-md"
+              >
                 No
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-1 shrink-0">
-              <button onClick={() => onEditar(p)} className="text-cyan-brand/80 p-1.5 hover:text-cyan-brand" aria-label="Editar pago">
+              <button
+                onClick={() => onEditar(p)}
+                className="text-cyan-brand/80 p-1.5 hover:text-cyan-brand"
+                aria-label="Editar pago"
+              >
                 <Pencil size={14} />
               </button>
-              <button onClick={() => setBorrando(p.id)} className="text-red-400/60 p-1.5 hover:text-red-400" aria-label="Borrar pago">
+              <button
+                onClick={() => setBorrando(p.id)}
+                className="text-red-400/60 p-1.5 hover:text-red-400"
+                aria-label="Borrar pago"
+              >
                 <Trash2 size={14} />
               </button>
             </div>
@@ -229,8 +339,22 @@ function Historial({ pagosAlumno, onEditar }) {
 }
 
 export default function Renovaciones() {
-  const { usuarios, planes, pagos, diasRenovacion, infoGimnasio } = useAuth();
-  const [filtro, setFiltro] = useState('renovar');
+  const {
+    usuarios,
+    planes,
+    pagos,
+    diasRenovacion,
+    infoGimnasio,
+    reservas,
+    marcarContactadoSeguimiento,
+  } = useAuth();
+  const [filtro, setFiltro] = useState(filtroInicial);
+  const location = useLocation();
+  // Si se llega con ?tab=... (por ejemplo desde Pendientes del Dashboard), se abre esa pestaña
+  useEffect(() => {
+    const t = new URLSearchParams(location.search).get('tab');
+    if (t && FILTROS.some((f) => f.valor === t)) setFiltro(t);
+  }, [location.search]);
   const [busqueda, setBusqueda] = useState('');
   const [renovando, setRenovando] = useState(null); // usuario
   const [editando, setEditando] = useState(null); // { pago, usuario }
@@ -238,11 +362,17 @@ export default function Renovaciones() {
 
   const filas = useMemo(() => {
     return usuarios
-      .filter((u) => u.estado !== 'inactivo' && u.estado !== 'pendiente' && u.plan_id)
+      .filter(
+        (u) => u.estado !== 'inactivo' && u.estado !== 'pendiente' && u.plan_id
+      )
       .map((u) => {
         const pagosAlumno = pagos
           .filter((p) => p.usuario_id === u.id)
-          .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || (b.creado_en || '').localeCompare(a.creado_en || ''));
+          .sort(
+            (a, b) =>
+              (b.fecha || '').localeCompare(a.fecha || '') ||
+              (b.creado_en || '').localeCompare(a.creado_en || '')
+          );
         const ultimo = pagosAlumno[0] || null;
         const v = vencimientoDe(u, planes, diasRenovacion);
         let estado;
@@ -261,41 +391,99 @@ export default function Renovaciones() {
   }, [usuarios, planes, pagos, diasRenovacion]);
 
   const porRenovar = filas.filter((f) => f.estado !== 'al_dia');
-  const conteo = {
-    renovar: porRenovar.length,
-    al_dia: filas.length - porRenovar.length,
-    todos: filas.length,
-  };
-  const montoPorRenovar = porRenovar.reduce((acc, f) => acc + (montoPlanDe(f.u, planes) || 0), 0);
+  // Alumnos con plan vigente que llevan 14 días o más sin venir (y sin reservas próximas)
+  const sinVenir = useMemo(() => {
+    const { sinVenir: lista } = alumnosEnRiesgo(
+      usuarios,
+      reservas || [],
+      planes,
+      diasRenovacion
+    );
+    return Object.fromEntries(lista.map((x) => [x.usuario.id, x]));
+  }, [usuarios, reservas, planes, diasRenovacion]);
+  const enFiltro = (f, filtroActual) =>
+    filtroActual === 'renovar'
+      ? f.estado === 'por_vencer' || f.estado === 'sin_pago'
+      : filtroActual === 'vencidos'
+      ? f.estado === 'vencido'
+      : filtroActual === 'sin_venir'
+      ? !!sinVenir[f.u.id]
+      : filtroActual === 'al_dia'
+      ? f.estado === 'al_dia'
+      : true;
+  const conteo = Object.fromEntries(
+    FILTROS.map((x) => [
+      x.valor,
+      filas.filter((f) => enFiltro(f, x.valor)).length,
+    ])
+  );
+  const montoPorRenovar = porRenovar.reduce(
+    (acc, f) => acc + (montoPlanDe(f.u, planes) || 0),
+    0
+  );
 
   const texto = busqueda.trim().toLowerCase();
   const visibles = filas
-    .filter((f) => (filtro === 'renovar' ? f.estado !== 'al_dia' : filtro === 'al_dia' ? f.estado === 'al_dia' : true))
+    .filter((f) => enFiltro(f, filtro))
     .filter(
       (f) =>
         !texto ||
         (f.u.nombre || '').toLowerCase().includes(texto) ||
         (f.u.correo || '').toLowerCase().includes(texto) ||
         (f.u.rut || '').toLowerCase().includes(texto)
+    )
+    .map((f) => ({ ...f, riesgo: sinVenir[f.u.id] || null }))
+    // En "Sin venir", los que llevan más tiempo primero; los ya contactados esta semana al final
+    .sort((a, b) =>
+      filtro === 'sin_venir'
+        ? Number(contactadoReciente(a.u)) - Number(contactadoReciente(b.u)) ||
+          (b.riesgo?.diasSinVenir ?? 9999) - (a.riesgo?.diasSinVenir ?? 9999)
+        : 0
     );
+
+  function mensajeSinVenir(u, riesgo) {
+    const nombre = (u.nombre || '').split(' ')[0];
+    return `Hola ${nombre}! Te extrañamos en ${
+      infoGimnasio?.nombre || 'CED&S'
+    } 💪 ${
+      riesgo?.diasSinVenir
+        ? `Hace ${riesgo.diasSinVenir} días que no vienes.`
+        : 'Todavía no has venido a tu primera clase.'
+    } ¿Te reservamos una clase esta semana? Si te pasó algo, cuéntanos y vemos cómo ayudarte.`;
+  }
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6 max-w-3xl mx-auto">
       <div className="grid grid-cols-2 gap-2 mb-5">
         <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-3.5">
-          <p className="text-white/40 text-[11px] uppercase tracking-wide">Por renovar</p>
-          <p className="text-white font-display text-2xl leading-tight mt-0.5">{porRenovar.length}</p>
-          <p className="text-white/35 text-[11px]">vencidos, por vencer o sin pago</p>
+          <p className="text-white/40 text-[11px] uppercase tracking-wide">
+            Por renovar
+          </p>
+          <p className="text-white font-display text-2xl leading-tight mt-0.5">
+            {porRenovar.length}
+          </p>
+          <p className="text-white/35 text-[11px]">
+            vencidos, por vencer o sin pago
+          </p>
         </div>
         <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-3.5">
-          <p className="text-white/40 text-[11px] uppercase tracking-wide">Monto por cobrar</p>
-          <p className="text-white font-display text-2xl leading-tight mt-0.5">{formatearPesos(montoPorRenovar)}</p>
-          <p className="text-white/35 text-[11px]">según el valor de cada plan</p>
+          <p className="text-white/40 text-[11px] uppercase tracking-wide">
+            Monto por cobrar
+          </p>
+          <p className="text-white font-display text-2xl leading-tight mt-0.5">
+            {formatearPesos(montoPorRenovar)}
+          </p>
+          <p className="text-white/35 text-[11px]">
+            según el valor de cada plan
+          </p>
         </div>
       </div>
 
       <div className="relative mb-3">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+        <Search
+          size={15}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none"
+        />
         <input
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -304,13 +492,15 @@ export default function Renovaciones() {
         />
       </div>
 
-      <div className="flex gap-2 mb-5">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-5">
         {FILTROS.map((f) => (
           <button
             key={f.valor}
             onClick={() => setFiltro(f.valor)}
             className={`text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${
-              filtro === f.valor ? 'bg-cyan-brand text-ink' : 'bg-white/[0.06] text-white/50'
+              filtro === f.valor
+                ? 'bg-cyan-brand text-ink'
+                : 'bg-white/[0.06] text-white/50'
             }`}
           >
             {f.label} ({conteo[f.valor]})
@@ -320,34 +510,84 @@ export default function Renovaciones() {
 
       {visibles.length === 0 && (
         <p className="text-white/30 text-sm text-center py-12">
-          {filtro === 'renovar' ? 'No hay alumnos por renovar. 🎉' : 'No hay alumnos para mostrar.'}
+          {filtro === 'renovar'
+            ? 'No hay alumnos por renovar. 🎉'
+            : filtro === 'sin_venir'
+            ? '¡Todos tus alumnos están viniendo! 🎉'
+            : filtro === 'vencidos'
+            ? 'No hay planes vencidos. 🎉'
+            : 'No hay alumnos para mostrar.'}
         </p>
       )}
 
       <div className="flex flex-col gap-2.5">
-        {visibles.map(({ u, plan, pagosAlumno, ultimo, v, estado }) => {
+        {visibles.map(({ u, plan, pagosAlumno, ultimo, v, estado, riesgo }) => {
           const historialAqui = historialAbierto === u.id;
+          const contacto = textoContacto(u);
+          const reciente = contactadoReciente(u);
+          const linkWhatsapp =
+            filtro === 'sin_venir'
+              ? numeroWhatsapp(u.telefono) &&
+                `https://wa.me/${numeroWhatsapp(
+                  u.telefono
+                )}?text=${encodeURIComponent(mensajeSinVenir(u, riesgo))}`
+              : estado !== 'al_dia' &&
+                linkRecordatorio(
+                  u,
+                  v,
+                  montoPlanDe(u, planes),
+                  plan,
+                  infoGimnasio?.nombre
+                );
           return (
-            <div key={u.id} className="bg-white/[0.04] border border-white/10 rounded-2xl overflow-hidden">
+            <div
+              key={u.id}
+              className={`bg-white/[0.04] border border-white/10 rounded-2xl overflow-hidden ${
+                reciente && estado !== 'al_dia' ? 'opacity-70' : ''
+              }`}
+            >
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-white font-semibold truncate">{u.nombre}</p>
-                    <p className="text-white/40 text-xs truncate">{plan?.nombre || 'Plan eliminado'}</p>
+                    <p className="text-white font-semibold truncate">
+                      {u.nombre}
+                    </p>
+                    <p className="text-white/40 text-xs truncate">
+                      {plan?.nombre || 'Plan eliminado'}
+                    </p>
+                    {riesgo && (
+                      <p className="text-orange-300 text-xs">
+                        {riesgo.diasSinVenir
+                          ? `Última clase hace ${riesgo.diasSinVenir} días`
+                          : 'Nunca ha venido a una clase'}
+                      </p>
+                    )}
+                    {contacto && (
+                      <p className="text-cyan-brand/80 text-[11px] flex items-center gap-1">
+                        <Check size={11} /> {contacto}
+                      </p>
+                    )}
                   </div>
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full border shrink-0 ${ESTADOS[estado].clase}`}>
+                  <span
+                    className={`text-[11px] px-2 py-0.5 rounded-full border shrink-0 ${ESTADOS[estado].clase}`}
+                  >
                     {ESTADOS[estado].label}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 mt-3">
                   <div className="bg-black/20 rounded-xl px-3 py-2">
-                    <p className="text-white/35 text-[10px] uppercase tracking-wide">Último pago</p>
+                    <p className="text-white/35 text-[10px] uppercase tracking-wide">
+                      Último pago
+                    </p>
                     {ultimo ? (
                       <>
-                        <p className="text-white text-sm font-semibold tabular-nums">{formatearPesos(ultimo.monto)}</p>
+                        <p className="text-white text-sm font-semibold tabular-nums">
+                          {formatearPesos(ultimo.monto)}
+                        </p>
                         <p className="text-white/45 text-[11px]">
-                          {fechaCorta(ultimo.fecha)} · {etiquetaMedio(ultimo.medio)}
+                          {fechaCorta(ultimo.fecha)} ·{' '}
+                          {etiquetaMedio(ultimo.medio)}
                         </p>
                       </>
                     ) : (
@@ -355,14 +595,26 @@ export default function Renovaciones() {
                     )}
                   </div>
                   <div className="bg-black/20 rounded-xl px-3 py-2">
-                    <p className="text-white/35 text-[10px] uppercase tracking-wide">Vence el</p>
-                    <p className="text-white text-sm font-semibold">{v ? fechaCorta(v.vence) : '—'}</p>
+                    <p className="text-white/35 text-[10px] uppercase tracking-wide">
+                      Vence el
+                    </p>
+                    <p className="text-white text-sm font-semibold">
+                      {v ? fechaCorta(v.vence) : '—'}
+                    </p>
                     <p
                       className={`text-[11px] ${
-                        estado === 'vencido' ? 'text-red-300' : estado === 'por_vencer' ? 'text-yellow-200' : 'text-white/45'
+                        estado === 'vencido'
+                          ? 'text-red-300'
+                          : estado === 'por_vencer'
+                          ? 'text-yellow-200'
+                          : 'text-white/45'
                       }`}
                     >
-                      {v ? textoDias(v.dias) : `Plan: ${formatearPesos(montoPlanDe(u, planes) || 0)}`}
+                      {v
+                        ? textoDias(v.dias)
+                        : `Plan: ${formatearPesos(
+                            montoPlanDe(u, planes) || 0
+                          )}`}
                     </p>
                   </div>
                 </div>
@@ -375,33 +627,57 @@ export default function Renovaciones() {
                     <RefreshCw size={14} /> Renovar
                   </button>
                   <button
-                    onClick={() => ultimo && setEditando({ pago: ultimo, usuario: u, venceInicial: v?.vence })}
+                    onClick={() =>
+                      ultimo &&
+                      setEditando({
+                        pago: ultimo,
+                        usuario: u,
+                        venceInicial: v?.vence,
+                      })
+                    }
                     disabled={!ultimo}
                     className="flex-1 flex items-center justify-center gap-1.5 bg-white/10 text-white rounded-lg py-2 text-sm disabled:opacity-30"
                   >
                     <Pencil size={14} /> Editar pago
                   </button>
-                  {estado !== 'al_dia' && linkRecordatorio(u, v, montoPlanDe(u, planes), plan, infoGimnasio?.nombre) && (
+                  {linkWhatsapp && (
                     <a
-                      href={linkRecordatorio(u, v, montoPlanDe(u, planes), plan, infoGimnasio?.nombre)}
+                      href={linkWhatsapp}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => marcarContactadoSeguimiento(u.id)}
                       className="flex items-center justify-center bg-[#25D366]/15 border border-[#25D366]/40 text-[#7ee2a5] rounded-lg px-3 py-2"
-                      aria-label="Recordar pago por WhatsApp"
-                      title="Recordar pago por WhatsApp"
+                      aria-label="Escribir por WhatsApp"
+                      title="Escribir por WhatsApp (queda marcado como contactado)"
                     >
                       <MessageCircle size={15} />
                     </a>
                   )}
                   <button
-                    onClick={() => setHistorialAbierto(historialAqui ? null : u.id)}
+                    onClick={() =>
+                      setHistorialAbierto(historialAqui ? null : u.id)
+                    }
                     className="flex items-center justify-center gap-1 bg-white/[0.06] text-white/70 rounded-lg px-3 py-2 text-sm"
                     aria-label="Historial de pagos"
                   >
                     <History size={14} />
-                    {historialAqui ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    {historialAqui ? (
+                      <ChevronUp size={14} />
+                    ) : (
+                      <ChevronDown size={14} />
+                    )}
                   </button>
                 </div>
+                {estado !== 'al_dia' || riesgo
+                  ? !reciente && (
+                      <button
+                        onClick={() => marcarContactadoSeguimiento(u.id)}
+                        className="mt-2 text-white/45 text-xs flex items-center gap-1"
+                      >
+                        <Check size={12} /> Ya lo contacté
+                      </button>
+                    )
+                  : null}
               </div>
 
               {historialAqui && (
@@ -409,7 +685,16 @@ export default function Renovaciones() {
                   <p className="text-white/35 text-[11px] uppercase tracking-wide px-4 mb-2">
                     Historial de pagos ({pagosAlumno.length})
                   </p>
-                  <Historial pagosAlumno={pagosAlumno} onEditar={(p) => setEditando({ pago: p, usuario: u, venceInicial: p.id === ultimo?.id ? v?.vence : '' })} />
+                  <Historial
+                    pagosAlumno={pagosAlumno}
+                    onEditar={(p) =>
+                      setEditando({
+                        pago: p,
+                        usuario: u,
+                        venceInicial: p.id === ultimo?.id ? v?.vence : '',
+                      })
+                    }
+                  />
                 </div>
               )}
             </div>
@@ -435,10 +720,16 @@ export default function Renovaciones() {
       {editando && (
         <Modal
           titulo="Editar pago"
-          subtitulo={`${editando.usuario.nombre} · ${fechaCorta(editando.pago.fecha)}`}
+          subtitulo={`${editando.usuario.nombre} · ${fechaCorta(
+            editando.pago.fecha
+          )}`}
           onCerrar={() => setEditando(null)}
         >
-          <EditarPago pago={editando.pago} venceInicial={editando.venceInicial} onListo={() => setEditando(null)} />
+          <EditarPago
+            pago={editando.pago}
+            venceInicial={editando.venceInicial}
+            onListo={() => setEditando(null)}
+          />
         </Modal>
       )}
     </div>

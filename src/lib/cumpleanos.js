@@ -14,7 +14,8 @@ export function cumpleanosProximos(usuarios, dias = 7) {
   for (const u of usuarios) {
     if (u.estado !== 'activo' || !u.fecha_nacimiento) continue;
     let fecha = cumpleEnAnio(u.fecha_nacimiento, hoy.getFullYear());
-    if (fecha < hoy && Math.round((hoy - fecha) / 86400000) > 0) fecha = cumpleEnAnio(u.fecha_nacimiento, hoy.getFullYear() + 1);
+    if (fecha < hoy && Math.round((hoy - fecha) / 86400000) > 0)
+      fecha = cumpleEnAnio(u.fecha_nacimiento, hoy.getFullYear() + 1);
     const enDias = Math.round((fecha - hoy) / 86400000);
     if (enDias < 0 || enDias > dias) continue;
     const edad = fecha.getFullYear() - Number(u.fecha_nacimiento.slice(0, 4));
@@ -27,5 +28,7 @@ export function esMiCumpleanos(usuario) {
   if (!usuario?.fecha_nacimiento) return false;
   const hoy = new Date(hoyLocalISO() + 'T12:00:00');
   const fecha = cumpleEnAnio(usuario.fecha_nacimiento, hoy.getFullYear());
-  return fecha.getMonth() === hoy.getMonth() && fecha.getDate() === hoy.getDate();
+  return (
+    fecha.getMonth() === hoy.getMonth() && fecha.getDate() === hoy.getDate()
+  );
 }

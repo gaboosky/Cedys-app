@@ -1,22 +1,45 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { MEDIOS_PAGO, hoyLocalISO, montoPlanDe, venceSugerido, fechaVenceDe } from '../lib/ingresos';
+import {
+  MEDIOS_PAGO,
+  hoyLocalISO,
+  montoPlanDe,
+  venceSugerido,
+  fechaVenceDe,
+} from '../lib/ingresos';
 
 // Formulario para registrar un pago.
 // - usuarioFijo: si viene, el alumno ya está elegido (ej. desde su tarjeta en Usuarios).
 // - soloRenovacion: el pago siempre renueva el plan (no muestra la opción).
-export default function FormularioPago({ usuarioFijo, soloRenovacion = false, onCancelar, onListo }) {
-  const { usuarios, planes, diasRenovacion, confirmarRenovacion, registrarPago } = useAuth();
+export default function FormularioPago({
+  usuarioFijo,
+  soloRenovacion = false,
+  onCancelar,
+  onListo,
+}) {
+  const {
+    usuarios,
+    planes,
+    diasRenovacion,
+    confirmarRenovacion,
+    registrarPago,
+  } = useAuth();
 
   const [usuarioId, setUsuarioId] = useState(usuarioFijo?.id || '');
   const usuario = usuarioFijo || usuarios.find((u) => u.id === usuarioId);
-  const [monto, setMonto] = useState(usuarioFijo ? String(montoPlanDe(usuarioFijo, planes) || '') : '');
+  const [monto, setMonto] = useState(
+    usuarioFijo ? String(montoPlanDe(usuarioFijo, planes) || '') : ''
+  );
   const [medio, setMedio] = useState('transferencia');
   const [fecha, setFecha] = useState(hoyLocalISO());
-  const [renueva, setRenueva] = useState(soloRenovacion || !!usuarioFijo?.plan_id);
+  const [renueva, setRenueva] = useState(
+    soloRenovacion || !!usuarioFijo?.plan_id
+  );
   // Fecha en que vence el plan con este pago (sugerida, pero editable)
   const [vence, setVence] = useState(() =>
-    usuarioFijo?.plan_id ? venceSugerido(usuarioFijo, planes, diasRenovacion, hoyLocalISO()) : ''
+    usuarioFijo?.plan_id
+      ? venceSugerido(usuarioFijo, planes, diasRenovacion, hoyLocalISO())
+      : ''
   );
   const [venceEditado, setVenceEditado] = useState(false);
   const [nota, setNota] = useState('');
@@ -38,32 +61,60 @@ export default function FormularioPago({ usuarioFijo, soloRenovacion = false, on
 
   function cambiarFecha(valor) {
     setFecha(valor);
-    if (!venceEditado && usuario?.plan_id && valor) setVence(venceSugerido(usuario, planes, diasRenovacion, valor));
+    if (!venceEditado && usuario?.plan_id && valor)
+      setVence(venceSugerido(usuario, planes, diasRenovacion, valor));
   }
 
   function restablecerVence() {
-    if (usuario?.plan_id) setVence(venceSugerido(usuario, planes, diasRenovacion, fecha));
+    if (usuario?.plan_id)
+      setVence(venceSugerido(usuario, planes, diasRenovacion, fecha));
     setVenceEditado(false);
   }
 
-  const venceAnterior = usuario ? fechaVenceDe(usuario, planes, diasRenovacion) : null;
+  const venceAnterior = usuario
+    ? fechaVenceDe(usuario, planes, diasRenovacion)
+    : null;
   const textoFecha = (iso) =>
-    new Date(iso + 'T00:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
+    new Date(iso + 'T00:00:00').toLocaleDateString('es-CL', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
 
   async function guardar() {
     setError('');
     if (!usuario) return setError('Elige un alumno.');
     if (!monto || Number(monto) <= 0) return setError('Ingresa el monto.');
-    if (renueva && !usuario.plan_id) return setError('Este alumno no tiene plan asignado; desmarca "Renueva su plan".');
-    if (renueva && (!vence || vence <= fecha)) return setError('La fecha de vencimiento debe ser posterior a la fecha del pago.');
+    if (renueva && !usuario.plan_id)
+      return setError(
+        'Este alumno no tiene plan asignado; desmarca "Renueva su plan".'
+      );
+    if (renueva && (!vence || vence <= fecha))
+      return setError(
+        'La fecha de vencimiento debe ser posterior a la fecha del pago.'
+      );
 
     setEnviando(true);
     const resultado = renueva
-      ? await confirmarRenovacion(usuario.id, { monto: Number(monto), medio, fecha, nota, vence })
-      : await registrarPago({ usuarioId: usuario.id, monto: Number(monto), medio, fecha, tipo: 'manual', nota });
+      ? await confirmarRenovacion(usuario.id, {
+          monto: Number(monto),
+          medio,
+          fecha,
+          nota,
+          vence,
+        })
+      : await registrarPago({
+          usuarioId: usuario.id,
+          monto: Number(monto),
+          medio,
+          fecha,
+          tipo: 'manual',
+          nota,
+        });
     setEnviando(false);
 
-    if (!resultado?.ok) return setError(resultado?.mensaje || 'No se pudo registrar el pago.');
+    if (!resultado?.ok)
+      return setError(resultado?.mensaje || 'No se pudo registrar el pago.');
     onListo?.(resultado);
   }
 
@@ -75,12 +126,18 @@ export default function FormularioPago({ usuarioFijo, soloRenovacion = false, on
       {!usuarioFijo && (
         <div>
           <label className="text-white/40 text-xs mb-1 block">Alumno</label>
-          <select value={usuarioId} onChange={(e) => elegirUsuario(e.target.value)} className={inputClase}>
+          <select
+            value={usuarioId}
+            onChange={(e) => elegirUsuario(e.target.value)}
+            className={inputClase}
+          >
             <option value="">Elige un alumno…</option>
             {candidatos.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.nombre}
-                {u.plan_id && planes[u.plan_id] ? ` · ${planes[u.plan_id].nombre}` : ''}
+                {u.plan_id && planes[u.plan_id]
+                  ? ` · ${planes[u.plan_id].nombre}`
+                  : ''}
               </option>
             ))}
           </select>
@@ -99,8 +156,15 @@ export default function FormularioPago({ usuarioFijo, soloRenovacion = false, on
           />
         </div>
         <div className="flex-1">
-          <label className="text-white/40 text-xs mb-1 block">Fecha del pago</label>
-          <input type="date" value={fecha} onChange={(e) => cambiarFecha(e.target.value)} className={inputClase} />
+          <label className="text-white/40 text-xs mb-1 block">
+            Fecha del pago
+          </label>
+          <input
+            type="date"
+            value={fecha}
+            onChange={(e) => cambiarFecha(e.target.value)}
+            className={inputClase}
+          />
         </div>
       </div>
 
@@ -109,7 +173,11 @@ export default function FormularioPago({ usuarioFijo, soloRenovacion = false, on
           <div className="flex items-center justify-between mb-1">
             <label className="text-white/40 text-xs">Vence el</label>
             {venceEditado && (
-              <button type="button" onClick={restablecerVence} className="text-cyan-brand text-[11px] font-medium">
+              <button
+                type="button"
+                onClick={restablecerVence}
+                className="text-cyan-brand text-[11px] font-medium"
+              >
                 Usar fecha sugerida
               </button>
             )}
@@ -128,14 +196,18 @@ export default function FormularioPago({ usuarioFijo, soloRenovacion = false, on
             {venceEditado
               ? 'Fecha elegida a mano.'
               : venceAnterior
-              ? `Sugerida: mismo día del mes que su vencimiento anterior (${textoFecha(venceAnterior)}).`
+              ? `Sugerida: mismo día del mes que su vencimiento anterior (${textoFecha(
+                  venceAnterior
+                )}).`
               : 'Sugerida: mismo día del mes, contando desde la fecha del pago.'}
           </p>
         </div>
       )}
 
       <div>
-        <label className="text-white/40 text-xs mb-1 block">Medio de pago</label>
+        <label className="text-white/40 text-xs mb-1 block">
+          Medio de pago
+        </label>
         <div className="flex bg-black/20 border border-white/10 rounded-lg p-1">
           {MEDIOS_PAGO.map((m) => (
             <button
@@ -163,7 +235,8 @@ export default function FormularioPago({ usuarioFijo, soloRenovacion = false, on
           <span>
             Renueva su plan
             <span className="block text-white/30">
-              Reinicia sus sesiones y cuenta como su pago del período. Desmárcalo para pagos sueltos (ej. una clase extra).
+              Reinicia sus sesiones y cuenta como su pago del período.
+              Desmárcalo para pagos sueltos (ej. una clase extra).
             </span>
           </span>
         </label>

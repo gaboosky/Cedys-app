@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import CargasRutina from '../../components/CargasRutina';
 import { fechaVenceDe } from '../../lib/ingresos';
@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Check,
   HeartPulse,
+  Ruler,
 } from 'lucide-react';
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -35,10 +36,30 @@ function soloDigitos(s) {
 }
 
 export default function Alumnos() {
-  const { usuarioActual, horarios, usuarios, reservas, rutinaActivaDe, coachDeClase } = useAuth();
+  const {
+    usuarioActual,
+    horarios,
+    usuarios,
+    reservas,
+    rutinaActivaDe,
+    coachDeClase,
+  } = useAuth();
   const [abierto, setAbierto] = useState(null);
   const [alcance, setAlcance] = useState('mios'); // mios | todos
   const [busqueda, setBusqueda] = useState('');
+  const location = useLocation();
+
+  // Desde el buscador de arriba: /alumnos?ver=ID abre la ficha de ese alumno
+  useEffect(() => {
+    const id = new URLSearchParams(location.search).get('ver');
+    if (!id) return;
+    const u = usuarios.find((x) => String(x.id) === id);
+    if (u) {
+      setAlcance('todos');
+      setBusqueda(u.nombre || '');
+      setAbierto(u.id);
+    }
+  }, [location.search]);
 
   // "Mis alumnos": los que han reservado alguna clase que yo hice o haré
   const misAlumnosIds = new Set(
@@ -62,7 +83,10 @@ export default function Alumnos() {
       <p className="font-display text-3xl text-white mb-4">Alumnos</p>
 
       <div className="relative mb-3">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+        <Search
+          size={15}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none"
+        />
         <input
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -79,7 +103,9 @@ export default function Alumnos() {
             key={op.valor}
             onClick={() => setAlcance(op.valor)}
             className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
-              alcance === op.valor ? 'bg-cyan-brand text-ink' : 'bg-white/[0.06] text-white/50'
+              alcance === op.valor
+                ? 'bg-cyan-brand text-ink'
+                : 'bg-white/[0.06] text-white/50'
             }`}
           >
             {op.label}
@@ -102,7 +128,10 @@ export default function Alumnos() {
           const abiertoAqui = abierto === a.id;
           const rutinaActiva = rutinaActivaDe(a.id);
           return (
-            <div key={a.id} className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+            <div
+              key={a.id}
+              className="bg-white/5 border border-white/10 rounded-xl overflow-hidden"
+            >
               <button
                 onClick={() => setAbierto(abiertoAqui ? null : a.id)}
                 className="w-full flex items-center justify-between p-4"
@@ -110,15 +139,25 @@ export default function Alumnos() {
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-full bg-cyan-brand/15 border border-cyan-brand/40 flex items-center justify-center shrink-0 overflow-hidden">
                     {a.foto_url ? (
-                      <img src={a.foto_url} alt="" className="w-full h-full object-cover" />
+                      <img
+                        src={a.foto_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      <span className="font-display text-cyan-brand text-sm">{a.nombre.charAt(0)}</span>
+                      <span className="font-display text-cyan-brand text-sm">
+                        {a.nombre.charAt(0)}
+                      </span>
                     )}
                   </div>
                   <div className="text-left min-w-0">
-                    <p className="text-white text-sm font-medium truncate">{a.nombre}</p>
+                    <p className="text-white text-sm font-medium truncate">
+                      {a.nombre}
+                    </p>
                     <p className="text-white/40 text-xs truncate">
-                      {rutinaActiva ? rutinaActiva.nombre : 'Sin rutina asignada'}
+                      {rutinaActiva
+                        ? rutinaActiva.nombre
+                        : 'Sin rutina asignada'}
                     </p>
                   </div>
                 </div>
@@ -172,7 +211,9 @@ function FichaAlumno({ alumno }) {
     d.setDate(d.getDate() - 30);
     return isoLocal(d);
   })();
-  const pasadas = reservas.filter((r) => r.usuario_id === alumno.id && r.fecha >= hace30 && r.fecha <= hoy);
+  const pasadas = reservas.filter(
+    (r) => r.usuario_id === alumno.id && r.fecha >= hace30 && r.fecha <= hoy
+  );
   const asistio = pasadas.filter((r) => r.asistio === true).length;
   const falto = pasadas.filter((r) => r.asistio === false).length;
 
@@ -183,19 +224,30 @@ function FichaAlumno({ alumno }) {
   const [modo, setModo] = useState('seleccionar'); // seleccionar | importar
   const [seleccion, setSeleccion] = useState('');
   const [msgRutina, setMsgRutina] = useState(null);
-  const [importForm, setImportForm] = useState({ nombre: '', link: '', archivo: null });
+  const [importForm, setImportForm] = useState({
+    nombre: '',
+    link: '',
+    archivo: null,
+  });
   const [importando, setImportando] = useState(false);
 
   // Rutinas para asignar: sin repetir nombres confusos (se indica de quién es cada una)
   const duenoDe = (rutinaId) => {
-    const asign = (usuarioRutinas || []).find((ur) => ur.rutina_id === rutinaId && ur.activa);
-    return asign ? usuarios.find((u) => u.id === asign.usuario_id)?.nombre : null;
+    const asign = (usuarioRutinas || []).find(
+      (ur) => ur.rutina_id === rutinaId && ur.activa
+    );
+    return asign
+      ? usuarios.find((u) => u.id === asign.usuario_id)?.nombre
+      : null;
   };
   const opcionesRutina = [...rutinas]
     .sort((x, y) => (x.nombre || '').localeCompare(y.nombre || ''))
     .map((r) => {
       const dueno = duenoDe(r.id);
-      return { id: r.id, etiqueta: dueno ? `${r.nombre} (de ${dueno.split(' ')[0]})` : r.nombre };
+      return {
+        id: r.id,
+        etiqueta: dueno ? `${r.nombre} (de ${dueno.split(' ')[0]})` : r.nombre,
+      };
     });
 
   async function guardarObs() {
@@ -205,7 +257,8 @@ function FichaAlumno({ alumno }) {
   }
 
   async function handleAsignar() {
-    if (!seleccion) return setMsgRutina({ ok: false, mensaje: 'Elige una rutina.' });
+    if (!seleccion)
+      return setMsgRutina({ ok: false, mensaje: 'Elige una rutina.' });
     await asignarRutina(alumno.id, seleccion);
     const nombre = rutinas.find((r) => r.id === seleccion)?.nombre;
     setMsgRutina({ ok: true, mensaje: `Rutina "${nombre}" asignada.` });
@@ -214,7 +267,10 @@ function FichaAlumno({ alumno }) {
 
   async function handleImportar() {
     if (!importForm.nombre.trim() || !importForm.archivo) {
-      return setMsgRutina({ ok: false, mensaje: 'Ponle un nombre a la rutina y elige el archivo Excel.' });
+      return setMsgRutina({
+        ok: false,
+        mensaje: 'Ponle un nombre a la rutina y elige el archivo Excel.',
+      });
     }
     setImportando(true);
     setMsgRutina(null);
@@ -222,40 +278,79 @@ function FichaAlumno({ alumno }) {
       const { leerArchivoExcel } = await import('../../lib/excelRutinaParser');
       const datosSemanas = await leerArchivoExcel(importForm.archivo);
       if (Object.keys(datosSemanas).length === 0) {
-        setMsgRutina({ ok: false, mensaje: 'No encontré hojas con formato "Semana X" en ese archivo.' });
+        setMsgRutina({
+          ok: false,
+          mensaje: 'No encontré hojas con formato "Semana X" en ese archivo.',
+        });
         setImportando(false);
         return;
       }
-      const nueva = await crearRutina(importForm.nombre.trim(), importForm.link.trim());
+      const nueva = await crearRutina(
+        importForm.nombre.trim(),
+        importForm.link.trim()
+      );
       await importarContenidoRutina(nueva.id, datosSemanas);
       await asignarRutina(alumno.id, nueva.id);
-      setMsgRutina({ ok: true, mensaje: `Rutina importada con ${Object.keys(datosSemanas).length} semana(s) y asignada.` });
+      setMsgRutina({
+        ok: true,
+        mensaje: `Rutina importada con ${
+          Object.keys(datosSemanas).length
+        } semana(s) y asignada.`,
+      });
       setImportForm({ nombre: '', link: '', archivo: null });
       setModo('seleccionar');
     } catch {
-      setMsgRutina({ ok: false, mensaje: 'No pude leer ese archivo. Revisa que sea un .xlsx válido.' });
+      setMsgRutina({
+        ok: false,
+        mensaje: 'No pude leer ese archivo. Revisa que sea un .xlsx válido.',
+      });
     }
     setImportando(false);
   }
 
-  const campo = 'bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand';
+  const campo =
+    'bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand';
 
   return (
     <div className="border-t border-white/10 p-4 flex flex-col gap-5">
+      {/* Seguimiento personal (objetivo, mediciones y avance) */}
+      <button
+        onClick={() => navigate(`/seguimiento-personal/${alumno.id}`)}
+        className="w-full flex items-center justify-between bg-cyan-brand/10 border border-cyan-brand/40 rounded-xl px-4 py-3 text-left"
+      >
+        <span className="flex items-center gap-2 text-white text-sm font-medium">
+          <Ruler size={16} className="text-cyan-brand" /> Seguimiento personal
+        </span>
+        <span className="text-cyan-brand text-xs shrink-0">Ver →</span>
+      </button>
+
       {/* Contacto y plan */}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-black/20 rounded-xl px-3 py-2">
-          <p className="text-white/35 text-[10px] uppercase tracking-wide">Plan</p>
+          <p className="text-white/35 text-[10px] uppercase tracking-wide">
+            Plan
+          </p>
           <p className="text-white text-sm">{plan?.nombre || 'Sin plan'}</p>
           <p className="text-white/45 text-[11px]">
-            {restantes !== null ? `${restantes} sesiones disponibles` : plan ? 'Ilimitado' : ''}
+            {restantes !== null
+              ? `${restantes} sesiones disponibles`
+              : plan
+              ? 'Ilimitado'
+              : ''}
           </p>
-          {vence && <p className="text-white/45 text-[11px]">Vence {formatearFecha(vence)}</p>}
+          {vence && (
+            <p className="text-white/45 text-[11px]">
+              Vence {formatearFecha(vence)}
+            </p>
+          )}
         </div>
         <div className="bg-black/20 rounded-xl px-3 py-2">
-          <p className="text-white/35 text-[10px] uppercase tracking-wide">Últimos 30 días</p>
+          <p className="text-white/35 text-[10px] uppercase tracking-wide">
+            Últimos 30 días
+          </p>
           <p className="text-white text-sm">
-            {asistio} clase{asistio !== 1 ? 's' : ''} asistida{asistio !== 1 ? 's' : ''}
+            {asistio} clase{asistio !== 1 ? 's' : ''} asistida
+            {asistio !== 1 ? 's' : ''}
           </p>
           <p className="text-white/45 text-[11px]">
             {falto} falta{falto !== 1 ? 's' : ''}
@@ -287,7 +382,9 @@ function FichaAlumno({ alumno }) {
           <p className="text-red-200/80 text-[10px] uppercase tracking-wide flex items-center gap-1.5 mb-0.5">
             <HeartPulse size={12} /> OBS del alumno
           </p>
-          <p className="text-white/90 text-sm whitespace-pre-line">{alumno.obs_salud}</p>
+          <p className="text-white/90 text-sm whitespace-pre-line">
+            {alumno.obs_salud}
+          </p>
         </div>
       )}
 
@@ -298,7 +395,10 @@ function FichaAlumno({ alumno }) {
             <AlertTriangle size={12} /> Observaciones
           </p>
           {!editandoObs && (
-            <button onClick={() => setEditandoObs(true)} className="text-cyan-brand text-xs">
+            <button
+              onClick={() => setEditandoObs(true)}
+              className="text-cyan-brand text-xs"
+            >
               {obs ? 'Editar' : 'Agregar'}
             </button>
           )}
@@ -313,7 +413,10 @@ function FichaAlumno({ alumno }) {
               className={campo + ' resize-none'}
             />
             <div className="flex gap-2">
-              <button onClick={guardarObs} className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-xs">
+              <button
+                onClick={guardarObs}
+                className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-xs"
+              >
                 Guardar
               </button>
               <button
@@ -328,17 +431,27 @@ function FichaAlumno({ alumno }) {
             </div>
           </div>
         ) : (
-          <p className={`text-sm ${obs ? 'text-orange-100/90' : 'text-white/30'}`}>
+          <p
+            className={`text-sm ${
+              obs ? 'text-orange-100/90' : 'text-white/30'
+            }`}
+          >
             {obs || 'Sin observaciones. Solo las ven los coaches y el admin.'}
           </p>
         )}
-        {msgObs && !editandoObs && msgObs.ok && <p className="text-cyan-brand text-xs mt-1">{msgObs.mensaje}</p>}
-        {msgObs && !msgObs.ok && <p className="text-red-400 text-xs mt-1">{msgObs.mensaje}</p>}
+        {msgObs && !editandoObs && msgObs.ok && (
+          <p className="text-cyan-brand text-xs mt-1">{msgObs.mensaje}</p>
+        )}
+        {msgObs && !msgObs.ok && (
+          <p className="text-red-400 text-xs mt-1">{msgObs.mensaje}</p>
+        )}
       </div>
 
       {/* Rutina */}
       <div>
-        <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Rutina actual</p>
+        <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+          Rutina actual
+        </p>
         {rutinaActiva ? (
           <button
             onClick={() => navigate(`/rutinas/${rutinaActiva.id}`)}
@@ -347,7 +460,9 @@ function FichaAlumno({ alumno }) {
             <Dumbbell size={16} className="text-cyan-brand" />
             <div className="text-left flex-1">
               <p className="text-white text-sm">{rutinaActiva.nombre}</p>
-              <p className="text-white/40 text-xs">desde {formatearFecha(rutinaActiva.fecha_asignacion)}</p>
+              <p className="text-white/40 text-xs">
+                desde {formatearFecha(rutinaActiva.fecha_asignacion)}
+              </p>
             </div>
             <ChevronRight size={16} className="text-cyan-brand/60" />
           </button>
@@ -357,7 +472,9 @@ function FichaAlumno({ alumno }) {
       </div>
 
       <div>
-        <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Asignar rutina</p>
+        <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+          Asignar rutina
+        </p>
         {modo === 'seleccionar' ? (
           <div className="flex gap-2">
             <select
@@ -375,7 +492,10 @@ function FichaAlumno({ alumno }) {
                 </option>
               ))}
             </select>
-            <button onClick={handleAsignar} className="bg-cyan-brand text-ink font-semibold rounded-lg px-4 text-sm">
+            <button
+              onClick={handleAsignar}
+              className="bg-cyan-brand text-ink font-semibold rounded-lg px-4 text-sm"
+            >
               Asignar
             </button>
           </div>
@@ -383,23 +503,31 @@ function FichaAlumno({ alumno }) {
           <div className="flex flex-col gap-2 bg-black/20 border border-white/10 rounded-lg p-3">
             <input
               value={importForm.nombre}
-              onChange={(e) => setImportForm({ ...importForm, nombre: e.target.value })}
+              onChange={(e) =>
+                setImportForm({ ...importForm, nombre: e.target.value })
+              }
               placeholder="Nombre de la rutina"
               className={campo}
             />
             <input
               value={importForm.link}
-              onChange={(e) => setImportForm({ ...importForm, link: e.target.value })}
+              onChange={(e) =>
+                setImportForm({ ...importForm, link: e.target.value })
+              }
               placeholder="Link de Google Sheets (opcional, solo referencia)"
               className={campo}
             />
             <label className="flex items-center justify-center gap-2 bg-white/5 border border-dashed border-white/20 rounded-lg py-3 text-sm text-white/60 cursor-pointer">
               <Upload size={15} />
-              {importForm.archivo ? importForm.archivo.name : 'Elegir archivo Excel (.xlsx)'}
+              {importForm.archivo
+                ? importForm.archivo.name
+                : 'Elegir archivo Excel (.xlsx)'}
               <input
                 type="file"
                 accept=".xlsx"
-                onChange={(e) => setImportForm({ ...importForm, archivo: e.target.files[0] })}
+                onChange={(e) =>
+                  setImportForm({ ...importForm, archivo: e.target.files[0] })
+                }
                 className="hidden"
               />
             </label>
@@ -413,7 +541,11 @@ function FichaAlumno({ alumno }) {
           </div>
         )}
         {msgRutina && (
-          <p className={`text-xs mt-2 flex items-center gap-1 ${msgRutina.ok ? 'text-cyan-brand' : 'text-red-400'}`}>
+          <p
+            className={`text-xs mt-2 flex items-center gap-1 ${
+              msgRutina.ok ? 'text-cyan-brand' : 'text-red-400'
+            }`}
+          >
             {msgRutina.ok && <Check size={12} />} {msgRutina.mensaje}
           </p>
         )}
@@ -424,17 +556,23 @@ function FichaAlumno({ alumno }) {
           }}
           className="flex items-center gap-1 text-cyan-brand text-xs font-medium mt-2"
         >
-          <Upload size={13} /> {modo === 'importar' ? 'Elegir una existente' : 'Importar rutina desde Excel'}
+          <Upload size={13} />{' '}
+          {modo === 'importar'
+            ? 'Elegir una existente'
+            : 'Importar rutina desde Excel'}
         </button>
       </div>
 
       {historial.length > 0 && (
         <div>
-          <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Rutinas anteriores</p>
+          <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+            Rutinas anteriores
+          </p>
           <div className="flex flex-col gap-1">
             {historial.map((h) => (
               <p key={h.id} className="text-white/40 text-xs">
-                {h.rutina?.nombre} · {formatearFecha(h.fecha_asignacion)} a {formatearFecha(h.fecha_fin)}
+                {h.rutina?.nombre} · {formatearFecha(h.fecha_asignacion)} a{' '}
+                {formatearFecha(h.fecha_fin)}
               </p>
             ))}
           </div>

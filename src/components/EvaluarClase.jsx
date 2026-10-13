@@ -15,7 +15,9 @@ export function Estrellas({ valor, onElegir, tamano = 22 }) {
           disabled={!onElegir}
           onClick={() => onElegir && onElegir(n)}
           aria-label={`${n} estrella${n > 1 ? 's' : ''}`}
-          className={onElegir ? 'transition-transform active:scale-90' : 'cursor-default'}
+          className={
+            onElegir ? 'transition-transform active:scale-90' : 'cursor-default'
+          }
         >
           <Star
             size={tamano}
@@ -70,20 +72,27 @@ export default function EvaluarClase({ reserva, compacto = false }) {
         </div>
         {existente.comentario && (
           <p className="text-white/55 text-xs mt-1.5 flex items-start gap-1.5">
-            <MessageSquare size={12} className="shrink-0 mt-0.5" /> {existente.comentario}
+            <MessageSquare size={12} className="shrink-0 mt-0.5" />{' '}
+            {existente.comentario}
           </p>
         )}
-        {mensaje?.ok && <p className="text-cyan-brand text-xs mt-1">{mensaje.mensaje}</p>}
+        {mensaje?.ok && (
+          <p className="text-cyan-brand text-xs mt-1">{mensaje.mensaje}</p>
+        )}
       </div>
     );
   }
 
   return (
     <div className={compacto ? '' : 'mt-3 pt-3 border-t border-white/10'}>
-      {!compacto && <p className="text-white/45 text-xs mb-1.5">¿Cómo estuvo la clase?</p>}
+      {!compacto && (
+        <p className="text-white/45 text-xs mb-1.5">¿Cómo estuvo la clase?</p>
+      )}
       <div className="flex items-center gap-3">
         <Estrellas valor={puntaje} onElegir={elegir} />
-        {puntaje > 0 && <span className="text-white/60 text-xs">{TEXTOS[puntaje]}</span>}
+        {puntaje > 0 && (
+          <span className="text-white/60 text-xs">{TEXTOS[puntaje]}</span>
+        )}
       </div>
       {abierto && (
         <div className="flex flex-col gap-2 mt-2.5">
@@ -115,7 +124,9 @@ export default function EvaluarClase({ reserva, compacto = false }) {
           </div>
         </div>
       )}
-      {mensaje && !mensaje.ok && <p className="text-red-400 text-xs mt-1">{mensaje.mensaje}</p>}
+      {mensaje && !mensaje.ok && (
+        <p className="text-red-400 text-xs mt-1">{mensaje.mensaje}</p>
+      )}
     </div>
   );
 }
@@ -123,7 +134,9 @@ export default function EvaluarClase({ reserva, compacto = false }) {
 // Se puede evaluar una clase que ya empezó, a la que no quedó marcado como ausente.
 export function sePuedeEvaluar(reserva, hora) {
   if (reserva.asistio === false) return false;
-  return horaAFecha(reserva.fecha, hora).getTime() + 30 * 60 * 1000 < Date.now();
+  return (
+    horaAFecha(reserva.fecha, hora).getTime() + 30 * 60 * 1000 < Date.now()
+  );
 }
 
 function leerOcultas() {
@@ -136,21 +149,37 @@ function leerOcultas() {
 
 // Tarjeta que invita a evaluar la última clase (de los últimos 3 días) que aún no se evalúa.
 export function EvaluacionPendiente() {
-  const { usuarioActual, reservas, horarios, evaluacionDe, coachDeClase } = useAuth();
+  const { usuarioActual, reservas, horarios, evaluacionDe, coachDeClase } =
+    useAuth();
   const [ocultas, setOcultas] = useState(leerOcultas);
   if (!usuarioActual || usuarioActual.rol !== 'usuario') return null;
 
   const limite = Date.now() - 3 * 24 * 60 * 60 * 1000;
   const candidata = reservas
-    .filter((r) => r.usuario_id === usuarioActual.id && !ocultas.includes(String(r.id)))
+    .filter(
+      (r) =>
+        r.usuario_id === usuarioActual.id && !ocultas.includes(String(r.id))
+    )
     .map((r) => ({ r, h: horarios.find((x) => x.id === r.horario_id) }))
-    .filter(({ r, h }) => h && sePuedeEvaluar(r, h.hora) && horaAFecha(r.fecha, h.hora).getTime() > limite)
+    .filter(
+      ({ r, h }) =>
+        h &&
+        sePuedeEvaluar(r, h.hora) &&
+        horaAFecha(r.fecha, h.hora).getTime() > limite
+    )
     .filter(({ r }) => !evaluacionDe(r.id))
-    .sort((a, b) => b.r.fecha.localeCompare(a.r.fecha) || b.h.hora.localeCompare(a.h.hora))[0];
+    .sort(
+      (a, b) =>
+        b.r.fecha.localeCompare(a.r.fecha) || b.h.hora.localeCompare(a.h.hora)
+    )[0];
 
   if (!candidata) return null;
   const { r, h } = candidata;
-  const dia = new Date(r.fecha + 'T12:00:00').toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+  const dia = new Date(r.fecha + 'T12:00:00').toLocaleDateString('es-CL', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
 
   function ocultar() {
     const nuevas = [...ocultas, String(r.id)].slice(-50);
@@ -164,12 +193,19 @@ export function EvaluacionPendiente() {
 
   return (
     <div className="relative bg-yellow-300/[0.07] border border-yellow-300/30 rounded-2xl p-4 mb-5">
-      <button onClick={ocultar} aria-label="Ahora no" className="absolute top-2.5 right-2.5 text-white/35 p-1">
+      <button
+        onClick={ocultar}
+        aria-label="Ahora no"
+        className="absolute top-2.5 right-2.5 text-white/35 p-1"
+      >
         <X size={16} />
       </button>
-      <p className="text-yellow-200 text-[11px] font-semibold uppercase tracking-wide mb-0.5">Evalúa tu clase</p>
+      <p className="text-yellow-200 text-[11px] font-semibold uppercase tracking-wide mb-0.5">
+        Evalúa tu clase
+      </p>
       <p className="text-white text-sm mb-2.5 pr-6">
-        ¿Cómo estuvo tu clase del {dia} a las {h.hora.slice(0, 5)} con {coachDeClase(h, r.fecha).nombre || 'tu coach'}?
+        ¿Cómo estuvo tu clase del {dia} a las {h.hora.slice(0, 5)} con{' '}
+        {coachDeClase(h, r.fecha).nombre || 'tu coach'}?
       </p>
       <EvaluarClase reserva={r} compacto />
     </div>
@@ -216,7 +252,9 @@ export function EvaluacionesDeClase({ horarioId, fecha, conNombres = false }) {
                 </span>
               )}
             </div>
-            {e.comentario && <p className="text-white/70 text-xs mt-1">{e.comentario}</p>}
+            {e.comentario && (
+              <p className="text-white/70 text-xs mt-1">{e.comentario}</p>
+            )}
           </div>
         ))}
       </div>

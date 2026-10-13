@@ -23,7 +23,12 @@ export default function NuevaContrasena() {
 
     let resuelto = false;
     const { data } = supabase.auth.onAuthStateChange((evento, sesion) => {
-      if (sesion && (evento === 'PASSWORD_RECOVERY' || evento === 'SIGNED_IN' || evento === 'INITIAL_SESSION')) {
+      if (
+        sesion &&
+        (evento === 'PASSWORD_RECOVERY' ||
+          evento === 'SIGNED_IN' ||
+          evento === 'INITIAL_SESSION')
+      ) {
         resuelto = true;
         setEstado('listo');
       }
@@ -47,7 +52,8 @@ export default function NuevaContrasena() {
   async function guardar(e) {
     e.preventDefault();
     setError('');
-    if (password.length < 6) return setError('La contraseña debe tener al menos 6 caracteres.');
+    if (password.length < 6)
+      return setError('La contraseña debe tener al menos 6 caracteres.');
     if (password !== confirma) return setError('Las contraseñas no coinciden.');
     setGuardando(true);
     const { error: err } = await supabase.auth.updateUser({ password });
@@ -74,19 +80,29 @@ export default function NuevaContrasena() {
         <p className="font-display text-6xl tracking-tight text-white leading-none">
           CED<span className="text-cyan-brand">&amp;</span>S
         </p>
-        <p className="text-white/40 text-xs mt-2 tracking-wide">Restablecer contraseña</p>
+        <p className="text-white/40 text-xs mt-2 tracking-wide">
+          Restablecer contraseña
+        </p>
       </div>
 
-      {estado === 'verificando' && <p className="text-white/50 text-sm">Verificando el link...</p>}
+      {estado === 'verificando' && (
+        <p className="text-white/50 text-sm">Verificando el link...</p>
+      )}
 
       {estado === 'invalido' && (
         <div className="flex flex-col gap-4">
-          <p className="text-white text-base font-semibold">Este link ya no sirve</p>
-          <p className="text-white/50 text-sm">
-            Puede que haya vencido o que ya se haya usado. Vuelve al inicio, aprieta "Olvidé mi contraseña" y usa el
-            correo más reciente que te llegue.
+          <p className="text-white text-base font-semibold">
+            Este link ya no sirve
           </p>
-          <button onClick={irAlInicio} className="bg-cyan-brand text-ink font-semibold rounded-xl py-3 text-sm">
+          <p className="text-white/50 text-sm">
+            Puede que haya vencido o que ya se haya usado. Vuelve al inicio,
+            aprieta "Olvidé mi contraseña" y usa el correo más reciente que te
+            llegue.
+          </p>
+          <button
+            onClick={irAlInicio}
+            className="bg-cyan-brand text-ink font-semibold rounded-xl py-3 text-sm"
+          >
             Volver al inicio
           </button>
         </div>
@@ -134,9 +150,16 @@ export default function NuevaContrasena() {
 
       {estado === 'guardado' && (
         <div className="flex flex-col gap-4">
-          <p className="text-white text-base font-semibold">¡Listo! Tu contraseña fue cambiada.</p>
-          <p className="text-white/50 text-sm">Ahora entra con tu correo y la contraseña nueva.</p>
-          <button onClick={irAlInicio} className="bg-cyan-brand text-ink font-semibold rounded-xl py-3 text-sm">
+          <p className="text-white text-base font-semibold">
+            ¡Listo! Tu contraseña fue cambiada.
+          </p>
+          <p className="text-white/50 text-sm">
+            Ahora entra con tu correo y la contraseña nueva.
+          </p>
+          <button
+            onClick={irAlInicio}
+            className="bg-cyan-brand text-ink font-semibold rounded-xl py-3 text-sm"
+          >
             Ir a iniciar sesión
           </button>
         </div>

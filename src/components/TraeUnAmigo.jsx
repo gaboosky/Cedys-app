@@ -22,7 +22,10 @@ export default function TraeUnAmigo() {
   async function compartir() {
     if (navigator.share) {
       try {
-        await navigator.share({ title: `Sesión de prueba en ${gimnasio}`, text: texto });
+        await navigator.share({
+          title: `Sesión de prueba en ${gimnasio}`,
+          text: texto,
+        });
         return;
       } catch (e) {
         // canceló o no se pudo: se abre WhatsApp
@@ -47,7 +50,8 @@ export default function TraeUnAmigo() {
         <Gift size={18} className="text-cyan-brand" /> Trae a un amigo
       </p>
       <p className="text-white/60 text-sm mt-1">
-        Comparte tu link para que pida su sesión de prueba. Si se inscribe, te regalamos una sesión extra 🎁
+        Comparte tu link para que pida su sesión de prueba. Si se inscribe, te
+        regalamos una sesión extra 🎁
       </p>
       <div className="flex gap-2 mt-3">
         <button
@@ -60,13 +64,15 @@ export default function TraeUnAmigo() {
           onClick={copiar}
           className="flex items-center justify-center gap-1.5 bg-white/[0.08] border border-white/10 text-white/80 rounded-xl px-4 text-sm"
         >
-          {copiado ? <Check size={15} /> : <Copy size={15} />} {copiado ? 'Copiado' : 'Copiar link'}
+          {copiado ? <Check size={15} /> : <Copy size={15} />}{' '}
+          {copiado ? 'Copiado' : 'Copiar link'}
         </button>
       </div>
       {stats && stats.solicitudes > 0 && (
         <p className="text-white/55 text-xs mt-3">
-          {stats.solicitudes} amigo{stats.solicitudes !== 1 ? 's' : ''} pidi{stats.solicitudes !== 1 ? 'eron' : 'ó'} prueba con
-          tu link · {stats.inscritos} se inscribi{stats.inscritos !== 1 ? 'eron' : 'ó'}
+          {stats.solicitudes} amigo{stats.solicitudes !== 1 ? 's' : ''} pidi
+          {stats.solicitudes !== 1 ? 'eron' : 'ó'} prueba con tu link ·{' '}
+          {stats.inscritos} se inscribi{stats.inscritos !== 1 ? 'eron' : 'ó'}
         </p>
       )}
     </div>

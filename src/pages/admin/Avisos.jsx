@@ -14,7 +14,9 @@ export default function Avisos() {
   const [resultado, setResultado] = useState(null);
   const [confirmar, setConfirmar] = useState(false);
 
-  const alumnos = usuarios.filter((u) => u.rol === 'usuario' && u.estado === 'activo');
+  const alumnos = usuarios.filter(
+    (u) => u.rol === 'usuario' && u.estado === 'activo'
+  );
   const GRUPOS = [
     { valor: 'alumnos', label: 'Todos los alumnos activos', lista: alumnos },
     {
@@ -25,14 +27,30 @@ export default function Avisos() {
         return v && v.dias <= 7;
       }),
     },
-    { valor: 'sinplan', label: 'Alumnos sin plan', lista: alumnos.filter((u) => !u.plan_id) },
+    {
+      valor: 'sinplan',
+      label: 'Alumnos sin plan',
+      lista: alumnos.filter((u) => !u.plan_id),
+    },
     {
       valor: 'coaches',
       label: 'Coaches',
-      lista: usuarios.filter((u) => (u.rol === 'coach' || u.rol === 'head_coach') && u.estado !== 'inactivo'),
+      lista: usuarios.filter(
+        (u) =>
+          (u.rol === 'coach' || u.rol === 'head_coach') &&
+          u.estado !== 'inactivo'
+      ),
     },
-    { valor: 'todos', label: 'Todos (alumnos y coaches)', lista: usuarios.filter((u) => u.estado === 'activo') },
-    { valor: 'elegir', label: 'Elegir personas', lista: usuarios.filter((u) => elegidos.includes(u.id)) },
+    {
+      valor: 'todos',
+      label: 'Todos (alumnos y coaches)',
+      lista: usuarios.filter((u) => u.estado === 'activo'),
+    },
+    {
+      valor: 'elegir',
+      label: 'Elegir personas',
+      lista: usuarios.filter((u) => elegidos.includes(u.id)),
+    },
   ];
   const actual = GRUPOS.find((g) => g.valor === grupo);
   const destinatarios = actual.lista;
@@ -62,7 +80,8 @@ export default function Avisos() {
         <p className="text-white font-display text-xl">Enviar aviso</p>
       </div>
       <p className="text-white/40 text-xs mb-5">
-        Les llega como notificación en la app y en el celular (a quienes activaron las notificaciones).
+        Les llega como notificación en la app y en el celular (a quienes
+        activaron las notificaciones).
       </p>
 
       <label className="text-white/40 text-xs mb-1 block">Mensaje</label>
@@ -77,7 +96,9 @@ export default function Avisos() {
         placeholder="Ej: Mañana lunes cerramos por feriado. ¡Nos vemos el martes!"
         className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-cyan-brand resize-none"
       />
-      <p className="text-white/30 text-[11px] text-right mb-4">{mensaje.length}/300</p>
+      <p className="text-white/30 text-[11px] text-right mb-4">
+        {mensaje.length}/300
+      </p>
 
       <label className="text-white/40 text-xs mb-2 block">¿A quién?</label>
       <div className="flex flex-col gap-1.5 mb-4">
@@ -89,11 +110,15 @@ export default function Avisos() {
               setResultado(null);
             }}
             className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm ${
-              grupo === g.valor ? 'bg-cyan-brand/10 border-cyan-brand/40 text-white' : 'bg-white/[0.03] border-white/10 text-white/70'
+              grupo === g.valor
+                ? 'bg-cyan-brand/10 border-cyan-brand/40 text-white'
+                : 'bg-white/[0.03] border-white/10 text-white/70'
             }`}
           >
             <span>{g.label}</span>
-            <span className="text-white/45 text-xs shrink-0 ml-2">{g.lista.length}</span>
+            <span className="text-white/45 text-xs shrink-0 ml-2">
+              {g.lista.length}
+            </span>
           </button>
         ))}
       </div>
@@ -101,7 +126,10 @@ export default function Avisos() {
       {grupo === 'elegir' && (
         <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-3 mb-4">
           <div className="relative mb-2">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30"
+            />
             <input
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
@@ -116,13 +144,17 @@ export default function Avisos() {
                 <button
                   key={u.id}
                   onClick={() =>
-                    setElegidos((prev) => (marcado ? prev.filter((x) => x !== u.id) : [...prev, u.id]))
+                    setElegidos((prev) =>
+                      marcado ? prev.filter((x) => x !== u.id) : [...prev, u.id]
+                    )
                   }
                   className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 text-left"
                 >
                   <span
                     className={`w-4 h-4 rounded border flex items-center justify-center ${
-                      marcado ? 'bg-cyan-brand border-cyan-brand' : 'border-white/30'
+                      marcado
+                        ? 'bg-cyan-brand border-cyan-brand'
+                        : 'border-white/30'
                     }`}
                   >
                     {marcado && <Check size={11} className="text-ink" />}
@@ -136,13 +168,20 @@ export default function Avisos() {
       )}
 
       {resultado && (
-        <p className={`text-sm mb-3 ${resultado.ok ? 'text-cyan-brand' : 'text-red-400'}`}>{resultado.mensaje}</p>
+        <p
+          className={`text-sm mb-3 ${
+            resultado.ok ? 'text-cyan-brand' : 'text-red-400'
+          }`}
+        >
+          {resultado.mensaje}
+        </p>
       )}
 
       {confirmar ? (
         <div className="bg-yellow-400/10 border border-yellow-400/30 rounded-2xl p-4">
           <p className="text-yellow-100 text-sm mb-3">
-            ¿Enviar este aviso a {destinatarios.length} persona{destinatarios.length !== 1 ? 's' : ''}?
+            ¿Enviar este aviso a {destinatarios.length} persona
+            {destinatarios.length !== 1 ? 's' : ''}?
           </p>
           <div className="flex gap-2">
             <button
@@ -152,7 +191,10 @@ export default function Avisos() {
             >
               {enviando ? 'Enviando...' : 'Sí, enviar'}
             </button>
-            <button onClick={() => setConfirmar(false)} className="flex-1 bg-white/10 text-white rounded-lg py-2.5 text-sm">
+            <button
+              onClick={() => setConfirmar(false)}
+              className="flex-1 bg-white/10 text-white rounded-lg py-2.5 text-sm"
+            >
               Cancelar
             </button>
           </div>
@@ -163,7 +205,8 @@ export default function Avisos() {
           disabled={!mensaje.trim() || destinatarios.length === 0}
           className="w-full flex items-center justify-center gap-2 bg-cyan-brand text-ink font-semibold rounded-xl py-3 text-sm disabled:opacity-40"
         >
-          <Send size={15} /> Enviar a {destinatarios.length} persona{destinatarios.length !== 1 ? 's' : ''}
+          <Send size={15} /> Enviar a {destinatarios.length} persona
+          {destinatarios.length !== 1 ? 's' : ''}
         </button>
       )}
     </div>

@@ -17,7 +17,8 @@ import {
 
 // Vista de la semana: todas las clases de lunes a sábado de un vistazo
 function VistaSemana({ onElegirDia }) {
-  const { horarios, reservas, horarioEstaCancelado, coachDeClase, ausenciaDe } = useAuth();
+  const { horarios, reservas, horarioEstaCancelado, coachDeClase, ausenciaDe } =
+    useAuth();
   const [offset, setOffset] = useState(0);
   const base = new Date();
   base.setHours(12, 0, 0, 0);
@@ -25,24 +26,44 @@ function VistaSemana({ onElegirDia }) {
   const dow = base.getDay() === 0 ? 7 : base.getDay();
   const lunes = new Date(base);
   lunes.setDate(base.getDate() - (dow - 1));
-  const NOMBRES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const NOMBRES = [
+    'Domingo',
+    'Lunes',
+    'Martes',
+    'Miércoles',
+    'Jueves',
+    'Viernes',
+    'Sábado',
+  ];
   const dias = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(lunes);
     d.setDate(lunes.getDate() + i);
-    return { fecha: soloFechaLocal(d), nombre: NOMBRES[d.getDay()], num: d.getDate() };
+    return {
+      fecha: soloFechaLocal(d),
+      nombre: NOMBRES[d.getDay()],
+      num: d.getDate(),
+    };
   });
   const hoy = soloFechaLocal(new Date());
 
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between mb-2">
-        <button onClick={() => setOffset(offset - 1)} className="text-white/50 text-sm px-2">
+        <button
+          onClick={() => setOffset(offset - 1)}
+          className="text-white/50 text-sm px-2"
+        >
           ‹ Anterior
         </button>
         <p className="text-white/60 text-xs">
-          {offset === 0 ? 'Esta semana' : `Semana del ${dias[0].num} al ${dias[5].num}`}
+          {offset === 0
+            ? 'Esta semana'
+            : `Semana del ${dias[0].num} al ${dias[5].num}`}
         </p>
-        <button onClick={() => setOffset(offset + 1)} className="text-white/50 text-sm px-2">
+        <button
+          onClick={() => setOffset(offset + 1)}
+          className="text-white/50 text-sm px-2"
+        >
           Siguiente ›
         </button>
       </div>
@@ -50,18 +71,35 @@ function VistaSemana({ onElegirDia }) {
         <div className="grid grid-cols-6 gap-2 min-w-[660px]">
           {dias.map((d) => {
             const clases = horarios
-              .filter((h) => (h.fecha_unica ? h.fecha_unica === d.fecha : h.dia === d.nombre))
+              .filter((h) =>
+                h.fecha_unica ? h.fecha_unica === d.fecha : h.dia === d.nombre
+              )
               .sort((a, b) => a.hora.localeCompare(b.hora));
             return (
-              <div key={d.fecha} className={`rounded-xl border p-2 ${d.fecha === hoy ? 'border-cyan-brand/40 bg-cyan-brand/[0.04]' : 'border-white/10 bg-white/[0.02]'}`}>
-                <p className={`text-xs font-semibold mb-2 ${d.fecha === hoy ? 'text-cyan-brand' : 'text-white/60'}`}>
+              <div
+                key={d.fecha}
+                className={`rounded-xl border p-2 ${
+                  d.fecha === hoy
+                    ? 'border-cyan-brand/40 bg-cyan-brand/[0.04]'
+                    : 'border-white/10 bg-white/[0.02]'
+                }`}
+              >
+                <p
+                  className={`text-xs font-semibold mb-2 ${
+                    d.fecha === hoy ? 'text-cyan-brand' : 'text-white/60'
+                  }`}
+                >
                   {d.nombre.slice(0, 3)} {d.num}
                 </p>
                 <div className="flex flex-col gap-1.5">
-                  {clases.length === 0 && <p className="text-white/20 text-[11px]">—</p>}
+                  {clases.length === 0 && (
+                    <p className="text-white/20 text-[11px]">—</p>
+                  )}
                   {clases.map((h) => {
                     const cancelada = horarioEstaCancelado(h.id, d.fecha);
-                    const n = reservas.filter((r) => r.horario_id === h.id && r.fecha === d.fecha).length;
+                    const n = reservas.filter(
+                      (r) => r.horario_id === h.id && r.fecha === d.fecha
+                    ).length;
                     const coach = coachDeClase(h, d.fecha);
                     const ausencia = ausenciaDe(h.id, d.fecha);
                     return (
@@ -76,14 +114,28 @@ function VistaSemana({ onElegirDia }) {
                             : 'border-white/10 bg-white/[0.04]'
                         }`}
                       >
-                        <p className={`text-sm font-semibold leading-tight ${cancelada ? 'text-white/30 line-through' : 'text-white'}`}>
+                        <p
+                          className={`text-sm font-semibold leading-tight ${
+                            cancelada
+                              ? 'text-white/30 line-through'
+                              : 'text-white'
+                          }`}
+                        >
                           {h.hora}
                         </p>
                         <p className="text-white/45 text-[10px] truncate">
-                          {coach.nombre ? coach.nombre.split(' ')[0] : 'Sin coach'}
+                          {coach.nombre
+                            ? coach.nombre.split(' ')[0]
+                            : 'Sin coach'}
                           {coach.esReemplazo ? ' (reemp.)' : ''}
                         </p>
-                        <p className={`text-[10px] ${n >= h.cupo_max ? 'text-yellow-200' : 'text-cyan-brand/80'}`}>
+                        <p
+                          className={`text-[10px] ${
+                            n >= h.cupo_max
+                              ? 'text-yellow-200'
+                              : 'text-cyan-brand/80'
+                          }`}
+                        >
                           {cancelada ? 'Cancelada' : `${n}/${h.cupo_max}`}
                         </p>
                       </button>
@@ -101,7 +153,13 @@ function VistaSemana({ onElegirDia }) {
 
 // Reemplazo de coach para un día puntual + aviso de ausencia del coach
 function PanelReemplazo({ h, fecha, coaches, onCancelarClase }) {
-  const { coachDeClase, reemplazoDe, asignarReemplazo, ausenciaDe, resolverAusencia } = useAuth();
+  const {
+    coachDeClase,
+    reemplazoDe,
+    asignarReemplazo,
+    ausenciaDe,
+    resolverAusencia,
+  } = useAuth();
   const ausencia = ausenciaDe(h.id, fecha);
   const reemplazo = reemplazoDe(h.id, fecha);
   const [abierto, setAbierto] = useState(false);
@@ -124,8 +182,9 @@ function PanelReemplazo({ h, fecha, coaches, onCancelarClase }) {
     <div className="mt-2">
       {reemplazo && (
         <p className="text-[11px] text-white/60">
-          Este día la hace <span className="text-white">{reemplazo.coach_nombre}</span> (reemplazo de{' '}
-          {h.coach_nombre || 'sin coach'})
+          Este día la hace{' '}
+          <span className="text-white">{reemplazo.coach_nombre}</span>{' '}
+          (reemplazo de {h.coach_nombre || 'sin coach'})
         </p>
       )}
       {ausencia && (
@@ -133,7 +192,8 @@ function PanelReemplazo({ h, fecha, coaches, onCancelarClase }) {
           <p className="flex items-start gap-1.5 text-yellow-100 text-xs">
             <AlertTriangle size={13} className="shrink-0 mt-0.5" />
             <span>
-              {ausencia.coach_nombre} avisó que no puede hacer esta clase{ausencia.motivo ? `: ${ausencia.motivo}` : '.'}
+              {ausencia.coach_nombre} avisó que no puede hacer esta clase
+              {ausencia.motivo ? `: ${ausencia.motivo}` : '.'}
             </span>
           </p>
         </div>
@@ -165,22 +225,34 @@ function PanelReemplazo({ h, fecha, coaches, onCancelarClase }) {
           </div>
           <div className="flex flex-wrap gap-3">
             {reemplazo && (
-              <button onClick={() => guardar(null)} className="text-white/50 text-[11px]">
+              <button
+                onClick={() => guardar(null)}
+                className="text-white/50 text-[11px]"
+              >
                 Quitar reemplazo
               </button>
             )}
             {ausencia && (
               <>
-                <button onClick={onCancelarClase} className="text-yellow-300/90 text-[11px]">
+                <button
+                  onClick={onCancelarClase}
+                  className="text-yellow-300/90 text-[11px]"
+                >
                   Cancelar la clase
                 </button>
-                <button onClick={() => resolverAusencia(ausencia.id)} className="text-white/40 text-[11px]">
+                <button
+                  onClick={() => resolverAusencia(ausencia.id)}
+                  className="text-white/40 text-[11px]"
+                >
                   Ignorar aviso
                 </button>
               </>
             )}
             {!ausencia && (
-              <button onClick={() => setAbierto(false)} className="text-white/40 text-[11px]">
+              <button
+                onClick={() => setAbierto(false)}
+                className="text-white/40 text-[11px]"
+              >
                 Cerrar
               </button>
             )}
@@ -188,8 +260,12 @@ function PanelReemplazo({ h, fecha, coaches, onCancelarClase }) {
           {error && <p className="text-red-400 text-xs">{error}</p>}
         </div>
       ) : (
-        <button onClick={() => setAbierto(true)} className="mt-1 flex items-center gap-1 text-white/40 text-[11px] hover:text-white/70">
-          <UserCog size={12} /> {reemplazo ? 'Cambiar reemplazo' : 'Reemplazo este día'}
+        <button
+          onClick={() => setAbierto(true)}
+          className="mt-1 flex items-center gap-1 text-white/40 text-[11px] hover:text-white/70"
+        >
+          <UserCog size={12} />{' '}
+          {reemplazo ? 'Cambiar reemplazo' : 'Reemplazo este día'}
         </button>
       )}
     </div>
@@ -309,7 +385,8 @@ export default function ClasesAdmin() {
   const [mostrarFormFija, setMostrarFormFija] = useState(false);
   const [mostrarFormPuntual, setMostrarFormPuntual] = useState(false);
   const coachPorDefecto =
-    usuarioActual && (usuarioActual.rol === 'coach' || usuarioActual.rol === 'head_coach')
+    usuarioActual &&
+    (usuarioActual.rol === 'coach' || usuarioActual.rol === 'head_coach')
       ? usuarioActual.id
       : '';
   const [form, setForm] = useState({
@@ -385,7 +462,11 @@ export default function ClasesAdmin() {
     try {
       return await crearClase(nueva);
     } catch (err) {
-      return { ok: false, mensaje: 'No se pudo crear la clase: ' + (err?.message || 'error desconocido') };
+      return {
+        ok: false,
+        mensaje:
+          'No se pudo crear la clase: ' + (err?.message || 'error desconocido'),
+      };
     } finally {
       setGuardando(false);
     }
@@ -403,7 +484,9 @@ export default function ClasesAdmin() {
     if (repetida)
       return setMensajeCrear({
         ok: false,
-        mensaje: `Ya existe una clase fija los ${form.dia.toLowerCase()} a las ${form.hora}.`,
+        mensaje: `Ya existe una clase fija los ${form.dia.toLowerCase()} a las ${
+          form.hora
+        }.`,
       });
 
     const coach = coaches.find((c) => c.id === form.coach_id);
@@ -416,11 +499,18 @@ export default function ClasesAdmin() {
       fecha_unica: null,
     });
     if (resultado.ok) {
-      resultado.mensaje = `Clase creada. Se repite todos los ${form.dia.toLowerCase()} · próxima: ${proximaFechaParaDia(form.dia)}.`;
+      resultado.mensaje = `Clase creada. Se repite todos los ${form.dia.toLowerCase()} · próxima: ${proximaFechaParaDia(
+        form.dia
+      )}.`;
     }
     setMensajeCrear(resultado);
     if (resultado.ok) {
-      setForm({ dia: form.dia, hora: '', coach_id: form.coach_id, cupo_max: 6 });
+      setForm({
+        dia: form.dia,
+        hora: '',
+        coach_id: form.coach_id,
+        cupo_max: 6,
+      });
       setTimeout(() => {
         setMostrarFormFija(false);
         setMensajeCrear(null);
@@ -445,7 +535,12 @@ export default function ClasesAdmin() {
     });
     setMensajeCrear(resultado);
     if (resultado.ok) {
-      setFormPuntual({ fecha_unica: '', hora: '', coach_id: formPuntual.coach_id, cupo_max: 6 });
+      setFormPuntual({
+        fecha_unica: '',
+        hora: '',
+        coach_id: formPuntual.coach_id,
+        cupo_max: 6,
+      });
       setTimeout(() => {
         setMostrarFormPuntual(false);
         setMensajeCrear(null);
@@ -525,7 +620,11 @@ export default function ClasesAdmin() {
         />
       )}
 
-      <div className={`flex justify-end gap-2 mb-6 ${vista === 'semana' ? 'hidden' : ''}`}>
+      <div
+        className={`flex justify-end gap-2 mb-6 ${
+          vista === 'semana' ? 'hidden' : ''
+        }`}
+      >
         <button
           onClick={() => {
             setMostrarFormFija(!mostrarFormFija);
@@ -711,7 +810,9 @@ export default function ClasesAdmin() {
         </form>
       )}
 
-      <div className={`flex flex-col gap-2 ${vista === 'semana' ? 'hidden' : ''}`}>
+      <div
+        className={`flex flex-col gap-2 ${vista === 'semana' ? 'hidden' : ''}`}
+      >
         {dias.map((dia, index) => {
           const horariosDelDia = horarios
             .filter((h) => horarioAplicaEnFecha(h, dia.key, dia.nombreDia))
@@ -957,7 +1058,9 @@ export default function ClasesAdmin() {
                                 h={h}
                                 fecha={dia.key}
                                 coaches={coaches}
-                                onCancelarClase={() => abrirCancelacion(h.id, dia.key)}
+                                onCancelarClase={() =>
+                                  abrirCancelacion(h.id, dia.key)
+                                }
                               />
                             )}
 

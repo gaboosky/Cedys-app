@@ -11,7 +11,10 @@ import {
   Clock,
   Calendar,
 } from 'lucide-react';
-import { InsigniaEvaluacion, EvaluacionesDeClase } from '../../components/EvaluarClase';
+import {
+  InsigniaEvaluacion,
+  EvaluacionesDeClase,
+} from '../../components/EvaluarClase';
 
 function capitalizar(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -122,7 +125,9 @@ function CierreAdmin({ horarioId, fecha, inscritos }) {
   const [comentario, setComentario] = useState('Sin novedades');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
-  const sinMarcar = inscritos.filter((i) => i.asistio !== true && i.asistio !== false).length;
+  const sinMarcar = inscritos.filter(
+    (i) => i.asistio !== true && i.asistio !== false
+  ).length;
 
   async function handleFinalizar() {
     setGuardando(true);
@@ -134,9 +139,13 @@ function CierreAdmin({ horarioId, fecha, inscritos }) {
 
   return (
     <div className="border-t border-white/10 p-3 flex flex-col gap-2">
-      <p className="text-white/40 text-[11px] uppercase tracking-wide">Finalizar en nombre del coach</p>
+      <p className="text-white/40 text-[11px] uppercase tracking-wide">
+        Finalizar en nombre del coach
+      </p>
       {sinMarcar > 0 && (
-        <p className="text-yellow-300 text-xs">Falta marcar la asistencia de {sinMarcar}.</p>
+        <p className="text-yellow-300 text-xs">
+          Falta marcar la asistencia de {sinMarcar}.
+        </p>
       )}
       <textarea
         value={comentario}
@@ -165,23 +174,34 @@ function RegistrarSinAlumnos({ horario, fecha }) {
   async function handleRegistrar() {
     setGuardando(true);
     setError('');
-    const r = await finalizarClase(horario.id, fecha, 'Registrada por admin (sin alumnos)', {
-      permitirSinAlumnos: true,
-    });
+    const r = await finalizarClase(
+      horario.id,
+      fecha,
+      'Registrada por admin (sin alumnos)',
+      {
+        permitirSinAlumnos: true,
+      }
+    );
     setGuardando(false);
     setConfirmar(false);
     if (!r.ok) setError(r.mensaje);
   }
 
   if (!horario.coach_id) {
-    return <p className="text-white/35 text-xs">Sin coach asignado: asígnale uno en Clases para poder registrarla.</p>;
+    return (
+      <p className="text-white/35 text-xs">
+        Sin coach asignado: asígnale uno en Clases para poder registrarla.
+      </p>
+    );
   }
 
   return (
     <div>
       {confirmar ? (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-white/60 text-xs">¿Registrar como realizada para {horario.coach_nombre}?</span>
+          <span className="text-white/60 text-xs">
+            ¿Registrar como realizada para {horario.coach_nombre}?
+          </span>
           <button
             onClick={handleRegistrar}
             disabled={guardando}
@@ -189,7 +209,10 @@ function RegistrarSinAlumnos({ horario, fecha }) {
           >
             {guardando ? 'Guardando...' : 'Sí'}
           </button>
-          <button onClick={() => setConfirmar(false)} className="bg-white/10 text-white text-xs px-2.5 py-1 rounded-md">
+          <button
+            onClick={() => setConfirmar(false)}
+            className="bg-white/10 text-white text-xs px-2.5 py-1 rounded-md"
+          >
             No
           </button>
         </div>
@@ -239,7 +262,12 @@ export default function ClasesRealizadas() {
 
   function inscritosDe(horarioId, fecha) {
     return reservas
-      .filter((r) => r.horario_id === horarioId && r.fecha === fecha && r.estado === 'confirmada')
+      .filter(
+        (r) =>
+          r.horario_id === horarioId &&
+          r.fecha === fecha &&
+          r.estado === 'confirmada'
+      )
       .map((r) => ({
         usuario: usuarios.find((u) => u.id === r.usuario_id),
         reservaId: r.id,
@@ -276,9 +304,12 @@ export default function ClasesRealizadas() {
       <div className="flex items-center gap-2 mb-5">
         <CalendarCheck size={18} className="text-cyan-brand" />
         <div>
-          <p className="text-white font-display text-lg leading-tight">Clases realizadas</p>
+          <p className="text-white font-display text-lg leading-tight">
+            Clases realizadas
+          </p>
           <p className="text-white/40 text-xs">
-            {realizadas.length} clase{realizadas.length !== 1 ? 's' : ''} realizada
+            {realizadas.length} clase{realizadas.length !== 1 ? 's' : ''}{' '}
+            realizada
             {realizadas.length !== 1 ? 's' : ''}
           </p>
         </div>
@@ -294,7 +325,9 @@ export default function ClasesRealizadas() {
             key={op.valor}
             onClick={() => setFiltro(op.valor)}
             className={`text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${
-              filtro === op.valor ? 'bg-cyan-brand text-ink' : 'bg-white/[0.06] text-white/50'
+              filtro === op.valor
+                ? 'bg-cyan-brand text-ink'
+                : 'bg-white/[0.06] text-white/50'
             }`}
           >
             {op.etiqueta}
@@ -325,8 +358,16 @@ export default function ClasesRealizadas() {
       <div className="flex bg-white/[0.04] border border-white/10 rounded-xl p-1 mb-5">
         {[
           { valor: 'realizadas', etiqueta: 'Realizadas', n: realizadas.length },
-          { valor: 'pendientes', etiqueta: 'Por finalizar', n: pendientes.length },
-          { valor: 'sinAlumnos', etiqueta: 'Sin alumnos', n: sinAlumnos.length },
+          {
+            valor: 'pendientes',
+            etiqueta: 'Por finalizar',
+            n: pendientes.length,
+          },
+          {
+            valor: 'sinAlumnos',
+            etiqueta: 'Sin alumnos',
+            n: sinAlumnos.length,
+          },
         ].map((op) => (
           <button
             key={op.valor}
@@ -345,8 +386,8 @@ export default function ClasesRealizadas() {
 
       {vista === 'sinAlumnos' && sinAlumnos.length > 0 && (
         <p className="text-white/40 text-xs mb-4">
-          Estas clases no cuentan como realizadas. Si el coach igual hizo la clase, regístrala aquí y se le sumará a sus
-          clases realizadas.
+          Estas clases no cuentan como realizadas. Si el coach igual hizo la
+          clase, regístrala aquí y se le sumará a sus clases realizadas.
         </p>
       )}
 
@@ -359,24 +400,39 @@ export default function ClasesRealizadas() {
         <div className="flex flex-col gap-5">
           {Object.entries(porFecha).map(([fecha, items]) => (
             <div key={fecha}>
-              <p className="text-white/40 text-xs uppercase tracking-wide mb-2">{formatFechaLarga(fecha)}</p>
+              <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+                {formatFechaLarga(fecha)}
+              </p>
               <div className="flex flex-col gap-2">
                 {items.map((o) => {
                   const clave = `${o.horario.id}_${fecha}`;
                   const abiertaAqui = abierta === clave;
                   const inscritos = inscritosDe(o.horario.id, fecha);
-                  const asistieron = inscritos.filter((i) => i.asistio === true).length;
+                  const asistieron = inscritos.filter(
+                    (i) => i.asistio === true
+                  ).length;
                   const fin = finalizacionDe(o.horario.id, fecha);
 
                   if (vista === 'sinAlumnos') {
                     return (
-                      <div key={clave} className="bg-white/[0.04] border border-white/10 rounded-2xl p-3.5 flex flex-col gap-2">
+                      <div
+                        key={clave}
+                        className="bg-white/[0.04] border border-white/10 rounded-2xl p-3.5 flex flex-col gap-2"
+                      >
                         <div className="flex items-center gap-2.5">
                           <Clock size={14} className="text-white/30" />
-                          <p className="text-white text-sm font-medium">{o.horario.hora}</p>
-                          <p className="text-white/40 text-xs">{o.horario.coach_nombre || 'Sin coach'} · 0 inscritos</p>
+                          <p className="text-white text-sm font-medium">
+                            {o.horario.hora}
+                          </p>
+                          <p className="text-white/40 text-xs">
+                            {o.horario.coach_nombre || 'Sin coach'} · 0
+                            inscritos
+                          </p>
                         </div>
-                        <RegistrarSinAlumnos horario={o.horario} fecha={fecha} />
+                        <RegistrarSinAlumnos
+                          horario={o.horario}
+                          fecha={fecha}
+                        />
                       </div>
                     );
                   }
@@ -385,7 +441,9 @@ export default function ClasesRealizadas() {
                     <div
                       key={clave}
                       className={`bg-white/[0.04] border rounded-2xl overflow-hidden ${
-                        vista === 'pendientes' ? 'border-yellow-400/30' : 'border-white/10'
+                        vista === 'pendientes'
+                          ? 'border-yellow-400/30'
+                          : 'border-white/10'
                       }`}
                     >
                       <button
@@ -410,10 +468,14 @@ export default function ClasesRealizadas() {
                             </p>
                             <p className="text-white/40 text-xs flex items-center gap-2 flex-wrap">
                               <span>
-                                {fin?.coach_nombre || o.horario.coach_nombre || 'Sin coach'} · {asistieron}/
-                                {inscritos.length} asistieron
+                                {fin?.coach_nombre ||
+                                  o.horario.coach_nombre ||
+                                  'Sin coach'}{' '}
+                                · {asistieron}/{inscritos.length} asistieron
                               </span>
-                              <InsigniaEvaluacion lista={evaluacionesDeClase(o.horario.id, fecha)} />
+                              <InsigniaEvaluacion
+                                lista={evaluacionesDeClase(o.horario.id, fecha)}
+                              />
                             </p>
                           </div>
                         </div>
@@ -424,36 +486,60 @@ export default function ClasesRealizadas() {
                         )}
                       </button>
 
-                      {!abiertaAqui && fin && fin.comentario.trim().toLowerCase() !== 'sin novedades' && inscritos.length > 0 && (
-                        <p className="text-yellow-200/80 text-xs px-3.5 pb-3 -mt-1">💬 {fin.comentario}</p>
-                      )}
+                      {!abiertaAqui &&
+                        fin &&
+                        fin.comentario.trim().toLowerCase() !==
+                          'sin novedades' &&
+                        inscritos.length > 0 && (
+                          <p className="text-yellow-200/80 text-xs px-3.5 pb-3 -mt-1">
+                            💬 {fin.comentario}
+                          </p>
+                        )}
 
                       {abiertaAqui && fin && (
                         <div className="border-t border-white/10 px-3 pt-3">
-                          <p className="text-white/40 text-[11px] uppercase tracking-wide">Comentario</p>
-                          <p className="text-white/85 text-sm mt-0.5">{fin.comentario}</p>
+                          <p className="text-white/40 text-[11px] uppercase tracking-wide">
+                            Comentario
+                          </p>
+                          <p className="text-white/85 text-sm mt-0.5">
+                            {fin.comentario}
+                          </p>
                           {fin.registrada_por && (
-                            <p className="text-white/30 text-[11px] mt-0.5">Finalizada por {fin.registrada_por}</p>
+                            <p className="text-white/30 text-[11px] mt-0.5">
+                              Finalizada por {fin.registrada_por}
+                            </p>
                           )}
                         </div>
                       )}
 
                       {abiertaAqui && (
                         <div className="mt-2">
-                          <EvaluacionesDeClase horarioId={o.horario.id} fecha={fecha} conNombres />
+                          <EvaluacionesDeClase
+                            horarioId={o.horario.id}
+                            fecha={fecha}
+                            conNombres
+                          />
                         </div>
                       )}
 
                       {abiertaAqui && inscritos.length > 0 && (
                         <div className="border-t border-white/10 p-3 flex flex-col gap-1.5 mt-2">
                           {inscritos.map((item) => (
-                            <FilaAsistencia key={item.reservaId} item={item} onMarcar={marcarAsistencia} />
+                            <FilaAsistencia
+                              key={item.reservaId}
+                              item={item}
+                              onMarcar={marcarAsistencia}
+                            />
                           ))}
                         </div>
                       )}
 
                       {abiertaAqui && vista === 'pendientes' && (
-                        <CierreAdmin horarioId={o.horario.id} fecha={fecha} inscritos={inscritos} />
+                        <CierreAdmin
+                          horarioId={o.horario.id}
+                          fecha={fecha}
+                          inscritos={inscritos}
+                        />
                       )}
 
                       {abiertaAqui && fin && (
@@ -461,7 +547,9 @@ export default function ClasesRealizadas() {
                           {reabriendo === clave ? (
                             <div className="flex items-center gap-2">
                               <span className="text-white/50 text-xs">
-                                {inscritos.length === 0 ? '¿Quitar de realizadas?' : '¿Volver a dejarla por finalizar?'}
+                                {inscritos.length === 0
+                                  ? '¿Quitar de realizadas?'
+                                  : '¿Volver a dejarla por finalizar?'}
                               </span>
                               <button
                                 onClick={async () => {
@@ -472,7 +560,10 @@ export default function ClasesRealizadas() {
                               >
                                 Sí
                               </button>
-                              <button onClick={() => setReabriendo(null)} className="text-white/40 text-xs px-2 py-1">
+                              <button
+                                onClick={() => setReabriendo(null)}
+                                className="text-white/40 text-xs px-2 py-1"
+                              >
                                 No
                               </button>
                             </div>
@@ -481,7 +572,9 @@ export default function ClasesRealizadas() {
                               onClick={() => setReabriendo(clave)}
                               className="text-white/35 text-xs hover:text-white/60"
                             >
-                              {inscritos.length === 0 ? 'Quitar registro' : 'Reabrir'}
+                              {inscritos.length === 0
+                                ? 'Quitar registro'
+                                : 'Reabrir'}
                             </button>
                           )}
                         </div>

@@ -13,14 +13,26 @@ function leerCorreoGuardado() {
   }
 }
 
-const PRUEBA_VACIA = { nombre: '', telefono: '', correo: '', preferencia: '', comentario: '' };
+const PRUEBA_VACIA = {
+  nombre: '',
+  telefono: '',
+  correo: '',
+  preferencia: '',
+  comentario: '',
+};
 
 // Datos que pueden venir en el link: ?ref= (amigo que recomienda) y, en el link de registro
 // que manda el admin después de la sesión de prueba, ?p= (solicitud) &n= &t= &c= (nombre, teléfono, correo).
 function leerParametros() {
   try {
     const q = new URLSearchParams(window.location.search);
-    return { ref: q.get('ref') || '', p: q.get('p') || '', n: q.get('n') || '', t: q.get('t') || '', c: q.get('c') || '' };
+    return {
+      ref: q.get('ref') || '',
+      p: q.get('p') || '',
+      n: q.get('n') || '',
+      t: q.get('t') || '',
+      c: q.get('c') || '',
+    };
   } catch (e) {
     return { ref: '', p: '', n: '', t: '', c: '' };
   }
@@ -30,8 +42,14 @@ const LINK_TERMINOS =
   'https://docs.google.com/forms/d/e/1FAIpQLSfUWWCQPOlvTI5a7tVhAqOti3aYzLIp7N2Np9wAubf5pgxFHQ/viewform';
 
 export default function Login({ inicial = 'login' }) {
-  const { login, error, setError, registrarUsuario, solicitarRecuperacion, enviarSolicitudPrueba } =
-    useAuth();
+  const {
+    login,
+    error,
+    setError,
+    registrarUsuario,
+    solicitarRecuperacion,
+    enviarSolicitudPrueba,
+  } = useAuth();
   const [modo, setModo] = useState(inicial); // 'login' | 'registro' | 'recuperar' | 'prueba'
   const [correo, setCorreo] = useState(leerCorreoGuardado);
   const [mantener, setMantener] = useState(true);
@@ -74,7 +92,10 @@ export default function Login({ inicial = 'login' }) {
   async function handlePrueba(e) {
     e.preventDefault();
     setEnviando(true);
-    const resultado = await enviarSolicitudPrueba({ ...prueba, referido_por: params.ref });
+    const resultado = await enviarSolicitudPrueba({
+      ...prueba,
+      referido_por: params.ref,
+    });
     setEnviando(false);
     setMensajePrueba(resultado);
     if (resultado.ok) setPrueba(PRUEBA_VACIA);
@@ -86,7 +107,8 @@ export default function Login({ inicial = 'login' }) {
     setMensajeRegistro(null);
     setMensajeRecuperar(null);
     setMensajePrueba(null);
-    if (window.location.pathname !== '/') window.history.replaceState(null, '', '/');
+    if (window.location.pathname !== '/')
+      window.history.replaceState(null, '', '/');
   }
 
   async function handleRegistro(e) {
@@ -164,8 +186,12 @@ export default function Login({ inicial = 'login' }) {
             <CalendarCheck size={20} className="text-cyan-brand" />
           </span>
           <span className="flex-1 min-w-0">
-            <span className="block text-white font-semibold text-sm">Pide tu sesión de prueba</span>
-            <span className="block text-white/50 text-xs">¿Primera vez en CED&amp;S? Déjanos tus datos y te contactamos.</span>
+            <span className="block text-white font-semibold text-sm">
+              Pide tu sesión de prueba
+            </span>
+            <span className="block text-white/50 text-xs">
+              ¿Primera vez en CED&amp;S? Déjanos tus datos y te contactamos.
+            </span>
           </span>
           <ChevronRight size={18} className="text-cyan-brand shrink-0" />
         </button>
@@ -176,10 +202,13 @@ export default function Login({ inicial = 'login' }) {
           <div className="mb-1">
             <p className="text-white text-lg font-semibold">Sesión de prueba</p>
             <p className="text-white/50 text-sm">
-              Completa tus datos y te contactaremos para agendar tu primera clase.
+              Completa tus datos y te contactaremos para agendar tu primera
+              clase.
             </p>
             {params.ref && (
-              <p className="text-cyan-brand text-sm mt-1">🙌 Te invitó un amigo que entrena con nosotros.</p>
+              <p className="text-cyan-brand text-sm mt-1">
+                🙌 Te invitó un amigo que entrena con nosotros.
+              </p>
             )}
           </div>
           <input
@@ -206,19 +235,27 @@ export default function Login({ inicial = 'login' }) {
           />
           <input
             value={prueba.preferencia}
-            onChange={(e) => setPrueba({ ...prueba, preferencia: e.target.value })}
+            onChange={(e) =>
+              setPrueba({ ...prueba, preferencia: e.target.value })
+            }
             placeholder="Días u horario que te acomodan"
             className={INPUT}
           />
           <textarea
             value={prueba.comentario}
-            onChange={(e) => setPrueba({ ...prueba, comentario: e.target.value })}
+            onChange={(e) =>
+              setPrueba({ ...prueba, comentario: e.target.value })
+            }
             placeholder="Cuéntanos tu objetivo o algo importante (lesión, enfermedad, etc.) — opcional"
             rows={3}
             className={INPUT + ' resize-none'}
           />
           {mensajePrueba && (
-            <p className={`text-sm ${mensajePrueba.ok ? 'text-cyan-brand' : 'text-red-400'}`}>
+            <p
+              className={`text-sm ${
+                mensajePrueba.ok ? 'text-cyan-brand' : 'text-red-400'
+              }`}
+            >
               {mensajePrueba.mensaje}
             </p>
           )}
@@ -324,7 +361,8 @@ export default function Login({ inicial = 'login' }) {
         <form onSubmit={handleRegistro} className="flex flex-col gap-3">
           {params.p && (
             <p className="text-cyan-brand text-sm mb-1">
-              ¡Qué bueno que te quedas con nosotros! Completa tus datos para crear tu cuenta.
+              ¡Qué bueno que te quedas con nosotros! Completa tus datos para
+              crear tu cuenta.
             </p>
           )}
           <input
@@ -461,7 +499,8 @@ export default function Login({ inicial = 'login' }) {
             onClick={() => cambiarModo('login')}
             className="text-white/50 text-sm hover:text-white transition-colors inline-flex items-center gap-1"
           >
-            <ArrowLeft size={14} /> Volver a <span className="text-cyan-brand">iniciar sesión</span>
+            <ArrowLeft size={14} /> Volver a{' '}
+            <span className="text-cyan-brand">iniciar sesión</span>
           </button>
         )}
         {(modo === 'registro' || modo === 'recuperar') && (

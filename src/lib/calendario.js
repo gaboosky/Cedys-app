@@ -12,21 +12,23 @@ function fechaHoraIcs(fecha, hora, minutosExtra = 0) {
   const [h, m] = String(hora).slice(0, 5).split(':').map(Number);
   const d = new Date(`${fecha}T00:00:00`);
   d.setHours(h, m + minutosExtra, 0, 0);
-  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(
-    d.getMinutes()
-  )}00`;
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}${pad(d.getMinutes())}00`;
 }
 
 function limpiar(texto) {
-  return String(texto || '').replace(/[,;\\]/g, (c) => '\\' + c).replace(/\n/g, '\\n');
+  return String(texto || '')
+    .replace(/[,;\\]/g, (c) => '\\' + c)
+    .replace(/\n/g, '\\n');
 }
 
 // eventos: [{ id, fecha, hora, titulo, descripcion, lugar }]
 export function crearIcs(eventos) {
   const ahora = new Date();
-  const stamp = `${ahora.getUTCFullYear()}${pad(ahora.getUTCMonth() + 1)}${pad(ahora.getUTCDate())}T${pad(
-    ahora.getUTCHours()
-  )}${pad(ahora.getUTCMinutes())}00Z`;
+  const stamp = `${ahora.getUTCFullYear()}${pad(ahora.getUTCMonth() + 1)}${pad(
+    ahora.getUTCDate()
+  )}T${pad(ahora.getUTCHours())}${pad(ahora.getUTCMinutes())}00Z`;
   const lineas = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -40,7 +42,11 @@ export function crearIcs(eventos) {
       `UID:${ev.id}@cedys.cl`,
       `DTSTAMP:${stamp}`,
       `DTSTART;TZID=America/Santiago:${fechaHoraIcs(ev.fecha, ev.hora)}`,
-      `DTEND;TZID=America/Santiago:${fechaHoraIcs(ev.fecha, ev.hora, DURACION_MIN)}`,
+      `DTEND;TZID=America/Santiago:${fechaHoraIcs(
+        ev.fecha,
+        ev.hora,
+        DURACION_MIN
+      )}`,
       `SUMMARY:${limpiar(ev.titulo)}`,
       ev.descripcion ? `DESCRIPTION:${limpiar(ev.descripcion)}` : null,
       ev.lugar ? `LOCATION:${limpiar(ev.lugar)}` : null,

@@ -9,9 +9,12 @@ export default function SaludoCumpleanos() {
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-pink-400/20 via-cyan-brand/10 to-transparent border border-pink-300/30 rounded-2xl p-5 mb-5">
       <p className="text-3xl mb-1">🎉🎂</p>
-      <p className="text-white text-lg font-semibold">¡Feliz cumpleaños, {nombre}!</p>
+      <p className="text-white text-lg font-semibold">
+        ¡Feliz cumpleaños, {nombre}!
+      </p>
       <p className="text-white/65 text-sm mt-0.5">
-        Todo el equipo de {infoGimnasio?.nombre || 'CED&S'} te desea un gran día. ¡Celébralo entrenando! 💪
+        Todo el equipo de {infoGimnasio?.nombre || 'CED&S'} te desea un gran
+        día. ¡Celébralo entrenando! 💪
       </p>
     </div>
   );

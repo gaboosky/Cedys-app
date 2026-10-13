@@ -1,21 +1,53 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { DollarSign, CalendarDays, TrendingUp, UserX, CalendarClock, ChevronRight, ChevronDown, ChevronUp, Receipt, PiggyBank } from 'lucide-react';
+import {
+  DollarSign,
+  CalendarDays,
+  TrendingUp,
+  UserX,
+  CalendarClock,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Receipt,
+  PiggyBank,
+} from 'lucide-react';
 import GraficoBarrasMes from '../../components/GraficoBarrasMes';
 import BarrasHorizontales from '../../components/BarrasHorizontales';
 import GraficoDona from '../../components/GraficoDona';
 import FormularioPago from '../../components/FormularioPago';
 import {
-  MEDIOS_PAGO, COLOR_MEDIO, hoyLocalISO, mesActualKey, sumarMeses, ultimosMeses, nombreMes,
-  formatearPesos, totalDe, sumarDias, vencimientoDe, alumnosActivosPorMes,
+  MEDIOS_PAGO,
+  COLOR_MEDIO,
+  hoyLocalISO,
+  mesActualKey,
+  sumarMeses,
+  ultimosMeses,
+  nombreMes,
+  formatearPesos,
+  totalDe,
+  sumarDias,
+  vencimientoDe,
+  alumnosActivosPorMes,
 } from '../../lib/ingresos';
 
-const NOMBRES_DIA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const NOMBRES_DIA = [
+  'Domingo',
+  'Lunes',
+  'Martes',
+  'Miércoles',
+  'Jueves',
+  'Viernes',
+  'Sábado',
+];
 
 function ultimoDiaDelMes(mesKey) {
   const [anio, mes] = mesKey.split('-').map(Number);
-  return `${mesKey}-${String(new Date(anio, mes, 0).getDate()).padStart(2, '0')}`;
+  return `${mesKey}-${String(new Date(anio, mes, 0).getDate()).padStart(
+    2,
+    '0'
+  )}`;
 }
 
 function rangoAtajo(atajo) {
@@ -42,13 +74,26 @@ function iniciales(nombre) {
   return ((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase();
 }
 
-function Indicador({ icono: Icono, etiqueta, valor, detalle, destacado, onClick }) {
+function Indicador({
+  icono: Icono,
+  etiqueta,
+  valor,
+  detalle,
+  destacado,
+  onClick,
+}) {
   return (
     <div
       onClick={onClick}
       className={`rounded-2xl p-4 border ${
-        destacado ? 'bg-cyan-brand/[0.07] border-cyan-brand/40' : 'bg-white/[0.04] border-white/10'
-      } ${onClick ? 'cursor-pointer transition-transform active:scale-[0.98] hover:border-cyan-brand/50' : ''}`}
+        destacado
+          ? 'bg-cyan-brand/[0.07] border-cyan-brand/40'
+          : 'bg-white/[0.04] border-white/10'
+      } ${
+        onClick
+          ? 'cursor-pointer transition-transform active:scale-[0.98] hover:border-cyan-brand/50'
+          : ''
+      }`}
     >
       <div className="flex items-center gap-2 mb-3">
         <div className="w-8 h-8 rounded-lg bg-cyan-brand/15 flex items-center justify-center">
@@ -56,7 +101,9 @@ function Indicador({ icono: Icono, etiqueta, valor, detalle, destacado, onClick 
         </div>
         <p className="text-white/50 text-xs leading-tight">{etiqueta}</p>
       </div>
-      <p className="text-white font-display text-2xl leading-none tabular-nums">{valor}</p>
+      <p className="text-white font-display text-2xl leading-none tabular-nums">
+        {valor}
+      </p>
       <p className="text-white/35 text-[11px] mt-1.5">{detalle}</p>
     </div>
   );
@@ -64,7 +111,16 @@ function Indicador({ icono: Icono, etiqueta, valor, detalle, destacado, onClick 
 
 export default function Finanzas() {
   const navigate = useNavigate();
-  const { usuarios, planes, pagos, reservas, horarios, horarioEstaCancelado, diasRenovacion, gastos } = useAuth();
+  const {
+    usuarios,
+    planes,
+    pagos,
+    reservas,
+    horarios,
+    horarioEstaCancelado,
+    diasRenovacion,
+    gastos,
+  } = useAuth();
 
   const [atajo, setAtajo] = useState('mes');
   const [rango, setRango] = useState(rangoAtajo('mes'));
@@ -85,33 +141,51 @@ export default function Finanzas() {
   const hoy = hoyLocalISO();
 
   // --- Ingresos del período ---
-  const pagosPeriodo = pagos.filter((p) => p.fecha >= desde && p.fecha <= hasta);
+  const pagosPeriodo = pagos.filter(
+    (p) => p.fecha >= desde && p.fecha <= hasta
+  );
   const ingresosPeriodo = totalDe(pagosPeriodo);
-  const gastosPeriodo = (gastos || []).filter((g) => g.fecha >= desde && g.fecha <= hasta);
-  const totalGastos = gastosPeriodo.reduce((acc, g) => acc + (Number(g.monto) || 0), 0);
+  const gastosPeriodo = (gastos || []).filter(
+    (g) => g.fecha >= desde && g.fecha <= hasta
+  );
+  const totalGastos = gastosPeriodo.reduce(
+    (acc, g) => acc + (Number(g.monto) || 0),
+    0
+  );
   const utilidad = ingresosPeriodo - totalGastos;
 
   // --- Reservas de la semana (lunes a domingo) ---
   const hoyFecha = new Date(hoy + 'T00:00:00');
   const lunes = sumarDias(hoy, -((hoyFecha.getDay() + 6) % 7));
   const domingo = sumarDias(lunes, 6);
-  const reservasSemana = reservas.filter((r) => r.fecha >= lunes && r.fecha <= domingo).length;
+  const reservasSemana = reservas.filter(
+    (r) => r.fecha >= lunes && r.fecha <= domingo
+  ).length;
   let clasesSemana = 0;
   for (let i = 0; i < 7; i++) {
     const fecha = sumarDias(lunes, i);
     const diaNombre = NOMBRES_DIA[new Date(fecha + 'T00:00:00').getDay()];
     for (const h of horarios) {
-      const aplica = h.fecha_unica ? h.fecha_unica === fecha : h.dia === diaNombre;
+      const aplica = h.fecha_unica
+        ? h.fecha_unica === fecha
+        : h.dia === diaNombre;
       if (aplica && !horarioEstaCancelado(h.id, fecha)) clasesSemana++;
     }
   }
 
   // --- Asistencia y no-show del período (solo clases ya pasadas y marcadas por el coach) ---
   const marcadas = reservas.filter(
-    (r) => r.fecha >= desde && r.fecha <= hasta && r.fecha <= hoy && (r.asistio === true || r.asistio === false)
+    (r) =>
+      r.fecha >= desde &&
+      r.fecha <= hasta &&
+      r.fecha <= hoy &&
+      (r.asistio === true || r.asistio === false)
   );
   const asistieron = marcadas.filter((r) => r.asistio === true).length;
-  const pctAsistencia = marcadas.length > 0 ? Math.round((asistieron / marcadas.length) * 100) : null;
+  const pctAsistencia =
+    marcadas.length > 0
+      ? Math.round((asistieron / marcadas.length) * 100)
+      : null;
   const pctNoShow = marcadas.length > 0 ? 100 - pctAsistencia : null;
 
   // --- Alumnos activos por mes (últimos 6) ---
@@ -131,7 +205,9 @@ export default function Finanzas() {
   }));
 
   // --- Distribución por plan (alumnos activos hoy) ---
-  const conPlan = usuarios.filter((u) => u.estado === 'activo' && u.plan_id && planes[u.plan_id]);
+  const conPlan = usuarios.filter(
+    (u) => u.estado === 'activo' && u.plan_id && planes[u.plan_id]
+  );
   const distribucion = Object.values(
     conPlan.reduce((acc, u) => {
       const p = planes[u.plan_id];
@@ -139,12 +215,13 @@ export default function Finanzas() {
       acc[p.id].valor += 1;
       return acc;
     }, {})
-  )
-    .sort((a, b) => b.valor - a.valor);
+  ).sort((a, b) => b.valor - a.valor);
 
   // --- Medios de pago del período ---
   const porMedio = MEDIOS_PAGO.map((m) => {
-    const delMedio = pagosPeriodo.filter((p) => (p.medio || 'transferencia') === m.valor);
+    const delMedio = pagosPeriodo.filter(
+      (p) => (p.medio || 'transferencia') === m.valor
+    );
     return {
       key: m.valor,
       etiqueta: m.label,
@@ -161,22 +238,39 @@ export default function Finanzas() {
     .filter(({ v }) => !v || v.dias <= 7)
     .sort((a, b) => (a.v?.dias ?? -9999) - (b.v?.dias ?? -9999));
   const estaSemana = renovaciones.filter(({ v }) => v && v.dias >= 0).length;
-  const renovacionesVisibles = verTodasRenov ? renovaciones : renovaciones.slice(0, 6);
+  const renovacionesVisibles = verTodasRenov
+    ? renovaciones
+    : renovaciones.slice(0, 6);
 
   function etiquetaVence(v) {
-    if (!v) return { texto: 'Sin pago', clase: 'bg-red-500/10 text-red-300 border-red-500/30' };
+    if (!v)
+      return {
+        texto: 'Sin pago',
+        clase: 'bg-red-500/10 text-red-300 border-red-500/30',
+      };
     if (v.dias < 0) {
       const n = Math.abs(v.dias);
-      return { texto: `Venció hace ${n} día${n !== 1 ? 's' : ''}`, clase: 'bg-red-500/10 text-red-300 border-red-500/30' };
+      return {
+        texto: `Venció hace ${n} día${n !== 1 ? 's' : ''}`,
+        clase: 'bg-red-500/10 text-red-300 border-red-500/30',
+      };
     }
-    if (v.dias === 0) return { texto: 'Hoy', clase: 'bg-orange-400/10 text-orange-300 border-orange-400/30' };
+    if (v.dias === 0)
+      return {
+        texto: 'Hoy',
+        clase: 'bg-orange-400/10 text-orange-300 border-orange-400/30',
+      };
     return {
       texto: `En ${v.dias} día${v.dias !== 1 ? 's' : ''}`,
       clase: 'bg-yellow-400/10 text-yellow-200 border-yellow-400/30',
     };
   }
 
-  const fechaTexto = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+  const fechaTexto = (iso) =>
+    new Date(iso + 'T00:00:00').toLocaleDateString('es-CL', {
+      day: 'numeric',
+      month: 'short',
+    });
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-4 md:px-8 pt-5">
@@ -186,7 +280,10 @@ export default function Finanzas() {
           <button className="text-cyan-brand text-sm font-medium pb-2.5 border-b-2 border-cyan-brand -mb-px">
             Resumen financiero
           </button>
-          <button onClick={() => navigate('/ingreso-detalle')} className="text-white/50 text-sm pb-2.5 hover:text-white">
+          <button
+            onClick={() => navigate('/ingreso-detalle')}
+            className="text-white/50 text-sm pb-2.5 hover:text-white"
+          >
             Pagos y cobros
           </button>
         </div>
@@ -201,7 +298,9 @@ export default function Finanzas() {
                   key={a.valor}
                   onClick={() => elegirAtajo(a.valor)}
                   className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                    atajo === a.valor ? 'bg-cyan-brand text-ink' : 'text-white/55'
+                    atajo === a.valor
+                      ? 'bg-cyan-brand text-ink'
+                      : 'text-white/55'
                   }`}
                 >
                   {a.label}
@@ -239,7 +338,9 @@ export default function Finanzas() {
             icono={DollarSign}
             etiqueta="Ingresos del período"
             valor={formatearPesos(ingresosPeriodo)}
-            detalle={`${pagosPeriodo.length} pago${pagosPeriodo.length !== 1 ? 's' : ''} · ver detalle`}
+            detalle={`${pagosPeriodo.length} pago${
+              pagosPeriodo.length !== 1 ? 's' : ''
+            } · ver detalle`}
             destacado
             onClick={() => navigate('/ingreso-detalle')}
           />
@@ -247,19 +348,29 @@ export default function Finanzas() {
             icono={CalendarDays}
             etiqueta="Reservas de la semana"
             valor={reservasSemana}
-            detalle={`en ${clasesSemana} clase${clasesSemana !== 1 ? 's' : ''} programada${clasesSemana !== 1 ? 's' : ''}`}
+            detalle={`en ${clasesSemana} clase${
+              clasesSemana !== 1 ? 's' : ''
+            } programada${clasesSemana !== 1 ? 's' : ''}`}
           />
           <Indicador
             icono={TrendingUp}
             etiqueta="% de asistencia"
             valor={pctAsistencia === null ? '—' : `${pctAsistencia}%`}
-            detalle={pctAsistencia === null ? 'Aún sin asistencia marcada' : `${asistieron} de ${marcadas.length} reservas marcadas`}
+            detalle={
+              pctAsistencia === null
+                ? 'Aún sin asistencia marcada'
+                : `${asistieron} de ${marcadas.length} reservas marcadas`
+            }
           />
           <Indicador
             icono={UserX}
             etiqueta="% no-show"
             valor={pctNoShow === null ? '—' : `${pctNoShow}%`}
-            detalle={pctNoShow === null ? 'Aún sin asistencia marcada' : `${marcadas.length - asistieron} no llegaron`}
+            detalle={
+              pctNoShow === null
+                ? 'Aún sin asistencia marcada'
+                : `${marcadas.length - asistieron} no llegaron`
+            }
           />
         </div>
 
@@ -269,14 +380,20 @@ export default function Finanzas() {
             icono={Receipt}
             etiqueta="Gastos del período"
             valor={formatearPesos(totalGastos)}
-            detalle={`${gastosPeriodo.length} gasto${gastosPeriodo.length !== 1 ? 's' : ''} · ver y registrar`}
+            detalle={`${gastosPeriodo.length} gasto${
+              gastosPeriodo.length !== 1 ? 's' : ''
+            } · ver y registrar`}
             onClick={() => navigate('/gastos')}
           />
           <Indicador
             icono={PiggyBank}
             etiqueta="Utilidad (ingresos − gastos)"
             valor={formatearPesos(utilidad)}
-            detalle={utilidad >= 0 ? 'Resultado positivo' : 'Los gastos superan los ingresos'}
+            detalle={
+              utilidad >= 0
+                ? 'Resultado positivo'
+                : 'Los gastos superan los ingresos'
+            }
             destacado={utilidad >= 0}
           />
         </div>
@@ -286,8 +403,12 @@ export default function Finanzas() {
           <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <p className="text-white text-sm font-medium">Alumnos activos por mes</p>
-                <p className="text-white/35 text-[11px]">Últimos 6 meses · con plan vigente</p>
+                <p className="text-white text-sm font-medium">
+                  Alumnos activos por mes
+                </p>
+                <p className="text-white/35 text-[11px]">
+                  Últimos 6 meses · con plan vigente
+                </p>
               </div>
               <span className="text-cyan-brand text-[11px] font-semibold bg-cyan-brand/10 border border-cyan-brand/25 rounded-full px-2 py-0.5">
                 {activosMes[mesHoy] || 0} activos
@@ -304,29 +425,43 @@ export default function Finanzas() {
 
           <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4">
             <div className="mb-3">
-              <p className="text-white text-sm font-medium">Distribución por plan</p>
+              <p className="text-white text-sm font-medium">
+                Distribución por plan
+              </p>
               <p className="text-white/35 text-[11px]">
-                {conPlan.length} alumno{conPlan.length !== 1 ? 's' : ''} en {distribucion.length} plan
+                {conPlan.length} alumno{conPlan.length !== 1 ? 's' : ''} en{' '}
+                {distribucion.length} plan
                 {distribucion.length !== 1 ? 'es' : ''}
               </p>
             </div>
             <div className="max-h-[210px] overflow-y-auto pr-1">
-              <BarrasHorizontales items={distribucion} formatear={(v) => `${v} alumno${v !== 1 ? 's' : ''}`} vacio="Aún no hay alumnos con plan." />
+              <BarrasHorizontales
+                items={distribucion}
+                formatear={(v) => `${v} alumno${v !== 1 ? 's' : ''}`}
+                vacio="Aún no hay alumnos con plan."
+              />
             </div>
           </div>
         </div>
 
         <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 mb-4">
           <p className="text-white text-sm font-medium">Medios de pago</p>
-          <p className="text-white/35 text-[11px] mb-4">Ingresos del período por medio de pago</p>
-          <GraficoDona items={porMedio} formatear={formatearPesos} vacio="Sin pagos en este período." />
+          <p className="text-white/35 text-[11px] mb-4">
+            Ingresos del período por medio de pago
+          </p>
+          <GraficoDona
+            items={porMedio}
+            formatear={formatearPesos}
+            vacio="Sin pagos en este período."
+          />
         </div>
 
         {/* Próximas renovaciones */}
         <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4">
           <div className="flex items-center justify-between mb-2">
             <p className="flex items-center gap-2 text-white text-sm font-medium">
-              <CalendarClock size={16} className="text-cyan-brand" /> Próximas renovaciones
+              <CalendarClock size={16} className="text-cyan-brand" /> Próximas
+              renovaciones
             </p>
             <span className="text-cyan-brand text-[11px] font-semibold bg-cyan-brand/10 border border-cyan-brand/25 rounded-full px-2 py-0.5">
               {estaSemana} esta semana
@@ -334,32 +469,48 @@ export default function Finanzas() {
           </div>
 
           {renovaciones.length === 0 ? (
-            <p className="text-white/30 text-sm py-4">Nadie vence en los próximos 7 días.</p>
+            <p className="text-white/30 text-sm py-4">
+              Nadie vence en los próximos 7 días.
+            </p>
           ) : (
             <div>
               {renovacionesVisibles.map(({ u, v }) => {
                 const etiqueta = etiquetaVence(v);
                 const abierto = cobrandoId === u.id;
                 return (
-                  <div key={u.id} className="border-b border-white/[0.06] last:border-0">
+                  <div
+                    key={u.id}
+                    className="border-b border-white/[0.06] last:border-0"
+                  >
                     <button
                       onClick={() => setCobrandoId(abierto ? null : u.id)}
                       className="w-full flex items-center gap-3 py-3 text-left"
                     >
                       <div className="w-9 h-9 rounded-full bg-cyan-brand/15 border border-cyan-brand/30 flex items-center justify-center shrink-0">
-                        <span className="text-cyan-brand text-xs font-semibold">{iniciales(u.nombre)}</span>
+                        <span className="text-cyan-brand text-xs font-semibold">
+                          {iniciales(u.nombre)}
+                        </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-white text-sm truncate">{u.nombre}</p>
+                        <p className="text-white text-sm truncate">
+                          {u.nombre}
+                        </p>
                         <p className="text-white/35 text-[11px] truncate">
                           {planes[u.plan_id]?.nombre}
                           {v ? ` · vence ${fechaTexto(v.vence)}` : ''}
                         </p>
                       </div>
-                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap ${etiqueta.clase}`}>
+                      <span
+                        className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap ${etiqueta.clase}`}
+                      >
                         {etiqueta.texto}
                       </span>
-                      <ChevronRight size={16} className={`text-white/30 transition-transform ${abierto ? 'rotate-90' : ''}`} />
+                      <ChevronRight
+                        size={16}
+                        className={`text-white/30 transition-transform ${
+                          abierto ? 'rotate-90' : ''
+                        }`}
+                      />
                     </button>
                     {abierto && (
                       <div className="pb-3">
@@ -380,9 +531,13 @@ export default function Finanzas() {
                   className="w-full flex items-center justify-center gap-1 text-cyan-brand text-xs font-medium pt-3"
                 >
                   {verTodasRenov ? (
-                    <>Ver menos <ChevronUp size={14} /></>
+                    <>
+                      Ver menos <ChevronUp size={14} />
+                    </>
                   ) : (
-                    <>Ver las {renovaciones.length} <ChevronDown size={14} /></>
+                    <>
+                      Ver las {renovaciones.length} <ChevronDown size={14} />
+                    </>
                   )}
                 </button>
               )}

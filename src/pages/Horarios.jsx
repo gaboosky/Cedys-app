@@ -66,7 +66,10 @@ export default function Horarios() {
 
   function contarInscritos(horarioId, fecha) {
     return reservas.filter(
-      (r) => r.horario_id === horarioId && r.fecha === fecha && r.estado === 'confirmada'
+      (r) =>
+        r.horario_id === horarioId &&
+        r.fecha === fecha &&
+        r.estado === 'confirmada'
     ).length;
   }
 
@@ -131,16 +134,29 @@ export default function Horarios() {
                     const lleno = cupos === 0;
                     const reservada = estaReservada(h.id, dia.key);
                     const cancelada = horarioEstaCancelado(h.id, dia.key);
-                    const yaPaso = horaAFecha(dia.key, h.hora).getTime() <= Date.now();
-                    const cerradaPorTiempo = reservaBloqueada(dia.key, h.hora, horasAnticipacion);
+                    const yaPaso =
+                      horaAFecha(dia.key, h.hora).getTime() <= Date.now();
+                    const cerradaPorTiempo = reservaBloqueada(
+                      dia.key,
+                      h.hora,
+                      horasAnticipacion
+                    );
                     // Clase de hoy que ya cerró reservas pero aún no empieza: se puede pedir hora fuera de plazo.
                     const fueraDePlazo =
-                      !reservada && !cancelada && cerradaPorTiempo && dia.esHoy && !yaPaso;
+                      !reservada &&
+                      !cancelada &&
+                      cerradaPorTiempo &&
+                      dia.esHoy &&
+                      !yaPaso;
                     const solicitudPendiente =
-                      solicitudFueraPlazoDe(h.id, dia.key)?.estado === 'pendiente';
+                      solicitudFueraPlazoDe(h.id, dia.key)?.estado ===
+                      'pendiente';
                     // Las clases llenas SÍ se pueden abrir (para anotarse en la lista de espera).
                     const deshabilitada =
-                      !reservada && (cancelada || yaPaso || (cerradaPorTiempo && !fueraDePlazo));
+                      !reservada &&
+                      (cancelada ||
+                        yaPaso ||
+                        (cerradaPorTiempo && !fueraDePlazo));
                     const estaSeleccionado = seleccionado === clave;
 
                     let etiqueta;
@@ -166,13 +182,18 @@ export default function Horarios() {
                       colorEtiqueta = 'text-yellow-200/80';
                     } else {
                       etiqueta = `${cupos} cupo${cupos !== 1 ? 's' : ''}`;
-                      colorEtiqueta = cupos <= 2 ? 'text-yellow-200/80' : 'text-cyan-brand/80';
+                      colorEtiqueta =
+                        cupos <= 2
+                          ? 'text-yellow-200/80'
+                          : 'text-cyan-brand/80';
                     }
 
                     return (
                       <button
                         key={h.id}
-                        onClick={() => !deshabilitada && seleccionarHorario(h.id, dia.key)}
+                        onClick={() =>
+                          !deshabilitada && seleccionarHorario(h.id, dia.key)
+                        }
                         disabled={deshabilitada}
                         className={`rounded-xl border px-2 py-2 text-left transition-all duration-200 ${
                           estaSeleccionado || reservada
@@ -191,16 +212,22 @@ export default function Horarios() {
                         } ${estaSeleccionado ? 'scale-105' : ''}`}
                       >
                         <span className="flex items-center gap-1 text-base font-semibold leading-tight">
-                          {(estaSeleccionado || reservada) && <Check size={14} />}
+                          {(estaSeleccionado || reservada) && (
+                            <Check size={14} />
+                          )}
                           {h.hora}
                         </span>
-                        <span className={`block text-[11px] leading-tight mt-0.5 no-underline ${colorEtiqueta}`}>
+                        <span
+                          className={`block text-[11px] leading-tight mt-0.5 no-underline ${colorEtiqueta}`}
+                        >
                           {etiqueta}
                         </span>
                         {coachDeClase(h, dia.key).nombre && (
                           <span
                             className={`block text-[10px] leading-tight mt-0.5 truncate ${
-                              estaSeleccionado || reservada ? 'text-ink/60' : 'text-white/35'
+                              estaSeleccionado || reservada
+                                ? 'text-ink/60'
+                                : 'text-white/35'
                             }`}
                           >
                             {coachDeClase(h, dia.key).nombre.split(' ')[0]}
