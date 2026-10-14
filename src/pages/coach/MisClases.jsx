@@ -20,10 +20,7 @@ import {
   Clock,
   HeartPulse,
 } from 'lucide-react';
-import {
-  InsigniaEvaluacion,
-  EvaluacionesDeClase,
-} from '../../components/EvaluarClase';
+import { InsigniaEvaluacion, EvaluacionesDeClase } from '../../components/EvaluarClase';
 
 const DOS_HORAS_MS = 2 * 60 * 60 * 1000;
 
@@ -74,7 +71,13 @@ function proximosDiasHabiles(cantidad = 14) {
       const nombreDia = capitalizar(
         fecha.toLocaleDateString('es-CL', { weekday: 'long' })
       );
-      dias.push({ key: soloFechaLocal(fecha), nombreDia });
+      dias.push({
+        key: soloFechaLocal(fecha),
+        nombreDia,
+        diaCorto: nombreDia.slice(0, 3),
+        numero: fecha.getDate(),
+        esHoy: offset === 0,
+      });
     }
     offset++;
   }
@@ -90,20 +93,11 @@ function nombreMes(mesKey) {
 }
 
 function FilaAlumno({ item, onMarcar, bloqueada }) {
-  const {
-    usuario,
-    reservaId,
-    asistio,
-    primeraClase,
-    fueraDePlazo,
-    observacion,
-  } = item;
+  const { usuario, reservaId, asistio, primeraClase, fueraDePlazo, observacion } = item;
   return (
     <div className="flex items-center justify-between gap-2 px-4 py-3">
       <div className="min-w-0">
-        <span className="text-white text-sm block truncate">
-          {usuario.nombre}
-        </span>
+        <span className="text-white text-sm block truncate">{usuario.nombre}</span>
         <span className="text-white/40 text-xs">{usuario.telefono}</span>
         {(primeraClase || fueraDePlazo) && (
           <div className="flex flex-wrap gap-1 mt-1">
@@ -121,14 +115,12 @@ function FilaAlumno({ item, onMarcar, bloqueada }) {
         )}
         {usuario.obs_salud && (
           <p className="flex items-start gap-1 text-red-200/90 text-[11px] mt-1">
-            <HeartPulse size={11} className="shrink-0 mt-0.5" />{' '}
-            {usuario.obs_salud}
+            <HeartPulse size={11} className="shrink-0 mt-0.5" /> {usuario.obs_salud}
           </p>
         )}
         {observacion && (
           <p className="flex items-start gap-1 text-orange-200/90 text-[11px] mt-1">
-            <AlertTriangle size={11} className="shrink-0 mt-0.5" />{' '}
-            {observacion}
+            <AlertTriangle size={11} className="shrink-0 mt-0.5" /> {observacion}
           </p>
         )}
       </div>
@@ -138,9 +130,7 @@ function FilaAlumno({ item, onMarcar, bloqueada }) {
           disabled={bloqueada}
           aria-label="Asistió"
           className={`w-9 h-9 disabled:opacity-40 rounded-xl flex items-center justify-center transition-all active:scale-90 ${
-            asistio === true
-              ? 'bg-cyan-brand text-ink'
-              : 'bg-white/5 text-white/30'
+            asistio === true ? 'bg-cyan-brand text-ink' : 'bg-white/5 text-white/30'
           }`}
         >
           <Check size={16} />
@@ -150,9 +140,7 @@ function FilaAlumno({ item, onMarcar, bloqueada }) {
           disabled={bloqueada}
           aria-label="No asistió"
           className={`w-9 h-9 disabled:opacity-40 rounded-xl flex items-center justify-center transition-all active:scale-90 ${
-            asistio === false
-              ? 'bg-red-500/80 text-white'
-              : 'bg-white/5 text-white/30'
+            asistio === false ? 'bg-red-500/80 text-white' : 'bg-white/5 text-white/30'
           }`}
         >
           <X size={16} />
@@ -172,12 +160,7 @@ function AgregarAlumno({ horarioId, fecha, inscritosIds }) {
 
   const texto = busqueda.trim().toLowerCase();
   const candidatos = usuarios
-    .filter(
-      (u) =>
-        u.rol === 'usuario' &&
-        u.estado === 'activo' &&
-        !inscritosIds.includes(u.id)
-    )
+    .filter((u) => u.rol === 'usuario' && u.estado === 'activo' && !inscritosIds.includes(u.id))
     .filter((u) => !texto || (u.nombre || '').toLowerCase().includes(texto))
     .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''))
     .slice(0, 8);
@@ -196,21 +179,10 @@ function AgregarAlumno({ horarioId, fecha, inscritosIds }) {
   if (!abierto)
     return (
       <div className="px-4 py-2.5 border-t border-white/5">
-        <button
-          onClick={() => setAbierto(true)}
-          className="flex items-center gap-1.5 text-cyan-brand text-xs font-medium"
-        >
+        <button onClick={() => setAbierto(true)} className="flex items-center gap-1.5 text-cyan-brand text-xs font-medium">
           <UserPlus size={14} /> Agregar alumno que llegó sin reservar
         </button>
-        {mensaje && (
-          <p
-            className={`text-xs mt-1 ${
-              mensaje.ok ? 'text-cyan-brand' : 'text-red-400'
-            }`}
-          >
-            {mensaje.mensaje}
-          </p>
-        )}
+        {mensaje && <p className={`text-xs mt-1 ${mensaje.ok ? 'text-cyan-brand' : 'text-red-400'}`}>{mensaje.mensaje}</p>}
       </div>
     );
 
@@ -224,11 +196,7 @@ function AgregarAlumno({ horarioId, fecha, inscritosIds }) {
         className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand"
       />
       <div className="flex flex-col gap-1 max-h-56 overflow-y-auto">
-        {candidatos.length === 0 && (
-          <p className="text-white/35 text-xs">
-            No hay alumnos con ese nombre.
-          </p>
-        )}
+        {candidatos.length === 0 && <p className="text-white/35 text-xs">No hay alumnos con ese nombre.</p>}
         {candidatos.map((u) => (
           <button
             key={u.id}
@@ -241,16 +209,9 @@ function AgregarAlumno({ horarioId, fecha, inscritosIds }) {
           </button>
         ))}
       </div>
-      <p className="text-white/35 text-[11px]">
-        Quedará presente y se le descontará una sesión.
-      </p>
-      {mensaje && !mensaje.ok && (
-        <p className="text-red-400 text-xs">{mensaje.mensaje}</p>
-      )}
-      <button
-        onClick={() => setAbierto(false)}
-        className="self-start text-white/40 text-xs"
-      >
+      <p className="text-white/35 text-[11px]">Quedará presente y se le descontará una sesión.</p>
+      {mensaje && !mensaje.ok && <p className="text-red-400 text-xs">{mensaje.mensaje}</p>}
+      <button onClick={() => setAbierto(false)} className="self-start text-white/40 text-xs">
         Cancelar
       </button>
     </div>
@@ -270,8 +231,7 @@ function AvisoAusencia({ horarioId, fecha }) {
     return (
       <div className="px-4 py-3 border-t border-white/5">
         <p className="flex items-center gap-1.5 text-yellow-200 text-xs">
-          <Clock size={13} /> Avisaste que no puedes hacer esta clase. El admin
-          asignará un reemplazo o la cancelará.
+          <Clock size={13} /> Avisaste que no puedes hacer esta clase. El admin asignará un reemplazo o la cancelará.
         </p>
       </div>
     );
@@ -279,15 +239,10 @@ function AvisoAusencia({ horarioId, fecha }) {
   if (!abierto)
     return (
       <div className="px-4 py-2.5 border-t border-white/5">
-        <button
-          onClick={() => setAbierto(true)}
-          className="flex items-center gap-1.5 text-white/45 text-xs hover:text-white/70"
-        >
+        <button onClick={() => setAbierto(true)} className="flex items-center gap-1.5 text-white/45 text-xs hover:text-white/70">
           <CalendarX size={14} /> No puedo hacer esta clase
         </button>
-        {mensaje && (
-          <p className="text-cyan-brand text-xs mt-1">{mensaje.mensaje}</p>
-        )}
+        {mensaje && <p className="text-cyan-brand text-xs mt-1">{mensaje.mensaje}</p>}
       </div>
     );
 
@@ -314,16 +269,11 @@ function AvisoAusencia({ horarioId, fecha }) {
         >
           {enviando ? 'Enviando...' : 'Avisar al admin'}
         </button>
-        <button
-          onClick={() => setAbierto(false)}
-          className="flex-1 bg-white/10 text-white rounded-lg py-2 text-xs"
-        >
+        <button onClick={() => setAbierto(false)} className="flex-1 bg-white/10 text-white rounded-lg py-2 text-xs">
           Cancelar
         </button>
       </div>
-      {mensaje && !mensaje.ok && (
-        <p className="text-red-400 text-xs">{mensaje.mensaje}</p>
-      )}
+      {mensaje && !mensaje.ok && <p className="text-red-400 text-xs">{mensaje.mensaje}</p>}
     </div>
   );
 }
@@ -336,9 +286,7 @@ function CierreClase({ horarioId, fecha, inscritos }) {
   const [error, setError] = useState('');
   const [confirmarReabrir, setConfirmarReabrir] = useState(false);
 
-  const sinMarcar = inscritos.filter(
-    (i) => i.asistio !== true && i.asistio !== false
-  ).length;
+  const sinMarcar = inscritos.filter((i) => i.asistio !== true && i.asistio !== false).length;
 
   async function handleFinalizar() {
     setGuardando(true);
@@ -365,25 +313,15 @@ function CierreClase({ horarioId, fecha, inscritos }) {
           <p className="text-white/50 text-xs mt-0.5">
             {finalizada.presentes} presentes · {finalizada.ausentes} ausentes
           </p>
-          <p className="text-white/80 text-sm mt-1.5">
-            {finalizada.comentario}
-          </p>
+          <p className="text-white/80 text-sm mt-1.5">{finalizada.comentario}</p>
         </div>
         {confirmarReabrir ? (
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-white/50 text-xs">
-              ¿Reabrir para corregir asistencia?
-            </span>
-            <button
-              onClick={handleReabrir}
-              className="bg-white/15 text-white text-xs px-2.5 py-1 rounded-md"
-            >
+            <span className="text-white/50 text-xs">¿Reabrir para corregir asistencia?</span>
+            <button onClick={handleReabrir} className="bg-white/15 text-white text-xs px-2.5 py-1 rounded-md">
               Sí
             </button>
-            <button
-              onClick={() => setConfirmarReabrir(false)}
-              className="text-white/40 text-xs px-2 py-1"
-            >
+            <button onClick={() => setConfirmarReabrir(false)} className="text-white/40 text-xs px-2 py-1">
               No
             </button>
           </div>
@@ -404,8 +342,7 @@ function CierreClase({ horarioId, fecha, inscritos }) {
     return (
       <div className="px-4 py-3 border-t border-white/10">
         <p className="text-white/40 text-xs">
-          No hay alumnos en esta clase. Si alguien vino sin reservar, agrégalo
-          arriba y podrás finalizarla. Si nadie vino, no cuenta como realizada.
+          No hay alumnos en esta clase. Si alguien vino sin reservar, agrégalo arriba y podrás finalizarla. Si nadie vino, no cuenta como realizada.
         </p>
       </div>
     );
@@ -415,16 +352,10 @@ function CierreClase({ horarioId, fecha, inscritos }) {
 
   return (
     <div className="px-4 py-3 border-t border-white/10 flex flex-col gap-2">
-      <p className="text-white/40 text-[11px] uppercase tracking-wide">
-        Finalizar clase
-      </p>
+      <p className="text-white/40 text-[11px] uppercase tracking-wide">Finalizar clase</p>
       {sinMarcar > 0 && (
         <p className="flex items-center gap-1.5 text-yellow-300 text-xs">
-          <Lock size={12} /> Marca la asistencia de{' '}
-          {sinMarcar === 1
-            ? 'el alumno que falta'
-            : `los ${sinMarcar} alumnos que faltan`}{' '}
-          (✓ o ✕).
+          <Lock size={12} /> Marca la asistencia de {sinMarcar === 1 ? 'el alumno que falta' : `los ${sinMarcar} alumnos que faltan`} (✓ o ✕).
         </p>
       )}
       <label className="text-white/40 text-xs">Comentario de la clase</label>
@@ -584,59 +515,33 @@ function TarjetaClase({ h, fecha, abierta, setAbierta, inscritosDe, modo }) {
   const abiertaAqui = abierta === clave;
   const empezo = yaEmpezo(fecha, h.hora);
   const asistieron = inscritos.filter((i) => i.asistio === true).length;
-  const sinMarcar = inscritos.filter(
-    (i) => i.asistio !== true && i.asistio !== false
-  );
-  const enEspera = (listaEspera || []).filter(
-    (l) => l.horario_id === h.id && l.fecha === fecha
-  ).length;
+  const sinMarcar = inscritos.filter((i) => i.asistio !== true && i.asistio !== false);
+  const enEspera = (listaEspera || []).filter((l) => l.horario_id === h.id && l.fecha === fecha).length;
   const reemplazo = coachDeClase(h, fecha).esReemplazo;
   const esHoy = fecha === soloFechaLocal(new Date());
-  const pendienteFinalizar =
-    !cancelada && !fin && empezo && modo !== 'realizada';
+  const pendienteFinalizar = !cancelada && !fin && empezo && modo !== 'realizada';
 
   return (
     <div
       id={`clase-${clave}`}
       className={`bg-white/[0.04] border rounded-2xl overflow-hidden scroll-mt-4 ${
-        cancelada
-          ? 'border-red-500/25 opacity-80'
-          : pendienteFinalizar
-          ? 'border-yellow-400/40'
-          : 'border-white/10'
+        cancelada ? 'border-red-500/25 opacity-80' : pendienteFinalizar ? 'border-yellow-400/40' : 'border-white/10'
       }`}
     >
-      <button
-        onClick={() => setAbierta(abiertaAqui ? null : clave)}
-        className="w-full flex items-center justify-between gap-2 p-4"
-      >
+      <button onClick={() => setAbierta(abiertaAqui ? null : clave)} className="w-full flex items-center justify-between gap-2 p-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <p
-            className={`font-display text-2xl leading-none ${
-              cancelada ? 'text-white/40 line-through' : 'text-white'
-            }`}
-          >
+          <p className={`font-display text-2xl leading-none ${cancelada ? 'text-white/40 line-through' : 'text-white'}`}>
             {h.hora}
           </p>
-          {cancelada && (
-            <span className="text-[10px] bg-red-500/15 text-red-300 px-1.5 py-0.5 rounded">
-              Cancelada
-            </span>
-          )}
+          {cancelada && <span className="text-[10px] bg-red-500/15 text-red-300 px-1.5 py-0.5 rounded">Cancelada</span>}
           {pendienteFinalizar && (
             <span className="text-[10px] bg-yellow-400/15 text-yellow-300 px-1.5 py-0.5 rounded">
               {modo === 'pendiente' ? 'Por finalizar' : 'En curso'}
             </span>
           )}
-          {reemplazo && (
-            <span className="text-[10px] bg-white/10 text-white/70 px-1.5 py-0.5 rounded">
-              Reemplazo
-            </span>
-          )}
+          {reemplazo && <span className="text-[10px] bg-white/10 text-white/70 px-1.5 py-0.5 rounded">Reemplazo</span>}
           {modo === 'realizada' && fin && inscritos.length === 0 && (
-            <span className="text-[10px] bg-white/10 text-white/60 px-1.5 py-0.5 rounded">
-              Registrada por admin
-            </span>
+            <span className="text-[10px] bg-white/10 text-white/60 px-1.5 py-0.5 rounded">Registrada por admin</span>
           )}
           <InsigniaEvaluacion lista={evals} />
         </div>
@@ -655,11 +560,7 @@ function TarjetaClase({ h, fecha, abierta, setAbierta, inscritosDe, modo }) {
               <Users size={13} /> {inscritos.length}/{h.cupo_max}
             </span>
           )}
-          {abiertaAqui ? (
-            <ChevronUp size={16} className="text-white/40" />
-          ) : (
-            <ChevronDown size={16} className="text-white/40" />
-          )}
+          {abiertaAqui ? <ChevronUp size={16} className="text-white/40" /> : <ChevronDown size={16} className="text-white/40" />}
         </div>
       </button>
 
@@ -677,13 +578,9 @@ function TarjetaClase({ h, fecha, abierta, setAbierta, inscritosDe, modo }) {
 
       {abiertaAqui && cancelada && (
         <div className="border-t border-white/10 px-4 py-3">
-          <p className="text-red-300 text-sm">
-            Esta clase fue cancelada por el admin.
-          </p>
+          <p className="text-red-300 text-sm">Esta clase fue cancelada por el admin.</p>
           {mensajeCancelacionDe(h.id, fecha) && (
-            <p className="text-white/50 text-xs mt-0.5">
-              {mensajeCancelacionDe(h.id, fecha)}
-            </p>
+            <p className="text-white/50 text-xs mt-0.5">{mensajeCancelacionDe(h.id, fecha)}</p>
           )}
         </div>
       )}
@@ -691,62 +588,34 @@ function TarjetaClase({ h, fecha, abierta, setAbierta, inscritosDe, modo }) {
       {abiertaAqui && !cancelada && (
         <>
           <div className="border-t border-white/10 divide-y divide-white/5">
-            {inscritos.length === 0 && (
-              <p className="text-white/30 text-sm px-4 py-3">Nadie inscrito.</p>
-            )}
+            {inscritos.length === 0 && <p className="text-white/30 text-sm px-4 py-3">Nadie inscrito.</p>}
             {!empezo && inscritos.length > 0 && (
-              <p className="text-white/35 text-[11px] px-4 py-2">
-                La asistencia se marca cuando empiece la clase.
-              </p>
+              <p className="text-white/35 text-[11px] px-4 py-2">La asistencia se marca cuando empiece la clase.</p>
             )}
             {inscritos.map((item) => (
-              <FilaAlumno
-                key={item.reservaId}
-                item={item}
-                onMarcar={marcarAsistencia}
-                bloqueada={!!fin || !empezo}
-              />
+              <FilaAlumno key={item.reservaId} item={item} onMarcar={marcarAsistencia} bloqueada={!!fin || !empezo} />
             ))}
           </div>
 
           {empezo && !fin && sinMarcar.length > 0 && (
             <div className="px-4 py-2.5 border-t border-white/5">
               <button
-                onClick={() =>
-                  marcarAsistenciaVarias(
-                    sinMarcar.map((i) => i.reservaId),
-                    true
-                  )
-                }
+                onClick={() => marcarAsistenciaVarias(sinMarcar.map((i) => i.reservaId), true)}
                 className="w-full flex items-center justify-center gap-2 bg-cyan-brand/15 border border-cyan-brand/30 text-cyan-brand font-semibold rounded-xl py-2 text-sm"
               >
-                <CheckCheck size={15} /> Marcar{' '}
-                {sinMarcar.length === inscritos.length
-                  ? 'todos'
-                  : 'los que faltan'}{' '}
-                presentes
+                <CheckCheck size={15} /> Marcar {sinMarcar.length === inscritos.length ? 'todos' : 'los que faltan'} presentes
               </button>
-              <p className="text-white/35 text-[11px] text-center mt-1">
-                Después corrige con ✕ a los que no vinieron.
-              </p>
+              <p className="text-white/35 text-[11px] text-center mt-1">Después corrige con ✕ a los que no vinieron.</p>
             </div>
           )}
 
           {!fin && (empezo || esHoy) && modo !== 'realizada' && (
-            <AgregarAlumno
-              horarioId={h.id}
-              fecha={fecha}
-              inscritosIds={inscritos.map((i) => i.usuario.id)}
-            />
+            <AgregarAlumno horarioId={h.id} fecha={fecha} inscritosIds={inscritos.map((i) => i.usuario.id)} />
           )}
 
-          {(fin || (empezo && modo !== 'realizada')) && (
-            <CierreClase horarioId={h.id} fecha={fecha} inscritos={inscritos} />
-          )}
+          {(fin || (empezo && modo !== 'realizada')) && <CierreClase horarioId={h.id} fecha={fecha} inscritos={inscritos} />}
 
-          {!empezo && modo === 'proxima' && (
-            <AvisoAusencia horarioId={h.id} fecha={fecha} />
-          )}
+          {!empezo && modo === 'proxima' && <AvisoAusencia horarioId={h.id} fecha={fecha} />}
 
           <EvaluacionesDeClase horarioId={h.id} fecha={fecha} />
 
@@ -758,21 +627,12 @@ function TarjetaClase({ h, fecha, abierta, setAbierta, inscritosDe, modo }) {
 }
 
 function ResumenRealizadas({ lista, inscritosDe }) {
-  const totalInscritos = lista.reduce(
-    (acc, o) => acc + inscritosDe(o.horario.id, o.fecha).length,
-    0
-  );
+  const totalInscritos = lista.reduce((acc, o) => acc + inscritosDe(o.horario.id, o.fecha).length, 0);
   const totalAsistieron = lista.reduce(
-    (acc, o) =>
-      acc +
-      inscritosDe(o.horario.id, o.fecha).filter((i) => i.asistio === true)
-        .length,
+    (acc, o) => acc + inscritosDe(o.horario.id, o.fecha).filter((i) => i.asistio === true).length,
     0
   );
-  const pct =
-    totalInscritos > 0
-      ? Math.round((totalAsistieron / totalInscritos) * 100)
-      : null;
+  const pct = totalInscritos > 0 ? Math.round((totalAsistieron / totalInscritos) * 100) : null;
   return (
     <div className="grid grid-cols-3 gap-2 mb-4">
       <Kpi valor={lista.length} label="clases" />
@@ -791,20 +651,10 @@ function Kpi({ valor, label }) {
   );
 }
 
-async function descargarResumen(
-  lista,
-  inscritosDe,
-  nombreCoach,
-  etiquetaPeriodo,
-  finalizacionDe
-) {
+async function descargarResumen(lista, inscritosDe, nombreCoach, etiquetaPeriodo, finalizacionDe) {
   const XLSX = await import('xlsx');
   const filas = [...lista]
-    .sort(
-      (a, b) =>
-        a.fecha.localeCompare(b.fecha) ||
-        a.horario.hora.localeCompare(b.horario.hora)
-    )
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.horario.hora.localeCompare(b.horario.hora))
     .map((o) => {
       const ins = inscritosDe(o.horario.id, o.fecha);
       const fin = finalizacionDe(o.horario.id, o.fecha);
@@ -819,22 +669,10 @@ async function descargarResumen(
   filas.push({});
   filas.push({ Fecha: 'TOTAL CLASES', Hora: lista.length });
   const hoja = XLSX.utils.json_to_sheet(filas);
-  hoja['!cols'] = [
-    { wch: 14 },
-    { wch: 8 },
-    { wch: 10 },
-    { wch: 11 },
-    { wch: 40 },
-  ];
+  hoja['!cols'] = [{ wch: 14 }, { wch: 8 }, { wch: 10 }, { wch: 11 }, { wch: 40 }];
   const libro = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(libro, hoja, 'Clases');
-  XLSX.writeFile(
-    libro,
-    `clases-${(nombreCoach || 'coach').replace(
-      /\s+/g,
-      '-'
-    )}-${etiquetaPeriodo}.xlsx`
-  );
+  XLSX.writeFile(libro, `clases-${(nombreCoach || 'coach').replace(/\s+/g, '-')}-${etiquetaPeriodo}.xlsx`);
 }
 
 export default function MisClases() {
@@ -853,6 +691,7 @@ export default function MisClases() {
   } = useAuth();
   const [tab, setTab] = useState('proximas');
   const [mesFiltro, setMesFiltro] = useState('todos');
+  const [diaElegido, setDiaElegido] = useState(null);
 
   const hoy = soloFechaLocal(new Date());
   // Clase "mía" ese día: soy el coach del horario, o me tocó de reemplazo
@@ -875,11 +714,7 @@ export default function MisClases() {
           asistio: r.asistio,
           primeraClase: esPrimeraClase(usuario.id, fecha),
           fueraDePlazo: (solicitudesFueraPlazo || []).some(
-            (s) =>
-              s.horario_id === horarioId &&
-              s.fecha === fecha &&
-              s.usuario_id === usuario.id &&
-              s.estado === 'aprobada'
+            (s) => s.horario_id === horarioId && s.fecha === fecha && s.usuario_id === usuario.id && s.estado === 'aprobada'
           ),
           observacion: observacionDe(usuario.id),
         };
@@ -888,94 +723,85 @@ export default function MisClases() {
   }
 
   // 1) Por finalizar: ya empezaron, tuvieron alumnos y falta cerrarlas.
-  const porFinalizar = clasesPorFinalizarEnRango(
-    restarDias(hoy, 60),
-    hoy
-  ).filter((o) => esMia(o.horario, o.fecha));
-  const clavesPorFinalizar = new Set(
-    porFinalizar.map((o) => `${o.horario.id}_${o.fecha}`)
-  );
+  const porFinalizar = clasesPorFinalizarEnRango(restarDias(hoy, 60), hoy).filter((o) => esMia(o.horario, o.fecha));
+  const clavesPorFinalizar = new Set(porFinalizar.map((o) => `${o.horario.id}_${o.fecha}`));
 
   // Se abre sola la primera clase por finalizar, para que el botón quede a la vista
   const [abierta, setAbierta] = useState(() =>
-    porFinalizar[0]
-      ? `${porFinalizar[0].horario.id}_${porFinalizar[0].fecha}`
-      : null
+    porFinalizar[0] ? `${porFinalizar[0].horario.id}_${porFinalizar[0].fecha}` : null
   );
 
   // 2) Próximas
   const diasProximos = proximosDiasHabiles(14);
 
   // Resumen de hoy (lo primero que ve el coach al abrir la app)
-  const nombreHoy = capitalizar(
-    new Date().toLocaleDateString('es-CL', { weekday: 'long' })
-  );
+  const nombreHoy = capitalizar(new Date().toLocaleDateString('es-CL', { weekday: 'long' }));
   const clasesHoy = horarios
-    .filter((h) =>
-      h.fecha_unica ? h.fecha_unica === hoy : h.dia === nombreHoy
-    )
+    .filter((h) => (h.fecha_unica ? h.fecha_unica === hoy : h.dia === nombreHoy))
     .filter((h) => esMia(h, hoy) && !horarioEstaCancelado(h.id, hoy))
     .sort((a, b) => a.hora.localeCompare(b.hora))
-    .map((h) => ({
-      h,
-      inscritos: reservas.filter(
-        (r) => r.horario_id === h.id && r.fecha === hoy
-      ).length,
-    }));
+    .map((h) => ({ h, inscritos: reservas.filter((r) => r.horario_id === h.id && r.fecha === hoy).length }));
   const inscritosHoy = clasesHoy.reduce((acc, c) => acc + c.inscritos, 0);
   // La que está en curso o la siguiente (una clase "en curso" dura hasta 1 hora después de empezar)
   const siguienteHoy = clasesHoy.find(
-    ({ h }) =>
-      horaAFecha(hoy, h.hora).getTime() + 60 * 60 * 1000 > Date.now() &&
-      !finalizacionDe(h.id, hoy)
+    ({ h }) => horaAFecha(hoy, h.hora).getTime() + 60 * 60 * 1000 > Date.now() && !finalizacionDe(h.id, hoy)
   );
 
   function verClase(h) {
     const clave = `${h.id}_${hoy}`;
+    setDiaElegido(hoy);
     setAbierta(clave);
-    setTimeout(
-      () =>
-        document
-          .getElementById(`clase-${clave}`)
-          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-      50
-    );
+    setTimeout(() => document.getElementById(`clase-${clave}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
 
   // 3) Realizadas: finalizadas (o anteriores al sistema de finalizar) a mi nombre
-  const realizadas = clasesRealizadasConAlumnosEnRango(
-    restarDias(hoy, 365),
-    hoy
-  ).filter((o) => {
+  const realizadas = clasesRealizadasConAlumnosEnRango(restarDias(hoy, 365), hoy).filter((o) => {
     const fin = finalizacionDe(o.horario.id, o.fecha);
     return fin ? fin.coach_id === usuarioActual.id : esMia(o.horario, o.fecha);
   });
 
-  const mesesDisponibles = [
-    ...new Set(realizadas.map((o) => o.fecha.slice(0, 7))),
-  ];
+  const mesesDisponibles = [...new Set(realizadas.map((o) => o.fecha.slice(0, 7)))];
   const realizadasFiltradas =
-    mesFiltro === 'todos'
-      ? realizadas
-      : realizadas.filter((o) => o.fecha.slice(0, 7) === mesFiltro);
+    mesFiltro === 'todos' ? realizadas : realizadas.filter((o) => o.fecha.slice(0, 7) === mesFiltro);
   const realizadasPorFecha = realizadasFiltradas.reduce((acc, o) => {
     (acc[o.fecha] = acc[o.fecha] || []).push(o);
     return acc;
   }, {});
 
+  function clasesDelDia(dia) {
+    return horarios
+      .filter((h) => (h.fecha_unica ? h.fecha_unica === dia.key : h.dia === dia.nombreDia))
+      .filter((h) => esMia(h, dia.key))
+      .filter((h) => !clavesPorFinalizar.has(`${h.id}_${dia.key}`))
+      .filter((h) => !finalizacionDe(h.id, dia.key))
+      .filter((h) => {
+        if (!yaEmpezo(dia.key, h.hora)) return true;
+        // Ya empezó sin alumnos: se muestra un rato (para agregar a quien llegó) y después desaparece.
+        return !yaSeRealizo(dia.key, h.hora);
+      })
+      .sort((a, b) => a.hora.localeCompare(b.hora));
+  }
+  const diaPorDefecto = diasProximos.find((d) => clasesDelDia(d).length > 0) || diasProximos[0];
+  const diaActivo = diasProximos.find((d) => d.key === diaElegido) || diaPorDefecto;
+  const clasesActivas = diaActivo ? clasesDelDia(diaActivo) : [];
+  const primerNombre = (usuarioActual.nombre || '').trim().split(/\s+/)[0] || '';
+  const horaActual = new Date().getHours();
+  const saludo = horaActual < 12 ? 'Buenos días' : horaActual < 20 ? 'Buenas tardes' : 'Buenas noches';
+
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <div className="flex bg-white/[0.04] border border-white/10 rounded-xl p-1 mb-6">
+      <p className="font-display text-3xl text-white leading-tight">Mis Clases</p>
+      <p className="text-white/40 text-xs mt-1 mb-4">
+        {saludo}{primerNombre ? `, ${primerNombre}` : ''} 👋
+      </p>
+      <div className="flex bg-white/[0.04] border border-white/10 rounded-xl p-1 mb-5">
         <button
           onClick={() => setTab('proximas')}
           className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
             tab === 'proximas' ? 'bg-cyan-brand text-ink' : 'text-white/50'
           }`}
         >
-          Próximas
-          {porFinalizar.length > 0
-            ? ` · ${porFinalizar.length} por finalizar`
-            : ''}
+          Próximas{porFinalizar.length > 0 ? ` · ${porFinalizar.length} por finalizar` : ''}
         </button>
         <button
           onClick={() => setTab('realizadas')}
@@ -989,20 +815,15 @@ export default function MisClases() {
 
       {tab === 'proximas' && (
         <div className="flex flex-col gap-6">
-          <div className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-5 overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-cyan-brand" />
-            <p className="text-cyan-brand text-[11px] font-semibold tracking-[0.15em] uppercase">
-              Hoy
-            </p>
+          <div className="relative overflow-hidden rounded-3xl border border-cyan-brand/25 bg-gradient-to-br from-[#06343d] via-[#0b1b1f] to-ink p-5">
+            <div className="absolute -bottom-16 -left-10 w-48 h-48 rounded-full bg-cyan-brand/10 blur-3xl pointer-events-none" />
+            <p className="relative text-cyan-brand text-[11px] font-semibold tracking-[0.15em] uppercase">Hoy</p>
             {clasesHoy.length === 0 ? (
-              <p className="text-white text-lg mt-1">No tienes clases hoy 🙌</p>
+              <p className="relative text-white text-lg mt-1">No tienes clases hoy 🙌</p>
             ) : (
-              <>
-                <p className="text-white text-lg mt-1">
-                  {clasesHoy.length} clase{clasesHoy.length !== 1 ? 's' : ''} ·{' '}
-                  {inscritosHoy} alumno
-                  {inscritosHoy !== 1 ? 's' : ''} inscrito
-                  {inscritosHoy !== 1 ? 's' : ''}
+              <div className="relative">
+                <p className="text-white font-display text-2xl leading-tight mt-1">
+                  {clasesHoy.length} clase{clasesHoy.length !== 1 ? 's' : ''} · {inscritosHoy} alumno{inscritosHoy !== 1 ? 's' : ''}
                 </p>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {clasesHoy.map(({ h, inscritos }) => (
@@ -1025,35 +846,24 @@ export default function MisClases() {
                     className="mt-4 w-full bg-cyan-brand text-ink font-semibold rounded-xl py-2.5 text-sm"
                   >
                     {yaEmpezo(hoy, siguienteHoy.h.hora)
-                      ? `Pasar asistencia · clase de las ${siguienteHoy.h.hora.slice(
-                          0,
-                          5
-                        )}`
-                      : `Ver lista de la clase de las ${siguienteHoy.h.hora.slice(
-                          0,
-                          5
-                        )}`}
+                      ? `Pasar asistencia · clase de las ${siguienteHoy.h.hora.slice(0, 5)}`
+                      : `Ver lista de la clase de las ${siguienteHoy.h.hora.slice(0, 5)}`}
                   </button>
                 )}
-              </>
+              </div>
             )}
           </div>
 
           {porFinalizar.length > 0 && (
             <div>
-              <p className="text-yellow-300 text-xs uppercase tracking-wide mb-1">
-                Por finalizar
-              </p>
+              <p className="text-yellow-300 text-xs uppercase tracking-wide mb-1">Por finalizar</p>
               <p className="text-white/40 text-xs mb-2">
-                Marca la asistencia y deja un comentario para que pasen a
-                Realizadas.
+                Marca la asistencia y deja un comentario para que pasen a Realizadas.
               </p>
               <div className="flex flex-col gap-2">
                 {porFinalizar.map((o) => (
                   <div key={`${o.horario.id}_${o.fecha}`}>
-                    <p className="text-white/40 text-[11px] mb-1">
-                      {formatFechaLarga(o.fecha)}
-                    </p>
+                    <p className="text-white/40 text-[11px] mb-1">{formatFechaLarga(o.fecha)}</p>
                     <TarjetaClase
                       h={o.horario}
                       fecha={o.fecha}
@@ -1068,62 +878,83 @@ export default function MisClases() {
             </div>
           )}
 
-          {diasProximos.map((dia) => {
-            const horariosDelDia = horarios
-              .filter((h) =>
-                h.fecha_unica
-                  ? h.fecha_unica === dia.key
-                  : h.dia === dia.nombreDia
-              )
-              .filter((h) => esMia(h, dia.key))
-              .filter((h) => !clavesPorFinalizar.has(`${h.id}_${dia.key}`))
-              .filter((h) => !finalizacionDe(h.id, dia.key))
-              .filter((h) => {
-                if (!yaEmpezo(dia.key, h.hora)) return true;
-                // Ya empezó sin alumnos: se muestra un rato (para agregar a quien llegó) y después desaparece.
-                return !yaSeRealizo(dia.key, h.hora);
-              })
-              .sort((a, b) => a.hora.localeCompare(b.hora));
-            if (horariosDelDia.length === 0) return null;
-            return (
-              <div key={dia.key}>
-                <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
-                  {formatFechaLarga(dia.key)}
-                </p>
-                <div className="flex flex-col gap-2">
-                  {horariosDelDia.map((h) => (
-                    <TarjetaClase
-                      key={h.id}
-                      h={h}
-                      fecha={dia.key}
-                      abierta={abierta}
-                      setAbierta={setAbierta}
-                      inscritosDe={inscritosDe}
-                      modo="proxima"
-                    />
-                  ))}
-                </div>
+          <div>
+            <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Próximas clases</p>
+            <div className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-2" style={{ scrollbarWidth: 'none' }}>
+              {diasProximos.map((d) => {
+                const activo = d.key === diaActivo?.key;
+                const cantidad = clasesDelDia(d).length;
+                return (
+                  <button
+                    key={d.key}
+                    onClick={() => setDiaElegido(d.key)}
+                    className={`shrink-0 w-[52px] rounded-2xl py-2.5 flex flex-col items-center border transition-all active:scale-95 ${
+                      activo
+                        ? 'bg-cyan-brand border-cyan-brand text-ink shadow-[0_6px_20px_-6px_rgba(0,200,230,0.6)]'
+                        : 'bg-white/[0.04] border-white/10 text-white'
+                    } ${cantidad === 0 && !activo ? 'opacity-40' : ''}`}
+                  >
+                    <span className={`text-[10px] uppercase font-semibold ${activo ? 'text-ink/70' : 'text-white/40'}`}>
+                      {d.esHoy ? 'Hoy' : d.diaCorto}
+                    </span>
+                    <span className="font-display text-xl leading-tight">{d.numero}</span>
+                    <span className="flex gap-0.5 mt-0.5 h-1.5">
+                      {Array.from({ length: Math.min(cantidad, 4) }).map((_, i) => (
+                        <span key={i} className={`w-1.5 h-1.5 rounded-full ${activo ? 'bg-ink' : 'bg-cyan-brand'}`} />
+                      ))}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {diaActivo && (
+              <p className="text-white/40 text-xs mt-3 mb-2">{formatFechaLarga(diaActivo.key)}</p>
+            )}
+            {clasesActivas.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-white/35 text-sm">No tienes clases este día.</p>
               </div>
-            );
-          })}
+            ) : (
+              <div className="flex flex-col gap-2">
+                {clasesActivas.map((h) => (
+                  <TarjetaClase
+                    key={h.id}
+                    h={h}
+                    fecha={diaActivo.key}
+                    abierta={abierta}
+                    setAbierta={setAbierta}
+                    inscritosDe={inscritosDe}
+                    modo="proxima"
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {tab === 'realizadas' && (
         <>
-          <div className="flex items-center justify-between gap-2 mb-4">
-            <select
-              value={mesFiltro}
-              onChange={(e) => setMesFiltro(e.target.value)}
-              className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors"
-            >
-              <option value="todos">Todos los meses</option>
-              {mesesDisponibles.map((m) => (
-                <option key={m} value={m}>
-                  {nombreMes(m)}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex-1 flex gap-2 overflow-x-auto -ml-6 pl-6 pb-1" style={{ scrollbarWidth: 'none' }}>
+              {['todos', ...[...mesesDisponibles].sort().reverse()].map((m) => {
+                const activo = mesFiltro === m;
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setMesFiltro(m)}
+                    className={`shrink-0 rounded-full px-4 py-1.5 text-sm border transition-colors ${
+                      activo
+                        ? 'bg-cyan-brand border-cyan-brand text-ink font-semibold'
+                        : 'bg-white/[0.04] border-white/10 text-white/60'
+                    }`}
+                  >
+                    {m === 'todos' ? 'Todas' : nombreMes(m)}
+                  </button>
+                );
+              })}
+            </div>
             {realizadasFiltradas.length > 0 && (
               <button
                 onClick={() =>
@@ -1135,32 +966,21 @@ export default function MisClases() {
                     finalizacionDe
                   )
                 }
-                className="flex items-center gap-1.5 bg-white/[0.06] border border-white/10 text-white/80 rounded-lg px-3 py-2 text-xs"
+                className="shrink-0 flex items-center gap-1.5 bg-white/[0.06] border border-white/10 text-white/80 rounded-full px-3 py-1.5 text-xs"
               >
                 <Download size={14} /> Excel
               </button>
             )}
           </div>
 
-          {realizadasFiltradas.length > 0 && (
-            <ResumenRealizadas
-              lista={realizadasFiltradas}
-              inscritosDe={inscritosDe}
-            />
-          )}
+          {realizadasFiltradas.length > 0 && <ResumenRealizadas lista={realizadasFiltradas} inscritosDe={inscritosDe} />}
 
-          {realizadasFiltradas.length === 0 && (
-            <p className="text-white/30 text-sm">
-              Aún no tienes clases realizadas.
-            </p>
-          )}
+          {realizadasFiltradas.length === 0 && <p className="text-white/30 text-sm">Aún no tienes clases realizadas.</p>}
 
           <div className="flex flex-col gap-6">
-            {Object.entries(realizadasPorFecha).map(([fecha, items]) => (
+            {Object.entries(realizadasPorFecha).sort((a, b) => b[0].localeCompare(a[0])).map(([fecha, items]) => (
               <div key={fecha}>
-                <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
-                  {formatFechaLarga(fecha)}
-                </p>
+                <p className="text-white/40 text-xs uppercase tracking-wide mb-2">{formatFechaLarga(fecha)}</p>
                 <div className="flex flex-col gap-2">
                   {items.map((o) => (
                     <TarjetaClase

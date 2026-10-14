@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { hoyLocalISO, sumarDias } from '../lib/ingresos';
 import { useAuth } from '../context/AuthContext';
 import { subirImagen } from '../lib/storage';
 import { EvaluacionPendiente } from '../components/EvaluarClase';
@@ -19,6 +20,12 @@ import {
   HelpCircle,
   Camera,
   X,
+  CalendarClock,
+  Flame,
+  Ticket,
+  Users,
+  ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 
 const WHATSAPP_NUMERO = '56958540928';
@@ -29,7 +36,7 @@ const PREGUNTAS_FRECUENTES = [
   {
     pregunta: '¿Cómo cancelo una reserva?',
     respuesta:
-      'Ve a "Mis Reservas", elige la clase y toca "Cancelar esta reserva". Debes hacerlo con al menos 3 horas de anticipación, o la sesión se descontará igual.',
+      'Ve a "Mis Reservas", elige la clase y toca "Cancelar". Debes hacerlo con al menos {HORAS} horas de anticipación, o la sesión se descontará igual.',
   },
   {
     pregunta: '¿Qué pasa si llego tarde a una clase?',
@@ -72,6 +79,237 @@ function renderizarContenido(texto) {
     }
     return parte;
   });
+}
+
+const FRASES = [
+  'Cada clase suma. Lo importante es volver.',
+  'No tienes que ser el mejor, solo mejor que ayer.',
+  'La constancia le gana a la motivación.',
+  'Tu cuerpo agradece cada hora que le dedicas.',
+  'Un buen entrenamiento nunca se lamenta.',
+  'Pequeños pasos, grandes cambios.',
+  'Hoy es un buen día para moverse.',
+  'La disciplina es elegir lo que quieres a largo plazo.',
+  'Entrenar también es cuidarte.',
+  'Lo difícil hoy es lo fácil de mañana.',
+  'Llegar ya es la mitad del trabajo.',
+  'El progreso no siempre se ve, pero siempre se siente.',
+  'Respira, enfócate y dale.',
+  'Juntos se entrena mejor.',
+];
+
+const DIAS_NOMBRE = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DIAS_CORTOS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+function saludoSegunHora() {
+  const h = new Date().getHours();
+  if (h < 5) return 'Buenas noches';
+  if (h < 12) return 'Buenos días';
+  if (h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+function fraseDelDia() {
+  const hoy = new Date();
+  const inicio = new Date(hoy.getFullYear(), 0, 0);
+  const diaDelAnio = Math.floor((hoy - inicio) / 86400000);
+  return FRASES[diaDelAnio % FRASES.length];
+}
+
+function cuandoEs(fecha, hoy) {
+  if (fecha === hoy) return 'Hoy';
+  if (fecha === sumarDias(hoy, 1)) return 'Mañana';
+  return DIAS_NOMBRE[new Date(fecha + 'T12:00:00').getDay()];
+}
+
+function Bienvenida() {
+  const { usuarioActual, reservas, horarios, sesionesRestantes, rolEfectivo, coachDeClase, horarioEstaCancelado } = useAuth();
+  const vista = rolEfectivo || usuarioActual.rol;
+  const esAlumno = vista === 'usuario';
+  const esCoach = vista === 'coach';
+  const primerNombre = (usuarioActual.nombre || '').trim().split(/\s+/)[0] || '';
+  const hoy = hoyLocalISO();
+
+  const datos = useMemo(() => {
+    const horarioDe = {};
+    for (const h of horarios || []) horarioDe[h.id] = h;
+    const ahora = new Date();
+    const horaAhora = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+    const confirmadas = (reservas || []).filter((r) => r.estado === 'confirmada');
+
+    // Personas que entrenan hoy en el gimnasio
+    const entrenanHoy = new Set(confirmadas.filter((r) => r.fecha === hoy).map((r) => r.usuario_id)).size;
+
+    // Mis reservas
+    const mias = confirmadas.filter((r) => r.usuario_id === usuarioActual.id);
+    const proximas = mias
+      .map((r) => ({ ...r, hora: horarioDe[r.horario_id]?.hora || '' }))
+      .filter((r) => r.fecha > hoy || (r.fecha === hoy && r.hora >= horaAhora))
+      .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+    const proxima = proximas[0] || null;
+
+    const mes = hoy.slice(0, 7);
+    const esteMes = mias.filter((r) => r.fecha.startsWith(mes) && r.fecha <= hoy && r.asistio !== false).length;
+
+    // Semana actual (lunes a domingo)
+    const diaSemana = (new Date(hoy + 'T12:00:00').getDay() + 6) % 7; // 0 = lunes
+    const lunes = sumarDias(hoy, -diaSemana);
+    const semana = DIAS_CORTOS.map((letra, i) => {
+      const fecha = sumarDias(lunes, i);
+      const r = mias.find((x) => x.fecha === fecha);
+      let estado = 'nada';
+      if (r) estado = fecha < hoy ? (r.asistio === false ? 'nada' : 'fue') : 'reservada';
+      return { letra, fecha, estado, esHoy: fecha === hoy };
+    });
+    const clasesSemana = semana.filter((d) => d.estado === 'fue' || d.estado === 'reservada').length;
+
+    // Para el equipo: clases y alumnos de hoy
+    const clasesHoy = new Set(confirmadas.filter((r) => r.fecha === hoy).map((r) => r.horario_id)).size;
+
+    // Para el coach: SOLO sus clases de hoy (las que dicta él, incluido si es reemplazo) y sus alumnos
+    const nombreHoy = DIAS_NOMBRE[new Date(hoy + 'T12:00:00').getDay()];
+    const misClasesHoy = (horarios || []).filter(
+      (h) =>
+        (h.fecha_unica ? h.fecha_unica === hoy : h.dia === nombreHoy) &&
+        coachDeClase &&
+        String(coachDeClase(h, hoy).id) === String(usuarioActual.id) &&
+        !(horarioEstaCancelado && horarioEstaCancelado(h.id, hoy))
+    );
+    const idsMisClases = new Set(misClasesHoy.map((h) => h.id));
+    const misAlumnosHoy = new Set(
+      confirmadas.filter((r) => r.fecha === hoy && idsMisClases.has(r.horario_id)).map((r) => r.usuario_id)
+    ).size;
+
+    return { entrenanHoy, proxima, esteMes, semana, clasesSemana, clasesHoy, misClasesHoy: misClasesHoy.length, misAlumnosHoy };
+  }, [reservas, horarios, usuarioActual.id, hoy]);
+
+  const restantes = esAlumno ? sesionesRestantes(usuarioActual) : null;
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-cyan-brand/20 bg-gradient-to-br from-[#06343d] via-[#0b1b1f] to-ink p-5 mb-6">
+      <div className="absolute -bottom-16 -left-10 w-48 h-48 rounded-full bg-cyan-brand/10 blur-3xl" />
+
+      <div className="relative">
+        <p className="text-cyan-brand/80 text-xs font-semibold">{saludoSegunHora()},</p>
+        <p className="text-white font-display text-3xl leading-tight mt-0.5">
+          {primerNombre} 👋
+        </p>
+        <p className="text-white/60 text-sm mt-2 flex items-start gap-1.5">
+          <Sparkles size={14} className="text-cyan-brand shrink-0 mt-0.5" />
+          <span className="italic">{fraseDelDia()}</span>
+        </p>
+
+        {esAlumno ? (
+          <>
+            {/* Próxima clase */}
+            {datos.proxima ? (
+              <Link
+                to="/reservas"
+                className="mt-4 flex items-center gap-3 bg-white/[0.07] border border-white/10 rounded-2xl p-3 transition-transform active:scale-[0.98]"
+              >
+                <div className="w-11 h-11 rounded-xl bg-cyan-brand flex items-center justify-center shrink-0">
+                  <CalendarClock size={20} className="text-ink" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white/50 text-[11px] uppercase tracking-wide">Tu próxima clase</p>
+                  <p className="text-white font-semibold">
+                    {cuandoEs(datos.proxima.fecha, hoy)} · {datos.proxima.hora}
+                  </p>
+                </div>
+                <ChevronRight size={18} className="text-white/40" />
+              </Link>
+            ) : (
+              <Link
+                to="/horarios"
+                className="mt-4 flex items-center gap-3 bg-cyan-brand rounded-2xl p-3 transition-transform active:scale-[0.98]"
+              >
+                <div className="w-11 h-11 rounded-xl bg-ink/15 flex items-center justify-center shrink-0">
+                  <CalendarClock size={20} className="text-ink" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-ink font-semibold">Reserva tu próxima clase</p>
+                  <p className="text-ink/70 text-xs">Aún no tienes clases agendadas</p>
+                </div>
+                <ChevronRight size={18} className="text-ink/60" />
+              </Link>
+            )}
+
+            {/* Mi semana */}
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-white/50 text-[11px] uppercase tracking-wide">Mi semana</p>
+                <p className="text-white/50 text-[11px]">
+                  {datos.clasesSemana === 0
+                    ? '¡A empezar!'
+                    : `${datos.clasesSemana} ${datos.clasesSemana === 1 ? 'clase' : 'clases'}`}
+                </p>
+              </div>
+              <div className="flex justify-between">
+                {datos.semana.map((d) => (
+                  <div key={d.fecha} className="flex flex-col items-center gap-1">
+                    <div
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold ${
+                        d.estado === 'fue'
+                          ? 'bg-cyan-brand text-ink'
+                          : d.estado === 'reservada'
+                          ? 'border-2 border-cyan-brand/70 text-cyan-brand'
+                          : 'bg-white/[0.06] text-white/30'
+                      } ${d.esHoy ? 'ring-2 ring-white/70 ring-offset-2 ring-offset-[#0b1b1f]' : ''}`}
+                    >
+                      {d.estado === 'fue' ? '✓' : d.letra}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Datos rápidos */}
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <Dato icono={Ticket} valor={restantes ?? '—'} texto={restantes === 1 ? 'sesión disponible' : 'sesiones disponibles'} />
+              <Dato icono={Flame} valor={datos.esteMes} texto={datos.esteMes === 1 ? 'clase este mes' : 'clases este mes'} />
+              {datos.entrenanHoy > 0 ? (
+                <Dato icono={Users} valor={datos.entrenanHoy} texto={datos.entrenanHoy === 1 ? 'persona entrena hoy' : 'personas entrenan hoy'} />
+              ) : (
+                <Dato icono={Users} valor="💪" texto="¡Sé el primero hoy!" />
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {esCoach ? (
+              <>
+                <Dato icono={CalendarClock} valor={datos.misClasesHoy} texto={datos.misClasesHoy === 1 ? 'clase mía hoy' : 'clases mías hoy'} />
+                <Dato icono={Users} valor={datos.misAlumnosHoy} texto={datos.misAlumnosHoy === 1 ? 'alumno en mis clases hoy' : 'alumnos en mis clases hoy'} />
+              </>
+            ) : (
+              <>
+                <Dato icono={CalendarClock} valor={datos.clasesHoy} texto={datos.clasesHoy === 1 ? 'clase con reservas hoy (gym)' : 'clases con reservas hoy (gym)'} />
+                <Dato icono={Users} valor={datos.entrenanHoy} texto="alumnos entrenan hoy (gym)" />
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Dato({ icono: Icono, valor, texto }) {
+  return (
+    <div className="bg-black/25 border border-white/[0.07] rounded-2xl px-2 py-3 text-center">
+      <Icono size={15} className="text-cyan-brand mx-auto" />
+      <p className="text-white font-display text-2xl leading-none mt-1.5">{valor}</p>
+      <p className="text-white/45 text-[10px] leading-tight mt-1">{texto}</p>
+    </div>
+  );
+}
+
+function haceCuanto(fecha) {
+  const dias = Math.floor((Date.now() - new Date(fecha).getTime()) / 86400000);
+  if (dias <= 0) return 'Hoy';
+  if (dias === 1) return 'Ayer';
+  if (dias < 7) return `Hace ${dias} días`;
+  return new Date(fecha).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' });
 }
 
 function FormularioNoticia({
@@ -153,9 +391,7 @@ function FormularioNoticia({
           <input
             type="checkbox"
             checked={!!form.avisar}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, avisar: e.target.checked }))
-            }
+            onChange={(e) => setForm((prev) => ({ ...prev, avisar: e.target.checked }))}
             className="w-4 h-4 accent-cyan-500"
           />
           Avisar a todos al celular
@@ -189,6 +425,7 @@ export default function General() {
     actualizarNoticia,
     usuarios,
     enviarAvisoMasivo,
+    horasAnticipacion,
   } = useAuth();
   const esAdmin = usuarioActual.rol === 'head_coach';
 
@@ -202,9 +439,7 @@ export default function General() {
     crearNoticia(noticia);
     if (avisar) {
       enviarAvisoMasivo(
-        usuarios
-          .filter((u) => u.estado === 'activo' && u.id !== usuarioActual.id)
-          .map((u) => u.id),
+        usuarios.filter((u) => u.estado === 'activo' && u.id !== usuarioActual.id).map((u) => u.id),
         `Nueva noticia: ${noticia.titulo}`
       );
     }
@@ -221,23 +456,18 @@ export default function General() {
     setEditandoId(null);
   }
 
-  function formatearFecha(fecha) {
-    return new Date(fecha).toLocaleDateString('es-CL', {
-      day: 'numeric',
-      month: 'long',
-    });
-  }
 
   const [ultimaNoticia, ...restoNoticias] = noticias;
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
+      <Bienvenida />
       <SaludoCumpleanos />
       <EvaluacionPendiente />
       {/* Muro de noticias */}
       <div className="flex items-center justify-between mb-3">
         <p className="text-white/40 text-xs uppercase tracking-wide">
-          Muro de noticias
+          Novedades del gym
         </p>
         {esAdmin && (
           <button
@@ -254,12 +484,7 @@ export default function General() {
 
       {mostrarForm && (
         <FormularioNoticia
-          valorInicial={{
-            titulo: '',
-            contenido: '',
-            imagen_url: '',
-            avisar: true,
-          }}
+          valorInicial={{ titulo: '', contenido: '', imagen_url: '', avisar: true }}
           onGuardar={handleCrearNoticia}
           onCancelar={() => setMostrarForm(false)}
           textoBoton="Publicar"
@@ -290,8 +515,11 @@ export default function General() {
           <div className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-5 mb-3 overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-cyan-brand" />
             <div className="flex items-start justify-between gap-2 mb-1">
-              <p className="text-cyan-brand text-[10px] font-semibold tracking-[0.2em] uppercase">
+              <p className="text-cyan-brand text-[10px] font-semibold tracking-[0.2em] uppercase flex items-center gap-2">
                 Última publicación
+                {Date.now() - new Date(ultimaNoticia.created_at).getTime() < 3 * 86400000 && (
+                  <span className="bg-cyan-brand text-ink rounded-full px-2 py-0.5 tracking-normal">Nuevo</span>
+                )}
               </p>
               {esAdmin && (
                 <div className="flex gap-2 shrink-0">
@@ -327,7 +555,7 @@ export default function General() {
               {renderizarContenido(ultimaNoticia.contenido)}
             </p>
             <p className="text-white/30 text-xs mt-3">
-              {formatearFecha(ultimaNoticia.created_at)}
+              {haceCuanto(ultimaNoticia.created_at)}
             </p>
           </div>
         ))}
@@ -387,7 +615,7 @@ export default function General() {
                   {renderizarContenido(n.contenido)}
                 </p>
                 <p className="text-white/25 text-xs mt-2">
-                  {formatearFecha(n.created_at)}
+                  {haceCuanto(n.created_at)}
                 </p>
               </div>
             )
@@ -396,41 +624,43 @@ export default function General() {
       )}
       {ultimaNoticia && restoNoticias.length === 0 && <div className="mb-8" />}
 
-      {/* Redes sociales y ubicación */}
+      {/* Contacto rápido */}
       <p className="text-white/40 text-xs uppercase tracking-wide mb-3">
-        Encuéntranos
+        Estamos cerca
       </p>
-      <div className="flex flex-col gap-2 mb-8">
+      <div className="grid grid-cols-3 gap-2 mb-8">
+        <a
+          href={`https://wa.me/${WHATSAPP_NUMERO}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex flex-col items-center gap-2 bg-[#25D366]/10 border border-[#25D366]/25 rounded-2xl py-4 transition-transform active:scale-95"
+        >
+          <div className="w-11 h-11 rounded-full bg-[#25D366] flex items-center justify-center">
+            <MessageCircle size={20} className="text-white" />
+          </div>
+          <p className="text-white text-xs font-medium">WhatsApp</p>
+        </a>
         <a
           href={`https://instagram.com/${INSTAGRAM_USUARIO}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 bg-white/[0.04] border border-white/10 rounded-2xl p-4 transition-transform active:scale-[0.98]"
+          className="flex flex-col items-center gap-2 bg-pink-500/10 border border-pink-500/25 rounded-2xl py-4 transition-transform active:scale-95"
         >
-          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-            <AtSign size={18} className="text-white/60" />
+          <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600 flex items-center justify-center">
+            <AtSign size={20} className="text-white" />
           </div>
-          <div>
-            <p className="text-white text-sm font-medium">Instagram</p>
-            <p className="text-white/50 text-xs">@{INSTAGRAM_USUARIO}</p>
-          </div>
+          <p className="text-white text-xs font-medium">Instagram</p>
         </a>
-
         <a
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-            DIRECCION
-          )}`}
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(DIRECCION)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 bg-white/[0.04] border border-white/10 rounded-2xl p-4 transition-transform active:scale-[0.98]"
+          className="flex flex-col items-center gap-2 bg-cyan-brand/10 border border-cyan-brand/25 rounded-2xl py-4 transition-transform active:scale-95"
         >
-          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-            <MapPin size={18} className="text-white/60" />
+          <div className="w-11 h-11 rounded-full bg-cyan-brand flex items-center justify-center">
+            <MapPin size={20} className="text-ink" />
           </div>
-          <div>
-            <p className="text-white text-sm font-medium">Cómo llegar</p>
-            <p className="text-white/50 text-xs">{DIRECCION}</p>
-          </div>
+          <p className="text-white text-xs font-medium">Cómo llegar</p>
         </a>
       </div>
 
@@ -439,7 +669,9 @@ export default function General() {
         Preguntas frecuentes
       </p>
       <div className="flex flex-col gap-2 mb-8">
-        {PREGUNTAS_FRECUENTES.map((item, i) => {
+        {PREGUNTAS_FRECUENTES.map((original, i) => {
+          // Las horas de anticipación salen de Configuración → Políticas
+          const item = { ...original, respuesta: original.respuesta.replace('{HORAS}', String(horasAnticipacion ?? 3)) };
           const abierta = faqAbierta === i;
           return (
             <div
@@ -475,60 +707,17 @@ export default function General() {
         })}
       </div>
 
-      {/* Dudas y consultas */}
-      <p className="text-white/40 text-xs uppercase tracking-wide mb-3">
-        Dudas y consultas
-      </p>
-      <a
-        href={`https://wa.me/${WHATSAPP_NUMERO}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-3 bg-cyan-brand/10 border border-cyan-brand/30 rounded-2xl p-4 transition-transform active:scale-[0.98]"
-      >
-        <div className="w-10 h-10 rounded-full bg-cyan-brand flex items-center justify-center shrink-0">
-          <MessageCircle size={20} className="text-ink" />
-        </div>
-        <div>
-          <p className="text-white text-sm font-medium">¿Tienes dudas?</p>
-          <p className="text-white/50 text-xs">
-            Escríbenos directo por WhatsApp
-          </p>
-        </div>
-      </a>
-
-      <Link
-        to="/terminos"
-        className="flex items-center gap-3 bg-white/[0.04] border border-white/10 rounded-2xl p-4 mt-3 transition-transform active:scale-[0.98]"
-      >
-        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-          <FileText size={18} className="text-white/60" />
-        </div>
-        <div>
-          <p className="text-white text-sm font-medium">
-            Términos y condiciones
-          </p>
-          <p className="text-white/50 text-xs">
-            Revisa las condiciones de tu membresía
-          </p>
-        </div>
-      </Link>
-
-      <Link
-        to="/privacidad"
-        className="flex items-center gap-3 bg-white/[0.04] border border-white/10 rounded-2xl p-4 mt-3 transition-transform active:scale-[0.98]"
-      >
-        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-          <Shield size={18} className="text-white/60" />
-        </div>
-        <div>
-          <p className="text-white text-sm font-medium">
-            Política de Privacidad
-          </p>
-          <p className="text-white/50 text-xs">
-            Cómo cuidamos tus datos personales
-          </p>
-        </div>
-      </Link>
+      {/* Legal */}
+      <div className="flex items-center justify-center gap-4 text-xs text-white/35">
+        <Link to="/terminos" className="flex items-center gap-1 hover:text-white/60">
+          <FileText size={12} /> Términos y condiciones
+        </Link>
+        <span>·</span>
+        <Link to="/privacidad" className="flex items-center gap-1 hover:text-white/60">
+          <Shield size={12} /> Privacidad
+        </Link>
+      </div>
+      <p className="text-center text-white/20 text-[11px] mt-2">{DIRECCION}</p>
     </div>
   );
 }

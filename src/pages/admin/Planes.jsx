@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Pencil, Ticket, CalendarDays, Snowflake, Users } from 'lucide-react';
 
 export default function Planes() {
   const { planes, guardarPlan, crearPlan, eliminarPlan, usuarios } = useAuth();
@@ -10,9 +10,7 @@ export default function Planes() {
   async function confirmarEliminar(planId) {
     const resultado = await eliminarPlan(planId);
     setEliminando(null);
-    setErrorEliminar(
-      resultado.ok ? null : { planId, mensaje: resultado.mensaje }
-    );
+    setErrorEliminar(resultado.ok ? null : { planId, mensaje: resultado.mensaje });
   }
   const [editando, setEditando] = useState(null);
   const [form, setForm] = useState({});
@@ -85,15 +83,22 @@ export default function Planes() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <div className="flex justify-end mb-6">
+      <div className="flex items-end justify-between gap-3 mb-5">
+        <div>
+          <p className="font-display text-3xl text-white leading-tight">Planes</p>
+          <p className="text-white/40 text-xs mt-1">
+            {Object.keys(planes).length} plan{Object.keys(planes).length !== 1 ? 'es' : ''} ·{' '}
+            {usuarios.filter((u) => u.plan_id && u.estado !== 'inactivo').length} alumnos con plan
+          </p>
+        </div>
         <button
           onClick={() => {
             setMostrarNuevo(!mostrarNuevo);
             setEditando(null);
           }}
-          className="flex items-center gap-1 bg-cyan-brand text-ink text-sm font-semibold px-3 py-2 rounded-lg transition-transform active:scale-95"
+          className="flex items-center gap-1 bg-cyan-brand text-ink text-sm font-semibold px-3 py-2 rounded-xl shrink-0 transition-transform active:scale-95"
         >
-          <Plus size={16} /> Nuevo
+          <Plus size={16} /> Nuevo plan
         </button>
       </div>
 
@@ -185,10 +190,12 @@ export default function Planes() {
       )}
 
       <div className="flex flex-col gap-3">
-        {Object.values(planes).map((p) => (
+        {Object.values(planes)
+          .sort((a, b) => (a.valor_con_iva || 0) - (b.valor_con_iva || 0))
+          .map((p) => (
           <div
             key={p.id}
-            className="bg-white/[0.04] border border-white/10 rounded-2xl p-4"
+            className="relative overflow-hidden bg-white/[0.04] border border-white/10 rounded-3xl p-5"
           >
             {editando === p.id ? (
               <div className="flex flex-col gap-2">
@@ -250,75 +257,91 @@ export default function Planes() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white font-display text-xl">{p.nombre}</p>
-                  <p className="text-white/40 text-sm">
-                    {p.cantidad_sesiones
-                      ? `${p.cantidad_sesiones} sesiones/mes`
-                      : 'Ilimitado'}{' '}
-                    · Neto ${p.valor_neto.toLocaleString('es-CL')} · Con IVA $
-                    {p.valor_con_iva.toLocaleString('es-CL')}
-                  </p>
-                  <p className="text-white/30 text-xs mt-0.5">
-                    Duración: {p.duracion_dias || 30} días
-                    {(p.duracion_dias || 30) < 90
-                      ? ' · sin derecho a congelar'
-                      : ' · con derecho a congelar'}
-                  </p>
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-white font-display text-2xl leading-tight">{p.nombre}</p>
+                    <p className="font-display text-3xl text-cyan-brand leading-none mt-2">
+                      ${(p.valor_con_iva || 0).toLocaleString('es-CL')}
+                      <span className="text-white/40 text-xs font-sans ml-1.5">con IVA</span>
+                    </p>
+                    <p className="text-white/35 text-xs mt-1">Neto ${(p.valor_neto || 0).toLocaleString('es-CL')}</p>
+                  </div>
+                  {eliminando === p.id ? (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-red-300 text-xs">¿Eliminar?</span>
+                      <button
+                        onClick={() => confirmarEliminar(p.id)}
+                        className="bg-red-500/80 text-white text-xs font-semibold px-2.5 py-1.5 rounded-md"
+                      >
+                        Sí
+                      </button>
+                      <button
+                        onClick={() => setEliminando(null)}
+                        className="bg-white/10 text-white text-xs px-2.5 py-1.5 rounded-md"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => abrirEdicion(p)}
+                        className="w-9 h-9 rounded-full bg-cyan-brand/15 text-cyan-brand flex items-center justify-center transition-transform active:scale-90"
+                        aria-label="Editar plan"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEliminando(p.id);
+                          setErrorEliminar(null);
+                        }}
+                        className="w-9 h-9 rounded-full bg-red-500/10 text-red-300 flex items-center justify-center transition-transform active:scale-90"
+                        aria-label="Eliminar plan"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  )}
                 </div>
-                {eliminando === p.id ? (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-red-300 text-xs">¿Eliminar?</span>
-                    <button
-                      onClick={() => confirmarEliminar(p.id)}
-                      className="bg-red-500/80 text-white text-xs font-semibold px-2.5 py-1.5 rounded-md"
-                    >
-                      Sí
-                    </button>
-                    <button
-                      onClick={() => setEliminando(null)}
-                      className="bg-white/10 text-white text-xs px-2.5 py-1.5 rounded-md"
-                    >
-                      No
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 shrink-0">
-                    <button
-                      onClick={() => abrirEdicion(p)}
-                      className="text-cyan-brand text-sm font-medium transition-transform active:scale-95"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEliminando(p.id);
-                        setErrorEliminar(null);
-                      }}
-                      className="text-red-400/70 p-1 hover:text-red-400 transition-transform active:scale-90"
-                      aria-label="Eliminar plan"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                )}
+
+                <div className="flex flex-wrap gap-1.5 mt-4">
+                  <span className="flex items-center gap-1 bg-white/[0.06] text-white/75 text-xs rounded-full px-2.5 py-1">
+                    <Ticket size={12} className="text-cyan-brand" />
+                    {p.cantidad_sesiones ? `${p.cantidad_sesiones} sesiones` : 'Ilimitado'}
+                  </span>
+                  <span className="flex items-center gap-1 bg-white/[0.06] text-white/75 text-xs rounded-full px-2.5 py-1">
+                    <CalendarDays size={12} className="text-amber-300" />
+                    {p.duracion_dias || 30} días
+                  </span>
+                  <span
+                    className={`flex items-center gap-1 text-xs rounded-full px-2.5 py-1 ${
+                      (p.duracion_dias || 30) >= 90 ? 'bg-sky-400/10 text-sky-200' : 'bg-white/[0.04] text-white/40'
+                    }`}
+                  >
+                    <Snowflake size={12} />
+                    {(p.duracion_dias || 30) >= 90 ? 'Puede congelar' : 'Sin congelar'}
+                  </span>
+                  {p.cantidad_sesiones && p.valor_con_iva ? (
+                    <span className="bg-white/[0.04] text-white/45 text-xs rounded-full px-2.5 py-1">
+                      ${Math.round(p.valor_con_iva / p.cantidad_sesiones).toLocaleString('es-CL')} por sesión
+                    </span>
+                  ) : null}
+                </div>
               </div>
             )}
             {editando !== p.id && (
-              <p className="text-white/30 text-xs mt-1">
+              <p className="flex items-center gap-1.5 text-white/45 text-xs mt-3 pt-3 border-t border-white/[0.06]">
+                <Users size={13} />
                 {(() => {
                   const n = usuarios.filter((u) => u.plan_id === p.id).length;
-                  return n === 0
-                    ? 'Ningún alumno con este plan'
-                    : `${n} ${n === 1 ? 'alumno' : 'alumnos'} con este plan`;
+                  return n === 0 ? 'Ningún alumno con este plan' : `${n} ${n === 1 ? 'alumno' : 'alumnos'} con este plan`;
                 })()}
               </p>
             )}
             {errorEliminar?.planId === p.id && (
-              <p className="text-red-400 text-xs mt-2">
-                {errorEliminar.mensaje}
-              </p>
+              <p className="text-red-400 text-xs mt-2">{errorEliminar.mensaje}</p>
             )}
           </div>
         ))}

@@ -10,7 +10,19 @@ import {
   Check,
   AlertCircle,
   X,
+  RotateCcw,
+  Calendar,
 } from 'lucide-react';
+
+// Último día de rutina que abrió el alumno (se guarda en este celular)
+function leerUltimoDia(rutinaId) {
+  try {
+    const d = JSON.parse(localStorage.getItem('cedys_rutina_ultima') || 'null');
+    return d && d.rutinaId === rutinaId ? d : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function MiRutina() {
   const navigate = useNavigate();
@@ -29,6 +41,14 @@ export default function MiRutina() {
   const [mensaje, setMensaje] = useState(null);
 
   const rutinaActiva = rutinaActivaDe(usuarioActual.id);
+  const ultimoDia = rutinaActiva ? leerUltimoDia(rutinaActiva.id) : null;
+  const primerNombre = (usuarioActual.nombre || '').trim().split(/\s+/)[0] || '';
+  const semanasActiva = rutinaActiva?.fecha_asignacion
+    ? Math.max(
+        1,
+        Math.floor((Date.now() - new Date(rutinaActiva.fecha_asignacion + 'T00:00:00').getTime()) / (7 * 86400000)) + 1
+      )
+    : null;
   const historial = historialRutinasDe(usuarioActual.id).filter(
     (h) => !h.activa
   );
@@ -83,67 +103,80 @@ export default function MiRutina() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <p className="text-cyan-brand text-[11px] font-semibold tracking-[0.2em] uppercase mb-1">
-        CED&S Training
-      </p>
-      <p className="font-display text-3xl text-white leading-tight">
-        Mi Rutina
-      </p>
-      <p className="text-white/40 text-xs mt-1 mb-6">
-        Tu plan de entrenamiento actual
+      <p className="font-display text-3xl text-white leading-tight">Mi Rutina</p>
+      <p className="text-white/40 text-xs mt-1 mb-5">
+        {rutinaActiva ? `¡Vamos${primerNombre ? ', ' + primerNombre : ''}! Hoy toca darlo todo 💪` : 'Tu plan de entrenamiento'}
       </p>
 
       {rutinaActiva ? (
-        <div className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-6 mb-3 overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-cyan-brand" />
-
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-full bg-cyan-brand/15 border border-cyan-brand/30 flex items-center justify-center shrink-0">
-              <Dumbbell size={20} className="text-cyan-brand" />
-            </div>
-            <p className="text-cyan-brand text-[11px] font-semibold tracking-[0.2em] uppercase">
-              Rutina activa
+        <div className="relative overflow-hidden rounded-3xl border border-cyan-brand/25 bg-gradient-to-br from-[#06343d] via-[#0b1b1f] to-ink p-5 mb-3">
+          <div className="absolute -bottom-16 -left-10 w-48 h-48 rounded-full bg-cyan-brand/10 blur-3xl" />
+          <Dumbbell
+            size={120}
+            className="absolute -right-6 -top-4 text-cyan-brand/[0.07] rotate-[-30deg]"
+          />
+          <div className="relative">
+            <span className="inline-flex items-center gap-1.5 bg-cyan-brand/15 border border-cyan-brand/30 text-cyan-brand text-[11px] font-semibold rounded-full px-2.5 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-brand animate-pulse" /> Rutina activa
+            </span>
+            <p className="font-display text-white leading-tight mt-3" style={{ fontSize: '2rem' }}>
+              {rutinaActiva.nombre}
             </p>
+            <p className="text-white/45 text-xs mt-1.5 flex items-center gap-1.5">
+              <Calendar size={12} /> Desde el {formatearFecha(rutinaActiva.fecha_asignacion)}
+              {semanasActiva ? ` · semana ${semanasActiva} con este plan` : ''}
+            </p>
+
+            {ultimoDia && (
+              <button
+                onClick={() =>
+                  navigate(`/rutinas/${rutinaActiva.id}/semanas/${ultimoDia.semanaId}/dias/${ultimoDia.diaId}`)
+                }
+                className="w-full flex items-center gap-3 bg-white/[0.07] border border-white/10 rounded-2xl p-3 mt-5 text-left transition-transform active:scale-[0.98]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                  <RotateCcw size={18} className="text-cyan-brand" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white/45 text-[11px] uppercase tracking-wide">Continuar donde quedaste</p>
+                  <p className="text-white font-semibold truncate">
+                    Semana {ultimoDia.semanaNumero} · {ultimoDia.diaNombre}
+                  </p>
+                </div>
+                <ChevronRight size={18} className="text-white/40" />
+              </button>
+            )}
+
+            <button
+              onClick={() => navigate(`/rutinas/${rutinaActiva.id}`)}
+              className={`w-full flex items-center justify-center gap-2 bg-cyan-brand text-ink font-bold rounded-2xl py-4 text-sm tracking-wide transition-transform active:scale-[0.98] ${
+                ultimoDia ? 'mt-2' : 'mt-5'
+              }`}
+            >
+              <Play size={16} fill="currentColor" /> {ultimoDia ? 'VER TODA LA RUTINA' : 'COMENZAR ENTRENAMIENTO'}
+            </button>
           </div>
-
-          <p
-            className="font-display text-white leading-tight"
-            style={{ fontSize: '2rem' }}
-          >
-            {rutinaActiva.nombre}
-          </p>
-          <p className="text-white/50 text-sm mt-2">
-            Tu programa de entrenamiento actual
-          </p>
-          <p className="text-white/30 text-xs mt-1">
-            Activa desde {formatearFecha(rutinaActiva.fecha_asignacion)}
-          </p>
-
-          <button
-            onClick={() => navigate(`/rutinas/${rutinaActiva.id}`)}
-            className="w-full flex items-center justify-center gap-2 bg-cyan-brand text-ink font-bold rounded-2xl py-4 text-sm tracking-wide mt-5 transition-transform active:scale-[0.98]"
-          >
-            <Play size={16} fill="currentColor" /> COMENZAR ENTRENAMIENTO
-          </button>
         </div>
       ) : (
-        <div className="text-center py-10 mb-3">
-          <Dumbbell size={36} className="text-white/15 mx-auto mb-4" />
-          <p className="text-white font-display text-xl mb-1">
-            Aún no tienes una rutina
-          </p>
-          <p className="text-white/40 text-sm mb-6 px-4">
-            Tu coach puede asignarte un plan de entrenamiento o puedes importar
-            tu propia rutina.
-          </p>
-          {!mostrarForm && (
-            <button
-              onClick={() => setMostrarForm(true)}
-              className="bg-cyan-brand text-ink font-bold rounded-2xl px-6 py-3 text-sm tracking-wide transition-transform active:scale-[0.98]"
-            >
-              IMPORTAR MI RUTINA
-            </button>
-          )}
+        <div className="relative overflow-hidden rounded-3xl border border-cyan-brand/20 bg-gradient-to-br from-[#06343d] via-[#0b1b1f] to-ink text-center px-6 py-10 mb-3">
+          <div className="absolute -bottom-16 -left-10 w-48 h-48 rounded-full bg-cyan-brand/10 blur-3xl" />
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl bg-cyan-brand/15 flex items-center justify-center mx-auto mb-4">
+              <Dumbbell size={30} className="text-cyan-brand" />
+            </div>
+            <p className="text-white font-display text-2xl mb-1">Aún no tienes una rutina</p>
+            <p className="text-white/50 text-sm mb-6">
+              Tu coach puede asignarte un plan de entrenamiento o puedes importar tu propia rutina.
+            </p>
+            {!mostrarForm && (
+              <button
+                onClick={() => setMostrarForm(true)}
+                className="inline-flex items-center gap-2 bg-cyan-brand text-ink font-bold rounded-2xl px-6 py-3 text-sm transition-transform active:scale-[0.98]"
+              >
+                <Upload size={16} /> Importar mi rutina
+              </button>
+            )}
+          </div>
         </div>
       )}
 
