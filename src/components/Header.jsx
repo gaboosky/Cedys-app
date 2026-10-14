@@ -10,6 +10,7 @@ import {
   Dumbbell,
   FileBarChart,
   MessageSquare,
+  Star,
   Wallet,
   RefreshCw,
   MapPin,
@@ -58,6 +59,7 @@ const TITULOS = {
   '/general': 'General',
   '/mi-rutina': 'Mi Rutina',
   '/progreso': 'Progreso',
+  '/mis-evaluaciones': 'Mis evaluaciones',
 };
 
 const SUBTITULOS = {
@@ -87,6 +89,7 @@ const SUBTITULOS = {
   '/general': 'Noticias y novedades del gym',
   '/mi-rutina': 'Tu plan de entrenamiento',
   '/progreso': 'Tu evolución en el tiempo',
+  '/mis-evaluaciones': 'Lo que opinan de tus clases',
 };
 
 function formatearFechaNotif(fechaISO) {
@@ -142,7 +145,6 @@ export default function Header() {
   const {
     usuarioActual,
     logout,
-    logoUrl,
     notificaciones,
     marcarNotificacionLeida,
     rolEfectivo,
@@ -180,29 +182,58 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-black border-b border-white/10 relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(0,0,0,0.6)]">
+      <header className="sticky top-0 z-40 bg-black border-b border-white/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.6)] relative overflow-hidden">
+        {/* Esquina decorativa: triángulo en 3 tonos de celeste con textura de puntos */}
         <div
-          className="absolute -top-8 -right-8 w-32 h-32 bg-cyan-brand pointer-events-none"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              'radial-gradient(rgba(3,205,230,0.18) 1px, transparent 1px)',
+            backgroundSize: '12px 12px',
+            WebkitMaskImage:
+              'linear-gradient(90deg, transparent 40%, #000 100%)',
+            maskImage: 'linear-gradient(90deg, transparent 40%, #000 100%)',
+          }}
+        />
+        <div
+          className="absolute top-0 right-0 w-[128px] h-full pointer-events-none bg-[#02586a]"
           style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 0)' }}
         />
         <div
-          className="absolute -top-12 -right-12 w-40 h-40 bg-cyan-brandDark pointer-events-none"
+          className="absolute top-0 right-0 w-[100px] h-[77%] pointer-events-none bg-[#0298ae]"
           style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 0)' }}
         />
+        <div
+          className="absolute top-0 right-0 w-[70px] h-[54%] pointer-events-none bg-cyan-brand"
+          style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 0)' }}
+        />
+        <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-56 h-24 bg-cyan-brand/10 blur-3xl pointer-events-none" />
 
-        <div className="relative flex items-center justify-between px-3 pt-[calc(0.3rem+env(safe-area-inset-top))] pb-0">
-          <button
-            onClick={() => setMenuAbierto(true)}
-            className="text-white/80 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
-            aria-label="Abrir menú"
-          >
-            <Menu size={20} />
-          </button>
-          <div className="flex items-center gap-0.5">
+        <div className="relative grid grid-cols-[84px_1fr_84px] items-center px-2 pt-[calc(0.4rem+env(safe-area-inset-top))]">
+          <div className="flex justify-start">
+            <button
+              onClick={() => setMenuAbierto(true)}
+              className="text-white/80 p-2 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
+              aria-label="Abrir menú"
+            >
+              <Menu size={20} />
+            </button>
+          </div>
+
+          <div className="flex justify-center">
+            {/* Siempre el logo de la app: está hecho para fondo oscuro */}
+            <img
+              src={LOGO_CEDS_WORDMARK}
+              alt="CED&S"
+              className="w-[104px] h-auto object-contain"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-0.5">
             {rolEfectivo !== 'usuario' && (
               <button
                 onClick={() => setBuscando(true)}
-                className="text-white/80 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
+                className="text-white p-2 rounded-full bg-black/45 hover:bg-black/60 active:scale-90 transition-all"
                 aria-label="Buscar alumno"
               >
                 <Search size={18} />
@@ -210,12 +241,12 @@ export default function Header() {
             )}
             <button
               onClick={toggleNotificaciones}
-              className="relative text-white/80 p-1.5 rounded-lg hover:bg-white/5 active:scale-90 transition-all"
+              className="relative text-white p-2 rounded-full bg-black/45 hover:bg-black/60 active:scale-90 transition-all"
               aria-label="Notificaciones"
             >
               <Bell size={18} />
               {noLeidas > 0 && (
-                <span className="absolute top-0.5 right-0.5 bg-cyan-brand text-ink text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 bg-white text-ink text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-0.5 flex items-center justify-center shadow">
                   {noLeidas > 9 ? '9+' : noLeidas}
                 </span>
               )}
@@ -223,19 +254,7 @@ export default function Header() {
           </div>
         </div>
 
-        <div className="relative flex justify-center pt-0 pb-0.5">
-          <div className="absolute w-40 h-16 bg-cyan-brand/15 blur-3xl pointer-events-none" />
-          <img
-            src={logoUrl || LOGO_CEDS_WORDMARK}
-            alt="CED&S"
-            className="relative w-[130px] h-auto object-contain drop-shadow-[0_2px_8px_rgba(3,205,230,0.25)]"
-          />
-        </div>
-        <div className="relative flex justify-center pb-1.5">
-          <div className="w-12 h-[3px] rounded-full bg-cyan-brand shadow-[0_0_10px_rgba(3,205,230,0.6)]" />
-        </div>
-
-        <div className="relative pb-2.5 px-6 text-center">
+        <div className="relative px-6 pt-1 pb-2.5 text-center">
           <p className="font-display text-lg text-white leading-none tracking-wide">
             {titulo}
           </p>
@@ -243,6 +262,7 @@ export default function Header() {
             <p className="text-white/40 text-[11px] mt-1">{subtitulo}</p>
           )}
         </div>
+        <div className="h-[2px] bg-gradient-to-r from-transparent via-cyan-brand to-transparent opacity-80" />
       </header>
 
       {buscando && <BuscadorRapido onCerrar={() => setBuscando(false)} />}
@@ -294,7 +314,7 @@ export default function Header() {
           <div className="w-72 bg-ink h-full border-r border-white/10 p-5 flex flex-col overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <img
-                src={logoUrl || LOGO_CEDS_WORDMARK}
+                src={LOGO_CEDS_WORDMARK}
                 alt="CED&S"
                 className="h-10 object-contain"
               />
@@ -371,6 +391,25 @@ export default function Header() {
                 <MapPin size={18} />
                 El gimnasio
               </NavLink>
+
+              {(usuarioActual.rol === 'coach' ||
+                usuarioActual.rol === 'head_coach') &&
+                rolEfectivo !== 'usuario' && (
+                  <NavLink
+                    to="/mis-evaluaciones"
+                    onClick={() => setMenuAbierto(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'text-white/70 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <Star size={18} />
+                    Mis evaluaciones
+                  </NavLink>
+                )}
 
               {usuarioActual.rol === 'head_coach' &&
                 MENU_ADMIN.map((grupo) => (

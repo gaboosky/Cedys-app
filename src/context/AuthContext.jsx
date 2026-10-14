@@ -295,6 +295,7 @@ export function AuthProvider({ children }) {
     // se cierra cuando vuelve a abrir la app (después de haberla cerrado).
     try {
       if (
+        window.location.pathname !== '/nueva-contrasena' &&
         localStorage.getItem('cedys_no_mantener') === '1' &&
         !sessionStorage.getItem('cedys_sesion_viva')
       ) {
@@ -779,8 +780,83 @@ export function AuthProvider({ children }) {
     return {
       ok: true,
       mensaje:
-        'Si ese correo existe, te enviamos un link para restablecer tu contraseña.',
+        'Si ese correo existe, te enviamos un correo con un código de 6 dígitos (y un link). Revisa también la carpeta de spam.',
     };
+  }
+
+  // Recuperar contraseña con el código de 6 dígitos del correo (no depende del link).
+  async function restablecerConCodigo(correo, codigo, nueva) {
+    const email = (correo || '').trim().toLowerCase();
+    const token = String(codigo || '').replace(/\s/g, '');
+    if (!/^\d{6}$/.test(token))
+      return {
+        ok: false,
+        mensaje: 'El código tiene 6 números. Revisa el correo.',
+      };
+    if (!nueva || nueva.length < 6)
+      return {
+        ok: false,
+        mensaje: 'La contraseña nueva debe tener al menos 6 caracteres.',
+      };
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'recovery',
+    });
+    if (error) {
+      return {
+        ok: false,
+        mensaje: (error.message || '').toLowerCase().includes('expired')
+          ? 'El código venció. Pide uno nuevo.'
+          : 'El código no es correcto o ya se usó. Pide uno nuevo.',
+      };
+    }
+    const { error: errClave } = await supabase.auth.updateUser({
+      password: nueva,
+    });
+    await supabase.auth.signOut();
+    if (errClave) {
+      if (
+        (errClave.message || '')
+          .toLowerCase()
+          .includes('different from the old')
+      )
+        return {
+          ok: false,
+          mensaje: 'La contraseña nueva debe ser distinta a la anterior.',
+        };
+      return {
+        ok: false,
+        mensaje: 'No se pudo cambiar la contraseña: ' + errClave.message,
+      };
+    }
+    return {
+      ok: true,
+      mensaje: '¡Listo! Ya puedes entrar con tu nueva contraseña.',
+    };
+  }
+
+  // Herramientas del admin para el acceso de un alumno (función admin-usuarios en Supabase)
+  async function adminAcceso(accion, usuarioId, extra = {}) {
+    const { data, error } = await supabase.functions.invoke('admin-usuarios', {
+      body: { accion, usuario_id: usuarioId, ...extra },
+    });
+    if (error || !data?.ok) {
+      let detalle = data?.error || '';
+      try {
+        if (!detalle && error?.context?.json)
+          detalle = (await error.context.json())?.error || '';
+      } catch (e) {
+        // sin detalle
+      }
+      return {
+        ok: false,
+        mensaje:
+          detalle ||
+          'No se pudo conectar con la función "admin-usuarios". Revisa que esté creada en Supabase (Edge Functions).',
+      };
+    }
+    return data;
   }
 
   // El admin también es coach y usuario en la vida real. Esto le permite
@@ -1922,13 +1998,26 @@ export function AuthProvider({ children }) {
   }
 
   async function cambiarRol(usuarioId, nuevoRol) {
-    await supabase
+    const { error } = await supabase
       .from('usuarios')
       .update({ rol: nuevoRol })
       .eq('id', usuarioId);
+    if (error)
+      return {
+        ok: false,
+        mensaje: 'No se pudo cambiar el rol: ' + error.message,
+      };
+    const nombres = { usuario: 'Alumno', coach: 'Coach', head_coach: 'Admin' };
+    registrarActividad(
+      'Rol cambiado',
+      `${usuarios.find((u) => u.id === usuarioId)?.nombre || ''} → ${
+        nombres[nuevoRol] || nuevoRol
+      }`
+    );
     setUsuarios((prev) =>
       prev.map((u) => (u.id === usuarioId ? { ...u, rol: nuevoRol } : u))
     );
+    return { ok: true, mensaje: `Ahora es ${nombres[nuevoRol] || nuevoRol}.` };
   }
 
   async function aprobarUsuario(usuarioId) {
@@ -3707,6 +3796,8 @@ export function AuthProvider({ children }) {
         actualizarSolicitudPrueba,
         eliminarSolicitudPrueba,
         misReferidos,
+        restablecerConCodigo,
+        adminAcceso,
         planesSeguimiento,
         mediciones,
         guardarPlanSeguimiento,

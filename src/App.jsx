@@ -20,6 +20,7 @@ const RutinaSemanas = lazy(() => import('./pages/rutinas/RutinaSemanas'));
 const RutinaDias = lazy(() => import('./pages/rutinas/RutinaDias'));
 const RutinaEjercicios = lazy(() => import('./pages/rutinas/RutinaEjercicios'));
 const MiRutina = lazy(() => import('./pages/MiRutina'));
+const MisEvaluaciones = lazy(() => import('./pages/coach/MisEvaluaciones'));
 const Progreso = lazy(() => import('./pages/Progreso'));
 const Privacidad = lazy(() => import('./pages/Privacidad'));
 const Terminos = lazy(() => import('./pages/Terminos'));
@@ -93,6 +94,7 @@ function AppShell() {
           {/* Coach */}
           <Route path="/mis-clases" element={<MisClases />} />
           <Route path="/alumnos" element={<Alumnos />} />
+          <Route path="/mis-evaluaciones" element={<MisEvaluaciones />} />
 
           {/* Head Coach / Admin */}
           <Route path="/dashboard" element={<Dashboard />} />
