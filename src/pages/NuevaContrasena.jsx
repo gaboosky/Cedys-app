@@ -63,7 +63,7 @@ export default function NuevaContrasena() {
         return setError('La contraseña nueva debe ser distinta a la anterior.');
       return setError('No se pudo cambiar la contraseña: ' + err.message);
     }
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
     setEstado('guardado');
   }
 

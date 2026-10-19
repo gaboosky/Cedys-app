@@ -2,22 +2,49 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { formatearRut } from '../../lib/formato';
-import { Users, CalendarCheck, DollarSign, Download, CalendarX, Dumbbell, UserCog, ChevronRight, FileSpreadsheet } from 'lucide-react';
+import {
+  Users,
+  CalendarCheck,
+  DollarSign,
+  Download,
+  CalendarX,
+  Dumbbell,
+  UserCog,
+  ChevronRight,
+  FileSpreadsheet,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { claveRegistro, variacionPct } from '../../lib/cargas';
 import GraficoBarrasMes from '../../components/GraficoBarrasMes';
 import {
-  MEDIOS_PAGO, TIPOS_PAGO, etiquetaMedio, hoyLocalISO, mesDe, mesActualKey, sumarMeses,
-  ultimosMeses, nombreMes, formatearPesos, totalDe, totalesPorMes,
+  MEDIOS_PAGO,
+  TIPOS_PAGO,
+  etiquetaMedio,
+  hoyLocalISO,
+  mesDe,
+  mesActualKey,
+  sumarMeses,
+  ultimosMeses,
+  nombreMes,
+  formatearPesos,
+  totalDe,
+  totalesPorMes,
 } from '../../lib/ingresos';
 
 function ultimoDiaDelMes(mesKey) {
   const [anio, mes] = mesKey.split('-').map(Number);
-  return `${mesKey}-${String(new Date(anio, mes, 0).getDate()).padStart(2, '0')}`;
+  return `${mesKey}-${String(new Date(anio, mes, 0).getDate()).padStart(
+    2,
+    '0'
+  )}`;
 }
 
 function formatoFecha(fechaISO) {
-  return new Date(fechaISO + 'T00:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(fechaISO + 'T00:00:00').toLocaleDateString('es-CL', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 // Atajos de rango de fechas
@@ -29,8 +56,10 @@ function rangoAtajo(atajo) {
     const ant = sumarMeses(mes, -1);
     return { desde: `${ant}-01`, hasta: ultimoDiaDelMes(ant) };
   }
-  if (atajo === '3-meses') return { desde: `${sumarMeses(mes, -2)}-01`, hasta: hoy };
-  if (atajo === 'anio') return { desde: `${mes.slice(0, 4)}-01-01`, hasta: hoy };
+  if (atajo === '3-meses')
+    return { desde: `${sumarMeses(mes, -2)}-01`, hasta: hoy };
+  if (atajo === 'anio')
+    return { desde: `${mes.slice(0, 4)}-01-01`, hasta: hoy };
   return null;
 }
 
@@ -42,7 +71,17 @@ const ATAJOS = [
 ];
 
 export default function Reportes() {
-  const { usuarios, planes, reservas, horarios, pagos, registrosPeso = [], clasesRealizadasConAlumnosEnRango, finalizacionDe, coachDeClase } = useAuth();
+  const {
+    usuarios,
+    planes,
+    reservas,
+    horarios,
+    pagos,
+    registrosPeso = [],
+    clasesRealizadasConAlumnosEnRango,
+    finalizacionDe,
+    coachDeClase,
+  } = useAuth();
   const [generando, setGenerando] = useState(null);
   const navigate = useNavigate();
 
@@ -62,7 +101,8 @@ export default function Reportes() {
     setRango((r) => ({ ...r, [campo]: valor }));
   }
 
-  const nombreUsuario = (id) => usuarios.find((u) => u.id === id)?.nombre || 'Alumno eliminado';
+  const nombreUsuario = (id) =>
+    usuarios.find((u) => u.id === id)?.nombre || 'Alumno eliminado';
   const sufijoArchivo = `${desde}_a_${hasta}`;
 
   // --- Datos para gráficos ---
@@ -101,9 +141,14 @@ export default function Reportes() {
   const totalSocios = usuarios.filter((u) => u.estado === 'activo').length;
   const fechaLocalDe = (creadoEn) => {
     const d = new Date(creadoEn);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+      2,
+      '0'
+    )}-${String(d.getDate()).padStart(2, '0')}`;
   };
-  const cargasRango = registrosPeso.filter((r) => r.creado_en && enRango(fechaLocalDe(r.creado_en)));
+  const cargasRango = registrosPeso.filter(
+    (r) => r.creado_en && enRango(fechaLocalDe(r.creado_en))
+  );
   const alumnosConCargas = new Set(cargasRango.map((r) => r.usuario_id)).size;
 
   // --- Exportaciones ---
@@ -134,10 +179,16 @@ export default function Reportes() {
   }
 
   // Clases realizadas en el período, agrupadas por coach (sirve para pagar a los coaches)
-  const clasesPeriodo = clasesRealizadasConAlumnosEnRango(desde, hasta > hoyLocalISO() ? hoyLocalISO() : hasta);
+  const clasesPeriodo = clasesRealizadasConAlumnosEnRango(
+    desde,
+    hasta > hoyLocalISO() ? hoyLocalISO() : hasta
+  );
   const porCoach = clasesPeriodo.reduce((acc, o) => {
     const fin = finalizacionDe(o.horario.id, o.fecha);
-    const nombre = fin?.coach_nombre || coachDeClase(o.horario, o.fecha).nombre || 'Sin coach';
+    const nombre =
+      fin?.coach_nombre ||
+      coachDeClase(o.horario, o.fecha).nombre ||
+      'Sin coach';
     (acc[nombre] = acc[nombre] || []).push({ ...o, fin });
     return acc;
   }, {});
@@ -154,7 +205,12 @@ export default function Reportes() {
             acc +
             (o.fin
               ? o.fin.presentes
-              : reservas.filter((r) => r.horario_id === o.horario.id && r.fecha === o.fecha && r.asistio === true).length),
+              : reservas.filter(
+                  (r) =>
+                    r.horario_id === o.horario.id &&
+                    r.fecha === o.fecha &&
+                    r.asistio === true
+                ).length),
           0
         ),
       }))
@@ -170,10 +226,27 @@ export default function Reportes() {
           Comentario: o.fin?.comentario || '',
         }))
       )
-      .sort((a, b) => a.Coach.localeCompare(b.Coach) || a.Fecha.localeCompare(b.Fecha) || a.Hora.localeCompare(b.Hora));
+      .sort(
+        (a, b) =>
+          a.Coach.localeCompare(b.Coach) ||
+          a.Fecha.localeCompare(b.Fecha) ||
+          a.Hora.localeCompare(b.Hora)
+      );
     const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(resumen.length ? resumen : [{ Coach: 'Sin clases' }]), 'Resumen');
-    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(detalle.length ? detalle : [{ Coach: 'Sin clases' }]), 'Detalle');
+    XLSX.utils.book_append_sheet(
+      libro,
+      XLSX.utils.json_to_sheet(
+        resumen.length ? resumen : [{ Coach: 'Sin clases' }]
+      ),
+      'Resumen'
+    );
+    XLSX.utils.book_append_sheet(
+      libro,
+      XLSX.utils.json_to_sheet(
+        detalle.length ? detalle : [{ Coach: 'Sin clases' }]
+      ),
+      'Detalle'
+    );
     XLSX.writeFile(libro, `clases-por-coach-${sufijoArchivo}.xlsx`);
     setGenerando(null);
   }
@@ -193,10 +266,20 @@ export default function Reportes() {
           Hora: horario.hora,
           Coach: horario.coach_nombre || '',
           Alumno: usuario.nombre,
-          Asistió: r.asistio === true ? 'Sí' : r.asistio === false ? 'No' : 'Sin marcar',
-          'Fecha en que reservó': fechaReserva ? fechaReserva.toLocaleDateString('es-CL') : '',
+          Asistió:
+            r.asistio === true
+              ? 'Sí'
+              : r.asistio === false
+              ? 'No'
+              : 'Sin marcar',
+          'Fecha en que reservó': fechaReserva
+            ? fechaReserva.toLocaleDateString('es-CL')
+            : '',
           'Hora en que reservó': fechaReserva
-            ? fechaReserva.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+            ? fechaReserva.toLocaleTimeString('es-CL', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
             : '',
         };
       })
@@ -230,9 +313,14 @@ export default function Reportes() {
         Alumno: usuario?.nombre || '',
         'Fecha de la clase': r.fecha,
         'Hora de la clase': horario?.hora || '',
-        'Fecha en que canceló': fechaCancelacion ? fechaCancelacion.toLocaleDateString('es-CL') : '',
+        'Fecha en que canceló': fechaCancelacion
+          ? fechaCancelacion.toLocaleDateString('es-CL')
+          : '',
         'Hora en que canceló': fechaCancelacion
-          ? fechaCancelacion.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+          ? fechaCancelacion.toLocaleTimeString('es-CL', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
           : '',
         'Cancelación tardía': r.penalizada ? 'Sí' : 'No',
       };
@@ -248,7 +336,9 @@ export default function Reportes() {
   async function exportarIngresos() {
     setGenerando('ingresos');
     const XLSX = await import('xlsx');
-    const ordenados = [...pagosRango].sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const ordenados = [...pagosRango].sort((a, b) =>
+      a.fecha.localeCompare(b.fecha)
+    );
 
     // Hoja 1: cada pago
     const filasPagos = ordenados.map((p) => {
@@ -257,14 +347,25 @@ export default function Reportes() {
         Fecha: p.fecha,
         Socio: usuario?.nombre || 'Alumno eliminado',
         RUT: usuario ? formatearRut(usuario.rut) : '',
-        Plan: p.plan_id ? planes[p.plan_id]?.nombre || 'Plan eliminado' : 'Sin plan',
+        Plan: p.plan_id
+          ? planes[p.plan_id]?.nombre || 'Plan eliminado'
+          : 'Sin plan',
         'Medio de pago': etiquetaMedio(p.medio),
         Tipo: TIPOS_PAGO[p.tipo] || 'Pago',
         Monto: Number(p.monto) || 0,
         Nota: p.nota || '',
       };
     });
-    filasPagos.push({ Fecha: '', Socio: '', RUT: '', Plan: '', 'Medio de pago': '', Tipo: 'TOTAL', Monto: totalDe(ordenados), Nota: '' });
+    filasPagos.push({
+      Fecha: '',
+      Socio: '',
+      RUT: '',
+      Plan: '',
+      'Medio de pago': '',
+      Tipo: 'TOTAL',
+      Monto: totalDe(ordenados),
+      Nota: '',
+    });
 
     // Hoja 2: resumen por mes y medio de pago
     const meses = [...new Set(ordenados.map((p) => mesDe(p.fecha)))].sort();
@@ -272,14 +373,18 @@ export default function Reportes() {
       const delMes = ordenados.filter((p) => mesDe(p.fecha) === m);
       const fila = { Mes: nombreMes(m), Pagos: delMes.length };
       for (const medio of MEDIOS_PAGO) {
-        fila[medio.label] = totalDe(delMes.filter((p) => (p.medio || 'transferencia') === medio.valor));
+        fila[medio.label] = totalDe(
+          delMes.filter((p) => (p.medio || 'transferencia') === medio.valor)
+        );
       }
       fila.Total = totalDe(delMes);
       return fila;
     });
     const filaTotal = { Mes: 'TOTAL', Pagos: ordenados.length };
     for (const medio of MEDIOS_PAGO) {
-      filaTotal[medio.label] = totalDe(ordenados.filter((p) => (p.medio || 'transferencia') === medio.valor));
+      filaTotal[medio.label] = totalDe(
+        ordenados.filter((p) => (p.medio || 'transferencia') === medio.valor)
+      );
     }
     filaTotal.Total = totalDe(ordenados);
     filasMes.push(filaTotal);
@@ -287,17 +392,32 @@ export default function Reportes() {
     // Hoja 3: por plan
     const porPlan = {};
     for (const p of ordenados) {
-      const nombre = p.plan_id ? planes[p.plan_id]?.nombre || 'Plan eliminado' : 'Sin plan / pago suelto';
-      if (!porPlan[nombre]) porPlan[nombre] = { Plan: nombre, Pagos: 0, Total: 0 };
+      const nombre = p.plan_id
+        ? planes[p.plan_id]?.nombre || 'Plan eliminado'
+        : 'Sin plan / pago suelto';
+      if (!porPlan[nombre])
+        porPlan[nombre] = { Plan: nombre, Pagos: 0, Total: 0 };
       porPlan[nombre].Pagos += 1;
       porPlan[nombre].Total += Number(p.monto) || 0;
     }
     const filasPlan = Object.values(porPlan).sort((a, b) => b.Total - a.Total);
 
     const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(filasPagos), 'Pagos');
-    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(filasMes), 'Resumen por mes');
-    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(filasPlan), 'Por plan');
+    XLSX.utils.book_append_sheet(
+      libro,
+      XLSX.utils.json_to_sheet(filasPagos),
+      'Pagos'
+    );
+    XLSX.utils.book_append_sheet(
+      libro,
+      XLSX.utils.json_to_sheet(filasMes),
+      'Resumen por mes'
+    );
+    XLSX.utils.book_append_sheet(
+      libro,
+      XLSX.utils.json_to_sheet(filasPlan),
+      'Por plan'
+    );
     XLSX.writeFile(libro, `ingresos-ceds-${sufijoArchivo}.xlsx`);
     setGenerando(null);
   }
@@ -305,7 +425,9 @@ export default function Reportes() {
   async function exportarCargas() {
     setGenerando('cargas');
     const XLSX = await import('xlsx');
-    const ordenados = [...cargasRango].sort((a, b) => (a.creado_en || '').localeCompare(b.creado_en || ''));
+    const ordenados = [...cargasRango].sort((a, b) =>
+      (a.creado_en || '').localeCompare(b.creado_en || '')
+    );
 
     // Hoja 1: cada registro, con la variación respecto al registro anterior del mismo ejercicio
     const ultimoPorClave = {};
@@ -314,7 +436,11 @@ export default function Reportes() {
       const anterior = ultimoPorClave[clave];
       ultimoPorClave[clave] = r;
       const base =
-        r.peso_anterior !== null && r.peso_anterior !== undefined ? Number(r.peso_anterior) : anterior ? Number(anterior.peso) : null;
+        r.peso_anterior !== null && r.peso_anterior !== undefined
+          ? Number(r.peso_anterior)
+          : anterior
+          ? Number(anterior.peso)
+          : null;
       const pct = base !== null ? variacionPct(r.peso, base) : null;
       return {
         Fecha: new Date(r.creado_en).toLocaleDateString('es-CL'),
@@ -340,8 +466,13 @@ export default function Reportes() {
         const primero = lista[0];
         const ultimo = lista[lista.length - 1];
         const inicio =
-          primero.peso_anterior !== null && primero.peso_anterior !== undefined ? Number(primero.peso_anterior) : Number(primero.peso);
-        const comparable = lista.length > 1 || (primero.peso_anterior !== null && primero.peso_anterior !== undefined);
+          primero.peso_anterior !== null && primero.peso_anterior !== undefined
+            ? Number(primero.peso_anterior)
+            : Number(primero.peso);
+        const comparable =
+          lista.length > 1 ||
+          (primero.peso_anterior !== null &&
+            primero.peso_anterior !== undefined);
         const pct = comparable ? variacionPct(ultimo.peso, inicio) : null;
         return {
           Alumno: nombreUsuario(primero.usuario_id),
@@ -352,8 +483,12 @@ export default function Reportes() {
           'Último peso (kg)': Number(ultimo.peso),
           'Variación (%)': pct === null ? '' : pct,
           Cambios: lista.length,
-          'Primera fecha': new Date(primero.creado_en).toLocaleDateString('es-CL'),
-          'Última fecha': new Date(ultimo.creado_en).toLocaleDateString('es-CL'),
+          'Primera fecha': new Date(primero.creado_en).toLocaleDateString(
+            'es-CL'
+          ),
+          'Última fecha': new Date(ultimo.creado_en).toLocaleDateString(
+            'es-CL'
+          ),
         };
       })
       .sort(
@@ -367,7 +502,13 @@ export default function Reportes() {
     // Hoja 3: promedio de variación por alumno
     const porAlumno = {};
     for (const f of filasResumen) {
-      if (!porAlumno[f.Alumno]) porAlumno[f.Alumno] = { Alumno: f.Alumno, Ejercicios: 0, suma: 0, conVariacion: 0 };
+      if (!porAlumno[f.Alumno])
+        porAlumno[f.Alumno] = {
+          Alumno: f.Alumno,
+          Ejercicios: 0,
+          suma: 0,
+          conVariacion: 0,
+        };
       porAlumno[f.Alumno].Ejercicios += 1;
       if (f['Variación (%)'] !== '') {
         porAlumno[f.Alumno].suma += f['Variación (%)'];
@@ -377,13 +518,27 @@ export default function Reportes() {
     const filasAlumno = Object.values(porAlumno).map((a) => ({
       Alumno: a.Alumno,
       'Ejercicios registrados': a.Ejercicios,
-      'Variación promedio (%)': a.conVariacion ? Math.round((a.suma / a.conVariacion) * 10) / 10 : '',
+      'Variación promedio (%)': a.conVariacion
+        ? Math.round((a.suma / a.conVariacion) * 10) / 10
+        : '',
     }));
 
     const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(filasAlumno), 'Por alumno');
-    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(filasResumen), 'Por ejercicio');
-    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(filasRegistros), 'Registros');
+    XLSX.utils.book_append_sheet(
+      libro,
+      XLSX.utils.json_to_sheet(filasAlumno),
+      'Por alumno'
+    );
+    XLSX.utils.book_append_sheet(
+      libro,
+      XLSX.utils.json_to_sheet(filasResumen),
+      'Por ejercicio'
+    );
+    XLSX.utils.book_append_sheet(
+      libro,
+      XLSX.utils.json_to_sheet(filasRegistros),
+      'Registros'
+    );
     XLSX.writeFile(libro, `progreso-cargas-ceds-${sufijoArchivo}.xlsx`);
     setGenerando(null);
   }
@@ -391,11 +546,21 @@ export default function Reportes() {
   const inputFecha =
     'w-full bg-black/30 border border-white/10 rounded-lg px-2.5 py-2 text-white text-sm outline-none focus:border-cyan-brand transition-colors';
 
-  const marcadasRango = reservasRango.filter((r) => r.fecha <= hoy && (r.asistio === true || r.asistio === false));
-  const pctAsist = marcadasRango.length ? Math.round((marcadasRango.filter((r) => r.asistio === true).length / marcadasRango.length) * 100) : null;
+  const marcadasRango = reservasRango.filter(
+    (r) => r.fecha <= hoy && (r.asistio === true || r.asistio === false)
+  );
+  const pctAsist = marcadasRango.length
+    ? Math.round(
+        (marcadasRango.filter((r) => r.asistio === true).length /
+          marcadasRango.length) *
+          100
+      )
+    : null;
   const promedioClases = (() => {
     const v = datosClases.filter((d) => d.valor > 0);
-    return v.length ? Math.round(v.reduce((a, d) => a + d.valor, 0) / v.length) : 0;
+    return v.length
+      ? Math.round(v.reduce((a, d) => a + d.valor, 0) / v.length)
+      : 0;
   })();
 
   const GRUPOS = [
@@ -408,7 +573,9 @@ export default function Reportes() {
           color: 'bg-green-400/15 text-green-300',
           titulo: 'Ingresos',
           trae: 'Cada pago, resumen por mes y por plan',
-          dato: `${formatearPesos(totalDe(pagosRango))} · ${pagosRango.length} pago${pagosRango.length !== 1 ? 's' : ''}`,
+          dato: `${formatearPesos(totalDe(pagosRango))} · ${
+            pagosRango.length
+          } pago${pagosRango.length !== 1 ? 's' : ''}`,
           fn: exportarIngresos,
         },
       ],
@@ -422,7 +589,9 @@ export default function Reportes() {
           color: 'bg-cyan-brand/15 text-cyan-brand',
           titulo: 'Asistencia',
           trae: 'Quién reservó, a qué clase y si vino',
-          dato: `${reservasRango.length} reserva${reservasRango.length !== 1 ? 's' : ''}`,
+          dato: `${reservasRango.length} reserva${
+            reservasRango.length !== 1 ? 's' : ''
+          }`,
           fn: exportarAsistencia,
         },
         {
@@ -457,7 +626,9 @@ export default function Reportes() {
           color: 'bg-amber-400/15 text-amber-300',
           titulo: 'Progreso de cargas',
           trae: 'Cuánto subió cada alumno en sus ejercicios',
-          dato: `${cargasRango.length} registro${cargasRango.length !== 1 ? 's' : ''} · ${alumnosConCargas} alumno${alumnosConCargas !== 1 ? 's' : ''}`,
+          dato: `${cargasRango.length} registro${
+            cargasRango.length !== 1 ? 's' : ''
+          } · ${alumnosConCargas} alumno${alumnosConCargas !== 1 ? 's' : ''}`,
           fn: exportarCargas,
         },
         {
@@ -476,16 +647,23 @@ export default function Reportes() {
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6 max-w-3xl mx-auto">
       <p className="font-display text-3xl text-white leading-tight">Reportes</p>
-      <p className="text-white/40 text-xs mt-1 mb-4">Descarga la información del gimnasio en Excel</p>
+      <p className="text-white/40 text-xs mt-1 mb-4">
+        Descarga la información del gimnasio en Excel
+      </p>
 
       {/* Período (vale para todo lo de esta página) */}
-      <div className="flex gap-1.5 overflow-x-auto -mx-6 px-6 pb-1 mb-2" style={{ scrollbarWidth: 'none' }}>
+      <div
+        className="flex gap-1.5 overflow-x-auto -mx-6 px-6 pb-1 mb-2"
+        style={{ scrollbarWidth: 'none' }}
+      >
         {ATAJOS.map((a) => (
           <button
             key={a.valor}
             onClick={() => elegirAtajo(a.valor)}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold border transition-colors ${
-              atajo === a.valor ? 'bg-cyan-brand border-cyan-brand text-ink' : 'bg-white/[0.04] border-white/10 text-white/60'
+              atajo === a.valor
+                ? 'bg-cyan-brand border-cyan-brand text-ink'
+                : 'bg-white/[0.04] border-white/10 text-white/60'
             }`}
           >
             {a.label}
@@ -494,7 +672,9 @@ export default function Reportes() {
         <button
           onClick={() => setAtajo(null)}
           className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold border transition-colors ${
-            atajo === null ? 'bg-cyan-brand border-cyan-brand text-ink' : 'bg-white/[0.04] border-white/10 text-white/60'
+            atajo === null
+              ? 'bg-cyan-brand border-cyan-brand text-ink'
+              : 'bg-white/[0.04] border-white/10 text-white/60'
           }`}
         >
           Elegir fechas
@@ -502,8 +682,20 @@ export default function Reportes() {
       </div>
       {atajo === null && (
         <div className="flex gap-2 mb-2">
-          <input type="date" value={desde} max={hasta} onChange={(e) => cambiarFecha('desde', e.target.value)} className={inputFecha} />
-          <input type="date" value={hasta} min={desde} onChange={(e) => cambiarFecha('hasta', e.target.value)} className={inputFecha} />
+          <input
+            type="date"
+            value={desde}
+            max={hasta}
+            onChange={(e) => cambiarFecha('desde', e.target.value)}
+            className={inputFecha}
+          />
+          <input
+            type="date"
+            value={hasta}
+            min={desde}
+            onChange={(e) => cambiarFecha('hasta', e.target.value)}
+            className={inputFecha}
+          />
         </div>
       )}
       <p className="text-white/35 text-[11px] mb-4">
@@ -513,7 +705,9 @@ export default function Reportes() {
       {/* Resumen del período */}
       <div className="relative overflow-hidden rounded-3xl border border-cyan-brand/25 bg-gradient-to-br from-[#06343d] via-[#0b1b1f] to-ink p-4 mb-4">
         <div className="absolute -bottom-16 -left-10 w-48 h-48 rounded-full bg-cyan-brand/10 blur-3xl pointer-events-none" />
-        <p className="relative text-cyan-brand text-[11px] font-semibold tracking-[0.2em] uppercase mb-3">En este período</p>
+        <p className="relative text-cyan-brand text-[11px] font-semibold tracking-[0.2em] uppercase mb-3">
+          En este período
+        </p>
         <div className="relative grid grid-cols-2 gap-2">
           {[
             { v: formatearPesos(totalDe(pagosRango)), t: 'Ingresos' },
@@ -522,7 +716,9 @@ export default function Reportes() {
             { v: clasesPeriodo.length, t: 'Clases realizadas' },
           ].map((x) => (
             <div key={x.t} className="bg-black/25 rounded-xl px-3 py-2.5">
-              <p className="text-white font-display text-2xl leading-none tabular-nums">{x.v}</p>
+              <p className="text-white font-display text-2xl leading-none tabular-nums">
+                {x.v}
+              </p>
               <p className="text-white/45 text-[11px] mt-1">{x.t}</p>
             </div>
           ))}
@@ -533,7 +729,9 @@ export default function Reportes() {
       <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 mb-3">
         <p className="text-white text-sm font-medium">Clases tomadas por mes</p>
         <p className="text-white/40 text-[11px] mb-3">
-          Reservas de los últimos 12 meses{promedioClases ? ` · promedio ${promedioClases} al mes` : ''}. Toca una barra.
+          Reservas de los últimos 12 meses
+          {promedioClases ? ` · promedio ${promedioClases} al mes` : ''}. Toca
+          una barra.
         </p>
         <GraficoBarrasMes
           datos={datosClases}
@@ -548,7 +746,9 @@ export default function Reportes() {
       >
         <span>
           <span className="block text-white text-sm">Gráficos de ingresos</span>
-          <span className="block text-white/40 text-xs">Mes a mes, comparación y medios de pago</span>
+          <span className="block text-white/40 text-xs">
+            Mes a mes, comparación y medios de pago
+          </span>
         </span>
         <ChevronRight size={16} className="text-white/40" />
       </button>
@@ -556,7 +756,9 @@ export default function Reportes() {
       {/* Descargas agrupadas */}
       {GRUPOS.map((g) => (
         <div key={g.titulo} className="mb-5">
-          <p className="text-white/40 text-xs uppercase tracking-wide mb-2">{g.titulo}</p>
+          <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+            {g.titulo}
+          </p>
           <div className="flex flex-col gap-2">
             {g.items.map((it) => (
               <TarjetaReporte
@@ -577,10 +779,20 @@ export default function Reportes() {
   );
 }
 
-function TarjetaReporte({ icono: Icono, color, titulo, trae, detalle, onDescargar, generando }) {
+function TarjetaReporte({
+  icono: Icono,
+  color,
+  titulo,
+  trae,
+  detalle,
+  onDescargar,
+  generando,
+}) {
   return (
     <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-3.5 flex items-center gap-3">
-      <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+      <span
+        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color}`}
+      >
         <Icono size={18} />
       </span>
       <div className="flex-1 min-w-0">
@@ -594,8 +806,14 @@ function TarjetaReporte({ icono: Icono, color, titulo, trae, detalle, onDescarga
         className="shrink-0 flex flex-col items-center justify-center gap-0.5 w-16 h-14 bg-cyan-brand/10 border border-cyan-brand/30 text-cyan-brand rounded-xl disabled:opacity-50 transition-transform active:scale-95"
         aria-label={`Descargar ${titulo} en Excel`}
       >
-        {generando ? <FileSpreadsheet size={17} className="animate-pulse" /> : <Download size={17} />}
-        <span className="text-[10px] font-semibold">{generando ? '...' : 'Excel'}</span>
+        {generando ? (
+          <FileSpreadsheet size={17} className="animate-pulse" />
+        ) : (
+          <Download size={17} />
+        )}
+        <span className="text-[10px] font-semibold">
+          {generando ? '...' : 'Excel'}
+        </span>
       </button>
     </div>
   );

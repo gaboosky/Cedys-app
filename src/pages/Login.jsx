@@ -49,7 +49,11 @@ export default function Login({ inicial = 'login' }) {
     registrarUsuario,
     solicitarRecuperacion,
     enviarSolicitudPrueba,
+    restablecerConCodigo,
   } = useAuth();
+  const [pasoRecuperar, setPasoRecuperar] = useState(1); // 1: pedir código · 2: escribir código y clave nueva
+  const [codigo, setCodigo] = useState('');
+  const [claveNueva, setClaveNueva] = useState('');
   const [modo, setModo] = useState(inicial); // 'login' | 'registro' | 'recuperar' | 'prueba'
   const [correo, setCorreo] = useState(leerCorreoGuardado);
   const [mantener, setMantener] = useState(true);
@@ -160,13 +164,31 @@ export default function Login({ inicial = 'login' }) {
   async function handleRecuperar(e) {
     e.preventDefault();
     setEnviando(true);
-    const resultado = await solicitarRecuperacion(correoRecuperar);
+    if (pasoRecuperar === 1) {
+      const resultado = await solicitarRecuperacion(correoRecuperar);
+      setEnviando(false);
+      setMensajeRecuperar(resultado);
+      if (resultado.ok) setPasoRecuperar(2);
+      return;
+    }
+    const resultado = await restablecerConCodigo(
+      correoRecuperar,
+      codigo,
+      claveNueva
+    );
     setEnviando(false);
     setMensajeRecuperar(resultado);
+    if (resultado.ok) {
+      setCorreo(correoRecuperar.trim());
+      setCodigo('');
+      setClaveNueva('');
+      setPasoRecuperar(1);
+      setTimeout(() => cambiarModo('login'), 1800);
+    }
   }
 
   return (
-    <div className="min-h-screen bg-ink flex flex-col justify-center px-8 py-10">
+    <div className="min-h-screen bg-ink flex flex-col justify-center px-8 pt-10 pb-28">
       <div className="mb-8">
         <p className="font-display text-6xl tracking-tight text-white leading-none">
           CED<span className="text-cyan-brand">&amp;</span>S
@@ -328,16 +350,39 @@ export default function Login({ inicial = 'login' }) {
       {modo === 'recuperar' && (
         <form onSubmit={handleRecuperar} className="flex flex-col gap-4">
           <p className="text-white/50 text-sm">
-            Ingresa tu correo y te enviaremos un link para restablecer tu
-            contraseña.
+            {pasoRecuperar === 1
+              ? 'Ingresa tu correo y te enviaremos un código de 6 dígitos para crear una contraseña nueva.'
+              : 'Revisa tu correo (también en spam). Escribe el código de 6 dígitos y tu contraseña nueva.'}
           </p>
           <input
             type="email"
             value={correoRecuperar}
             onChange={(e) => setCorreoRecuperar(e.target.value)}
             placeholder="tu@correo.cl"
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 outline-none focus:border-cyan-brand transition-colors"
+            disabled={pasoRecuperar === 2}
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 outline-none focus:border-cyan-brand transition-colors disabled:opacity-60"
           />
+          {pasoRecuperar === 2 && (
+            <>
+              <input
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))}
+                placeholder="Código de 6 dígitos"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-center text-xl tracking-[0.5em] placeholder-white/30 placeholder:text-sm placeholder:tracking-normal outline-none focus:border-cyan-brand transition-colors"
+              />
+              <input
+                type="password"
+                value={claveNueva}
+                onChange={(e) => setClaveNueva(e.target.value)}
+                placeholder="Contraseña nueva (mínimo 6)"
+                autoComplete="new-password"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 outline-none focus:border-cyan-brand transition-colors"
+              />
+            </>
+          )}
           {mensajeRecuperar && (
             <p
               className={`text-sm ${
@@ -352,8 +397,28 @@ export default function Login({ inicial = 'login' }) {
             disabled={enviando}
             className="bg-cyan-brand text-ink font-semibold rounded-lg py-3 disabled:opacity-50"
           >
-            {enviando ? 'Enviando...' : 'Enviar link'}
+            {enviando
+              ? 'Enviando...'
+              : pasoRecuperar === 1
+              ? 'Enviar código'
+              : 'Guardar contraseña nueva'}
           </button>
+          {pasoRecuperar === 2 && (
+            <button
+              type="button"
+              onClick={() => {
+                setPasoRecuperar(1);
+                setMensajeRecuperar(null);
+              }}
+              className="text-white/45 text-sm"
+            >
+              ¿No te llegó? Volver a enviar o cambiar el correo
+            </button>
+          )}
+          <p className="text-white/35 text-xs text-center">
+            Si no recibes el correo, escríbele al gimnasio: pueden darte una
+            contraseña temporal.
+          </p>
         </form>
       )}
 
@@ -371,19 +436,6 @@ export default function Login({ inicial = 'login' }) {
             placeholder="Nombre completo"
             className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 outline-none focus:border-cyan-brand transition-colors"
             required
-          />
-          <input
-            value={form.rut}
-            onChange={(e) => setForm({ ...form, rut: e.target.value })}
-            placeholder="RUT"
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 outline-none focus:border-cyan-brand transition-colors"
-            required
-          />
-          <input
-            value={form.nacionalidad}
-            onChange={(e) => setForm({ ...form, nacionalidad: e.target.value })}
-            placeholder="Nacionalidad"
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-white/30 outline-none focus:border-cyan-brand transition-colors"
           />
           <div>
             <label className="text-white/40 text-xs mb-1 block">

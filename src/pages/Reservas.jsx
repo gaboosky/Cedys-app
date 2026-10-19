@@ -15,9 +15,13 @@ import {
   Plus,
   Clock,
   Trophy,
+  Dumbbell,
 } from 'lucide-react';
 import { descargarIcs, eventoDeReserva } from '../lib/calendario';
-import EvaluarClase, { EvaluacionPendiente, sePuedeEvaluar } from '../components/EvaluarClase';
+import EvaluarClase, {
+  EvaluacionPendiente,
+  sePuedeEvaluar,
+} from '../components/EvaluarClase';
 
 const pad = (n) => String(n).padStart(2, '0');
 function isoLocal(d) {
@@ -34,8 +38,20 @@ function partesFecha(fechaISO) {
   };
 }
 
-
-const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MESES_CORTOS = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'sep',
+  'oct',
+  'nov',
+  'dic',
+];
 
 function inicialesDe(nombre) {
   return String(nombre || '')
@@ -59,7 +75,8 @@ function cuantoFalta(fechaISO, hora) {
   }
   if (fechaISO === manana) return 'Mañana';
   const dias = Math.round(
-    (Date.parse(fechaISO + 'T12:00:00') - Date.parse(hoy + 'T12:00:00')) / 86400000
+    (Date.parse(fechaISO + 'T12:00:00') - Date.parse(hoy + 'T12:00:00')) /
+      86400000
   );
   return `En ${dias} días`;
 }
@@ -67,7 +84,10 @@ function cuantoFalta(fechaISO, hora) {
 // Cuadrito tipo calendario: día de la semana, número y mes
 function FechaCuadro({ fechaISO, tono = 'normal' }) {
   const d = new Date(fechaISO + 'T12:00:00');
-  const dia = d.toLocaleDateString('es-CL', { weekday: 'short' }).replace('.', '').slice(0, 3);
+  const dia = d
+    .toLocaleDateString('es-CL', { weekday: 'short' })
+    .replace('.', '')
+    .slice(0, 3);
   const estilos = {
     normal: 'bg-white/[0.06] border-white/10 text-white',
     cyan: 'bg-cyan-brand/15 border-cyan-brand/30 text-cyan-brand',
@@ -75,10 +95,16 @@ function FechaCuadro({ fechaISO, tono = 'normal' }) {
     gris: 'bg-white/[0.03] border-white/10 text-white/45',
   }[tono];
   return (
-    <div className={`w-[54px] shrink-0 rounded-xl border py-1.5 text-center ${estilos}`}>
-      <p className="text-[10px] uppercase font-semibold opacity-70 leading-none">{dia}</p>
+    <div
+      className={`w-[54px] shrink-0 rounded-xl border py-1.5 text-center ${estilos}`}
+    >
+      <p className="text-[10px] uppercase font-semibold opacity-70 leading-none">
+        {dia}
+      </p>
       <p className="font-display text-2xl leading-tight">{d.getDate()}</p>
-      <p className="text-[10px] uppercase opacity-60 leading-none">{MESES_CORTOS[d.getMonth()]}</p>
+      <p className="text-[10px] uppercase opacity-60 leading-none">
+        {MESES_CORTOS[d.getMonth()]}
+      </p>
     </div>
   );
 }
@@ -110,16 +136,25 @@ function VistaSemanal({ reservas, onElegirDia, diaElegido }) {
   }
 
   return (
-    <div className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-2 mb-4" style={{ scrollbarWidth: 'none' }}>
+    <div
+      className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-2 mb-4"
+      style={{ scrollbarWidth: 'none' }}
+    >
       <button
         onClick={() => onElegirDia(null)}
-        className={`shrink-0 w-[52px] rounded-2xl py-2.5 flex flex-col items-center justify-center border transition-all active:scale-95 ${
+        className={`shrink-0 w-[54px] rounded-2xl py-2.5 flex flex-col items-center justify-center border transition-colors duration-150 [-webkit-tap-highlight-color:transparent] select-none ${
           !diaElegido
-            ? 'bg-cyan-brand border-cyan-brand text-ink shadow-[0_6px_20px_-6px_rgba(0,200,230,0.6)]'
+            ? 'bg-cyan-brand border-cyan-brand text-ink'
             : 'bg-white/[0.04] border-white/10 text-white'
         }`}
       >
-        <span className={`text-[10px] uppercase font-semibold ${!diaElegido ? 'text-ink/70' : 'text-white/40'}`}>Ver</span>
+        <span
+          className={`text-[10px] uppercase font-semibold whitespace-nowrap ${
+            !diaElegido ? 'text-ink/70' : 'text-white/40'
+          }`}
+        >
+          Ver
+        </span>
         <span className="font-display text-base leading-tight">Todas</span>
         <span className="w-1.5 h-1.5 mt-0.5" />
       </button>
@@ -130,19 +165,29 @@ function VistaSemanal({ reservas, onElegirDia, diaElegido }) {
           <button
             key={d.key}
             onClick={() => onElegirDia(activo ? null : d.key)}
-            className={`shrink-0 w-[52px] rounded-2xl py-2.5 flex flex-col items-center border transition-all active:scale-95 ${
+            className={`shrink-0 w-[54px] rounded-2xl py-2.5 flex flex-col items-center border transition-colors duration-150 [-webkit-tap-highlight-color:transparent] select-none ${
               activo
-                ? 'bg-cyan-brand border-cyan-brand text-ink shadow-[0_6px_20px_-6px_rgba(0,200,230,0.6)]'
+                ? 'bg-cyan-brand border-cyan-brand text-ink'
                 : 'bg-white/[0.04] border-white/10 text-white'
             }`}
           >
-            <span className={`text-[10px] uppercase font-semibold ${activo ? 'text-ink/70' : 'text-white/40'}`}>
+            <span
+              className={`text-[10px] uppercase font-semibold whitespace-nowrap ${
+                activo ? 'text-ink/70' : 'text-white/40'
+              }`}
+            >
               {d.esHoy ? 'Hoy' : d.diaCorto}
             </span>
-            <span className="font-display text-xl leading-tight">{d.numero}</span>
+            <span className="font-display text-xl leading-tight">
+              {d.numero}
+            </span>
             <span
               className={`w-1.5 h-1.5 rounded-full mt-0.5 ${
-                tengoClase ? (activo ? 'bg-ink' : 'bg-cyan-brand') : 'bg-transparent'
+                tengoClase
+                  ? activo
+                    ? 'bg-ink'
+                    : 'bg-cyan-brand'
+                  : 'bg-transparent'
               }`}
             />
           </button>
@@ -227,13 +272,19 @@ export default function Reservas() {
     horasAnticipacion,
     infoGimnasio,
     coachDeClase,
+    diasRutinaHechos = [],
   } = useAuth();
+  // Qué día de rutina hizo en cada clase
+  const rutinaDeReserva = (r) =>
+    diasRutinaHechos.filter((d) => String(d.reserva_id) === String(r.id));
   const [diaElegido, setDiaElegido] = useState(null);
   const navigate = useNavigate();
   const [tab, setTab] = useState('proximas');
   const [confirmando, setConfirmando] = useState(null);
   const [cancelando, setCancelando] = useState(false);
-  const [mesFiltro, setMesFiltro] = useState(() => isoLocal(new Date()).slice(0, 7)); // 'AAAA-MM' o 'todos'
+  const [mesFiltro, setMesFiltro] = useState(() =>
+    isoLocal(new Date()).slice(0, 7)
+  ); // 'AAAA-MM' o 'todos'
 
   const ahora = Date.now();
 
@@ -245,7 +296,9 @@ export default function Reservas() {
       horario: (() => {
         const h = horarios.find((x) => x.id === r.horario_id);
         // Si ese día hay un coach de reemplazo, se muestra ese
-        return h ? { ...h, coach_nombre: coachDeClase(h, r.fecha).nombre } : null;
+        return h
+          ? { ...h, coach_nombre: coachDeClase(h, r.fecha).nombre }
+          : null;
       })(),
     }))
     .filter((r) => r.horario);
@@ -273,38 +326,59 @@ export default function Reservas() {
     setConfirmando(null);
   }
 
-  const proximasVisibles = diaElegido ? proximas.filter((r) => r.fecha === diaElegido) : proximas;
+  const proximasVisibles = diaElegido
+    ? proximas.filter((r) => r.fecha === diaElegido)
+    : proximas;
   const proxima = proximasVisibles[0];
   const resto = proximasVisibles.slice(1);
 
   // Filtro por mes en "Utilizadas": el mes actual + los meses en que tiene clases
   const mesActual = isoLocal(new Date()).slice(0, 7);
-  const mesesDisponibles = [...new Set([mesActual, ...utilizadas.map((r) => r.fecha.slice(0, 7))])].sort().reverse();
+  const mesesDisponibles = [
+    ...new Set([mesActual, ...utilizadas.map((r) => r.fecha.slice(0, 7))]),
+  ]
+    .sort()
+    .reverse();
   const nombreMes = (m) => {
-    const t = new Date(m + '-15T12:00:00').toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+    const t = new Date(m + '-15T12:00:00').toLocaleDateString('es-CL', {
+      month: 'long',
+      year: 'numeric',
+    });
     return t.charAt(0).toUpperCase() + t.slice(1);
   };
-  const delMes = mesFiltro === 'todos' ? utilizadas : utilizadas.filter((r) => r.fecha.slice(0, 7) === mesFiltro);
+  const delMes =
+    mesFiltro === 'todos'
+      ? utilizadas
+      : utilizadas.filter((r) => r.fecha.slice(0, 7) === mesFiltro);
   const asistidasMes = delMes.filter((r) => r.asistio === true).length;
   const faltasMes = delMes.filter((r) => r.asistio === false).length;
 
   function exportarTodas() {
     descargarIcs(
-      proximas.map((r) => eventoDeReserva(r, r.horario, infoGimnasio?.direccion)),
+      proximas.map((r) =>
+        eventoDeReserva(r, r.horario, infoGimnasio?.direccion)
+      ),
       'mis-clases-cedys.ics'
     );
   }
 
   const porcentajeAsistencia =
-    asistidasMes + faltasMes > 0 ? Math.round((asistidasMes / (asistidasMes + faltasMes)) * 100) : null;
+    asistidasMes + faltasMes > 0
+      ? Math.round((asistidasMes / (asistidasMes + faltasMes)) * 100)
+      : null;
 
   function agregarUna(r) {
-    descargarIcs([eventoDeReserva(r, r.horario, infoGimnasio?.direccion)], 'clase-cedys.ics');
+    descargarIcs(
+      [eventoDeReserva(r, r.horario, infoGimnasio?.direccion)],
+      'clase-cedys.ics'
+    );
   }
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <p className="font-display text-3xl text-white leading-tight">Mis Reservas</p>
+      <p className="font-display text-3xl text-white leading-tight">
+        Mis Reservas
+      </p>
       <p className="text-white/40 text-xs mt-1 mb-4">
         {proximas.length === 0
           ? 'Tu agenda de entrenamiento'
@@ -335,12 +409,20 @@ export default function Reservas() {
       {tab === 'proximas' && (
         <>
           {proximas.length > 0 && (
-            <VistaSemanal reservas={proximas} diaElegido={diaElegido} onElegirDia={setDiaElegido} />
+            <VistaSemanal
+              reservas={proximas}
+              diaElegido={diaElegido}
+              onElegirDia={setDiaElegido}
+            />
           )}
 
-          {diaElegido && proximasVisibles.length === 0 && proximas.length > 0 && (
-            <p className="text-white/40 text-sm text-center py-6">No tienes clases reservadas ese día.</p>
-          )}
+          {diaElegido &&
+            proximasVisibles.length === 0 &&
+            proximas.length > 0 && (
+              <p className="text-white/40 text-sm text-center py-6">
+                No tienes clases reservadas ese día.
+              </p>
+            )}
 
           {proximas.length === 0 && (
             <div className="relative overflow-hidden rounded-3xl border border-cyan-brand/20 bg-gradient-to-br from-[#06343d] via-[#0b1b1f] to-ink text-center px-6 py-12 mb-6">
@@ -349,8 +431,12 @@ export default function Reservas() {
                 <div className="w-16 h-16 rounded-2xl bg-cyan-brand/15 flex items-center justify-center mx-auto mb-4">
                   <Calendar size={30} className="text-cyan-brand" />
                 </div>
-                <p className="text-white font-display text-2xl mb-1">Tu agenda está libre</p>
-                <p className="text-white/50 text-sm mb-6">¿Cuándo te vemos? Reserva tu próxima clase.</p>
+                <p className="text-white font-display text-2xl mb-1">
+                  Tu agenda está libre
+                </p>
+                <p className="text-white/50 text-sm mb-6">
+                  ¿Cuándo te vemos? Reserva tu próxima clase.
+                </p>
                 <button
                   onClick={() => navigate('/horarios')}
                   className="inline-flex items-center gap-2 bg-cyan-brand text-ink font-bold rounded-2xl px-6 py-3 text-sm transition-transform active:scale-[0.98]"
@@ -363,7 +449,11 @@ export default function Reservas() {
 
           {proxima &&
             (() => {
-              const tardia = esCancelacionTardia(proxima.fecha, proxima.horario.hora, horasAnticipacion);
+              const tardia = esCancelacionTardia(
+                proxima.fecha,
+                proxima.horario.hora,
+                horasAnticipacion
+              );
               const confirmandoEsta = confirmando === proxima.id;
               return (
                 <div className="relative overflow-hidden rounded-3xl border border-cyan-brand/25 bg-gradient-to-br from-[#06343d] via-[#0b1b1f] to-ink p-5 mb-5">
@@ -374,18 +464,24 @@ export default function Reservas() {
                         Tu próxima clase
                       </p>
                       <span className="flex items-center gap-1 bg-cyan-brand text-ink text-[11px] font-bold rounded-full px-2.5 py-1">
-                        <Clock size={12} /> {cuantoFalta(proxima.fecha, proxima.horario.hora)}
+                        <Clock size={12} />{' '}
+                        {cuantoFalta(proxima.fecha, proxima.horario.hora)}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-4">
                       <FechaCuadro fechaISO={proxima.fecha} tono="cyan" />
                       <div>
-                        <p className="font-display text-white leading-none" style={{ fontSize: '3rem' }}>
+                        <p
+                          className="font-display text-white leading-none"
+                          style={{ fontSize: '3rem' }}
+                        >
                           {proxima.horario.hora}
                         </p>
                         <p className="text-white/50 text-sm mt-1">
-                          {proxima.dia_semana.charAt(0).toUpperCase() + proxima.dia_semana.slice(1)} {proxima.dia_numero} de {proxima.mes}
+                          {proxima.dia_semana.charAt(0).toUpperCase() +
+                            proxima.dia_semana.slice(1)}{' '}
+                          {proxima.dia_numero} de {proxima.mes}
                         </p>
                       </div>
                     </div>
@@ -395,7 +491,9 @@ export default function Reservas() {
                         <span className="w-7 h-7 rounded-full bg-cyan-brand/15 text-cyan-brand flex items-center justify-center text-[11px] font-bold">
                           {inicialesDe(proxima.horario.coach_nombre)}
                         </span>
-                        <span className="text-white/70 text-sm">Entrenas con {proxima.horario.coach_nombre}</span>
+                        <span className="text-white/70 text-sm">
+                          Entrenas con {proxima.horario.coach_nombre}
+                        </span>
                       </div>
                     )}
 
@@ -418,7 +516,9 @@ export default function Reservas() {
                       <PanelCancelacion
                         tardia={tardia}
                         cancelando={cancelando}
-                        onConfirmar={() => handleConfirmarCancelacion(proxima.id)}
+                        onConfirmar={() =>
+                          handleConfirmarCancelacion(proxima.id)
+                        }
                         onMantener={() => setConfirmando(null)}
                         horasAnticipacion={horasAnticipacion}
                       />
@@ -432,20 +532,33 @@ export default function Reservas() {
 
           {resto.length > 0 && (
             <>
-              <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Después</p>
+              <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+                Después
+              </p>
               <div className="flex flex-col gap-2">
                 {resto.map((r) => {
-                  const tardia = esCancelacionTardia(r.fecha, r.horario.hora, horasAnticipacion);
+                  const tardia = esCancelacionTardia(
+                    r.fecha,
+                    r.horario.hora,
+                    horasAnticipacion
+                  );
                   const confirmandoEsta = confirmando === r.id;
                   return (
-                    <div key={r.id} className="bg-white/[0.04] border border-white/10 rounded-2xl p-3">
+                    <div
+                      key={r.id}
+                      className="bg-white/[0.04] border border-white/10 rounded-2xl p-3"
+                    >
                       <div className="flex items-center gap-3">
                         <FechaCuadro fechaISO={r.fecha} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-white font-display text-2xl leading-none">{r.horario.hora}</p>
+                          <p className="text-white font-display text-2xl leading-none">
+                            {r.horario.hora}
+                          </p>
                           <p className="text-white/45 text-xs mt-1 truncate">
                             {cuantoFalta(r.fecha, r.horario.hora)}
-                            {r.horario.coach_nombre ? ` · con ${r.horario.coach_nombre.split(' ')[0]}` : ''}
+                            {r.horario.coach_nombre
+                              ? ` · con ${r.horario.coach_nombre.split(' ')[0]}`
+                              : ''}
                           </p>
                         </div>
                         {!confirmandoEsta && (
@@ -487,7 +600,8 @@ export default function Reservas() {
                   onClick={exportarTodas}
                   className="flex items-center justify-center gap-1.5 text-white/40 text-xs py-2"
                 >
-                  <CalendarPlus size={13} /> Agregar mis {proximas.length} clases al calendario
+                  <CalendarPlus size={13} /> Agregar mis {proximas.length}{' '}
+                  clases al calendario
                 </button>
               )}
             </div>
@@ -500,7 +614,10 @@ export default function Reservas() {
           {utilizadas.length > 0 && (
             <>
               {/* Meses */}
-              <div className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1 mb-4" style={{ scrollbarWidth: 'none' }}>
+              <div
+                className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1 mb-4"
+                style={{ scrollbarWidth: 'none' }}
+              >
                 {[...mesesDisponibles, 'todos'].map((m) => {
                   const activo = mesFiltro === m;
                   const texto =
@@ -508,7 +625,9 @@ export default function Reservas() {
                       ? 'Todos'
                       : m === mesActual
                       ? 'Este mes'
-                      : nombreMes(m).replace(/ de \d{4}$/, (x) => (m.slice(0, 4) === mesActual.slice(0, 4) ? '' : x));
+                      : nombreMes(m).replace(/ de \d{4}$/, (x) =>
+                          m.slice(0, 4) === mesActual.slice(0, 4) ? '' : x
+                        );
                   return (
                     <button
                       key={m}
@@ -529,34 +648,52 @@ export default function Reservas() {
               <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 mb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-white/40 text-[11px] uppercase tracking-wide">Asistencia</p>
+                    <p className="text-white/40 text-[11px] uppercase tracking-wide">
+                      Asistencia
+                    </p>
                     <p className="text-white font-display text-3xl leading-tight">
-                      {porcentajeAsistencia === null ? '—' : `${porcentajeAsistencia}%`}
+                      {porcentajeAsistencia === null
+                        ? '—'
+                        : `${porcentajeAsistencia}%`}
                     </p>
                   </div>
-                  {porcentajeAsistencia !== null && porcentajeAsistencia >= 80 && (
-                    <span className="flex items-center gap-1 bg-yellow-400/15 text-yellow-200 text-xs font-semibold rounded-full px-3 py-1">
-                      <Trophy size={13} /> ¡Muy constante!
-                    </span>
-                  )}
+                  {porcentajeAsistencia !== null &&
+                    porcentajeAsistencia >= 80 && (
+                      <span className="flex items-center gap-1 bg-yellow-400/15 text-yellow-200 text-xs font-semibold rounded-full px-3 py-1">
+                        <Trophy size={13} /> ¡Muy constante!
+                      </span>
+                    )}
                 </div>
                 <div className="h-2 rounded-full bg-white/10 overflow-hidden mt-2 flex">
                   {delMes.length > 0 && (
                     <>
-                      <div className="h-full bg-cyan-brand" style={{ width: `${(asistidasMes / delMes.length) * 100}%` }} />
-                      <div className="h-full bg-red-400/70" style={{ width: `${(faltasMes / delMes.length) * 100}%` }} />
+                      <div
+                        className="h-full bg-cyan-brand"
+                        style={{
+                          width: `${(asistidasMes / delMes.length) * 100}%`,
+                        }}
+                      />
+                      <div
+                        className="h-full bg-red-400/70"
+                        style={{
+                          width: `${(faltasMes / delMes.length) * 100}%`,
+                        }}
+                      />
                     </>
                   )}
                 </div>
                 <div className="flex gap-4 mt-3 text-xs">
                   <span className="flex items-center gap-1.5 text-white/60">
-                    <span className="w-2 h-2 rounded-full bg-cyan-brand" /> {asistidasMes} asististe
+                    <span className="w-2 h-2 rounded-full bg-cyan-brand" />{' '}
+                    {asistidasMes} asististe
                   </span>
                   <span className="flex items-center gap-1.5 text-white/60">
-                    <span className="w-2 h-2 rounded-full bg-red-400/70" /> {faltasMes} faltaste
+                    <span className="w-2 h-2 rounded-full bg-red-400/70" />{' '}
+                    {faltasMes} faltaste
                   </span>
                   <span className="flex items-center gap-1.5 text-white/40">
-                    <span className="w-2 h-2 rounded-full bg-white/20" /> {delMes.length} en total
+                    <span className="w-2 h-2 rounded-full bg-white/20" />{' '}
+                    {delMes.length} en total
                   </span>
                 </div>
               </div>
@@ -571,27 +708,54 @@ export default function Reservas() {
           {utilizadas.length === 0 && (
             <div className="text-center py-16">
               <CalendarCheck size={40} className="text-white/15 mx-auto mb-4" />
-              <p className="text-white/30 text-sm">Aún no tienes clases en tu historial.</p>
+              <p className="text-white/30 text-sm">
+                Aún no tienes clases en tu historial.
+              </p>
             </div>
           )}
 
           <div className="flex flex-col gap-2">
             {delMes.map((r) => (
-              <div key={r.id} className="bg-white/[0.03] border border-white/10 rounded-2xl p-3">
+              <div
+                key={r.id}
+                className="bg-white/[0.03] border border-white/10 rounded-2xl p-3"
+              >
                 <div className="flex items-center gap-3">
                   <FechaCuadro
                     fechaISO={r.fecha}
-                    tono={r.asistio === true ? 'cyan' : r.asistio === false ? 'rojo' : 'gris'}
+                    tono={
+                      r.asistio === true
+                        ? 'cyan'
+                        : r.asistio === false
+                        ? 'rojo'
+                        : 'gris'
+                    }
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-white/85 font-display text-2xl leading-none">{r.horario.hora}</p>
+                    <p className="text-white/85 font-display text-2xl leading-none">
+                      {r.horario.hora}
+                    </p>
                     {r.horario.coach_nombre && (
-                      <p className="text-white/40 text-xs mt-1 truncate">con {r.horario.coach_nombre}</p>
+                      <p className="text-white/40 text-xs mt-1 truncate">
+                        con {r.horario.coach_nombre}
+                      </p>
                     )}
                   </div>
                   <EstadoAsistencia asistio={r.asistio} />
                 </div>
-                {sePuedeEvaluar(r, r.horario.hora) && <EvaluarClase reserva={r} />}
+                {rutinaDeReserva(r).map((d) => (
+                  <p
+                    key={d.id}
+                    className="flex items-center gap-1.5 text-cyan-brand/90 text-xs mt-2 bg-cyan-brand/[0.07] border border-cyan-brand/20 rounded-lg px-2.5 py-1.5"
+                  >
+                    <Dumbbell size={12} /> Rutina:{' '}
+                    {d.semana_numero ? `Semana ${d.semana_numero} · ` : ''}
+                    {d.dia_nombre || 'día completado'}
+                  </p>
+                ))}
+                {sePuedeEvaluar(r, r.horario.hora) && (
+                  <EvaluarClase reserva={r} />
+                )}
               </div>
             ))}
           </div>

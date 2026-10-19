@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Plus, Trash2, Pencil, Ticket, CalendarDays, Snowflake, Users } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Pencil,
+  Ticket,
+  CalendarDays,
+  Snowflake,
+  Users,
+} from 'lucide-react';
 
 export default function Planes() {
   const { planes, guardarPlan, crearPlan, eliminarPlan, usuarios } = useAuth();
@@ -10,7 +18,9 @@ export default function Planes() {
   async function confirmarEliminar(planId) {
     const resultado = await eliminarPlan(planId);
     setEliminando(null);
-    setErrorEliminar(resultado.ok ? null : { planId, mensaje: resultado.mensaje });
+    setErrorEliminar(
+      resultado.ok ? null : { planId, mensaje: resultado.mensaje }
+    );
   }
   const [editando, setEditando] = useState(null);
   const [form, setForm] = useState({});
@@ -85,10 +95,17 @@ export default function Planes() {
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
       <div className="flex items-end justify-between gap-3 mb-5">
         <div>
-          <p className="font-display text-3xl text-white leading-tight">Planes</p>
+          <p className="font-display text-3xl text-white leading-tight">
+            Planes
+          </p>
           <p className="text-white/40 text-xs mt-1">
-            {Object.keys(planes).length} plan{Object.keys(planes).length !== 1 ? 'es' : ''} ·{' '}
-            {usuarios.filter((u) => u.plan_id && u.estado !== 'inactivo').length} alumnos con plan
+            {Object.keys(planes).length} plan
+            {Object.keys(planes).length !== 1 ? 'es' : ''} ·{' '}
+            {
+              usuarios.filter((u) => u.plan_id && u.estado !== 'inactivo')
+                .length
+            }{' '}
+            alumnos con plan
           </p>
         </div>
         <button
@@ -193,158 +210,180 @@ export default function Planes() {
         {Object.values(planes)
           .sort((a, b) => (a.valor_con_iva || 0) - (b.valor_con_iva || 0))
           .map((p) => (
-          <div
-            key={p.id}
-            className="relative overflow-hidden bg-white/[0.04] border border-white/10 rounded-3xl p-5"
-          >
-            {editando === p.id ? (
-              <div className="flex flex-col gap-2">
-                <input
-                  value={form.nombre}
-                  onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                  className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                  placeholder="Nombre del plan"
-                />
-                <input
-                  type="number"
-                  value={form.cantidad_sesiones}
-                  onChange={(e) =>
-                    setForm({ ...form, cantidad_sesiones: e.target.value })
-                  }
-                  className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                  placeholder="Sesiones (vacío = ilimitado)"
-                />
-                <input
-                  type="number"
-                  value={form.valor_neto}
-                  onChange={(e) =>
-                    setForm({ ...form, valor_neto: e.target.value })
-                  }
-                  className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                  placeholder="Valor neto"
-                />
-                <input
-                  type="number"
-                  value={form.valor_con_iva}
-                  onChange={(e) =>
-                    setForm({ ...form, valor_con_iva: e.target.value })
-                  }
-                  className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                  placeholder="Valor con IVA"
-                />
-                <input
-                  type="number"
-                  value={form.duracion_dias}
-                  onChange={(e) =>
-                    setForm({ ...form, duracion_dias: e.target.value })
-                  }
-                  className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                  placeholder="Duración en días (ej: 30, 90, 180, 365)"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => guardar(p.id)}
-                    className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm transition-transform active:scale-[0.98]"
-                  >
-                    Guardar
-                  </button>
-                  <button
-                    onClick={() => setEditando(null)}
-                    className="flex-1 bg-white/10 text-white rounded-lg py-2 text-sm transition-transform active:scale-[0.98]"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-white font-display text-2xl leading-tight">{p.nombre}</p>
-                    <p className="font-display text-3xl text-cyan-brand leading-none mt-2">
-                      ${(p.valor_con_iva || 0).toLocaleString('es-CL')}
-                      <span className="text-white/40 text-xs font-sans ml-1.5">con IVA</span>
-                    </p>
-                    <p className="text-white/35 text-xs mt-1">Neto ${(p.valor_neto || 0).toLocaleString('es-CL')}</p>
+            <div
+              key={p.id}
+              className="relative overflow-hidden bg-white/[0.04] border border-white/10 rounded-3xl p-5"
+            >
+              {editando === p.id ? (
+                <div className="flex flex-col gap-2">
+                  <input
+                    value={form.nombre}
+                    onChange={(e) =>
+                      setForm({ ...form, nombre: e.target.value })
+                    }
+                    className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                    placeholder="Nombre del plan"
+                  />
+                  <input
+                    type="number"
+                    value={form.cantidad_sesiones}
+                    onChange={(e) =>
+                      setForm({ ...form, cantidad_sesiones: e.target.value })
+                    }
+                    className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                    placeholder="Sesiones (vacío = ilimitado)"
+                  />
+                  <input
+                    type="number"
+                    value={form.valor_neto}
+                    onChange={(e) =>
+                      setForm({ ...form, valor_neto: e.target.value })
+                    }
+                    className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                    placeholder="Valor neto"
+                  />
+                  <input
+                    type="number"
+                    value={form.valor_con_iva}
+                    onChange={(e) =>
+                      setForm({ ...form, valor_con_iva: e.target.value })
+                    }
+                    className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                    placeholder="Valor con IVA"
+                  />
+                  <input
+                    type="number"
+                    value={form.duracion_dias}
+                    onChange={(e) =>
+                      setForm({ ...form, duracion_dias: e.target.value })
+                    }
+                    className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                    placeholder="Duración en días (ej: 30, 90, 180, 365)"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => guardar(p.id)}
+                      className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-sm transition-transform active:scale-[0.98]"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      onClick={() => setEditando(null)}
+                      className="flex-1 bg-white/10 text-white rounded-lg py-2 text-sm transition-transform active:scale-[0.98]"
+                    >
+                      Cancelar
+                    </button>
                   </div>
-                  {eliminando === p.id ? (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-red-300 text-xs">¿Eliminar?</span>
-                      <button
-                        onClick={() => confirmarEliminar(p.id)}
-                        className="bg-red-500/80 text-white text-xs font-semibold px-2.5 py-1.5 rounded-md"
-                      >
-                        Sí
-                      </button>
-                      <button
-                        onClick={() => setEliminando(null)}
-                        className="bg-white/10 text-white text-xs px-2.5 py-1.5 rounded-md"
-                      >
-                        No
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={() => abrirEdicion(p)}
-                        className="w-9 h-9 rounded-full bg-cyan-brand/15 text-cyan-brand flex items-center justify-center transition-transform active:scale-90"
-                        aria-label="Editar plan"
-                      >
-                        <Pencil size={15} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEliminando(p.id);
-                          setErrorEliminar(null);
-                        }}
-                        className="w-9 h-9 rounded-full bg-red-500/10 text-red-300 flex items-center justify-center transition-transform active:scale-90"
-                        aria-label="Eliminar plan"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  )}
                 </div>
+              ) : (
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-white font-display text-2xl leading-tight">
+                        {p.nombre}
+                      </p>
+                      <p className="font-display text-3xl text-cyan-brand leading-none mt-2">
+                        ${(p.valor_con_iva || 0).toLocaleString('es-CL')}
+                        <span className="text-white/40 text-xs font-sans ml-1.5">
+                          con IVA
+                        </span>
+                      </p>
+                      <p className="text-white/35 text-xs mt-1">
+                        Neto ${(p.valor_neto || 0).toLocaleString('es-CL')}
+                      </p>
+                    </div>
+                    {eliminando === p.id ? (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-red-300 text-xs">¿Eliminar?</span>
+                        <button
+                          onClick={() => confirmarEliminar(p.id)}
+                          className="bg-red-500/80 text-white text-xs font-semibold px-2.5 py-1.5 rounded-md"
+                        >
+                          Sí
+                        </button>
+                        <button
+                          onClick={() => setEliminando(null)}
+                          className="bg-white/10 text-white text-xs px-2.5 py-1.5 rounded-md"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => abrirEdicion(p)}
+                          className="w-9 h-9 rounded-full bg-cyan-brand/15 text-cyan-brand flex items-center justify-center transition-transform active:scale-90"
+                          aria-label="Editar plan"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEliminando(p.id);
+                            setErrorEliminar(null);
+                          }}
+                          className="w-9 h-9 rounded-full bg-red-500/10 text-red-300 flex items-center justify-center transition-transform active:scale-90"
+                          aria-label="Eliminar plan"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
-                <div className="flex flex-wrap gap-1.5 mt-4">
-                  <span className="flex items-center gap-1 bg-white/[0.06] text-white/75 text-xs rounded-full px-2.5 py-1">
-                    <Ticket size={12} className="text-cyan-brand" />
-                    {p.cantidad_sesiones ? `${p.cantidad_sesiones} sesiones` : 'Ilimitado'}
-                  </span>
-                  <span className="flex items-center gap-1 bg-white/[0.06] text-white/75 text-xs rounded-full px-2.5 py-1">
-                    <CalendarDays size={12} className="text-amber-300" />
-                    {p.duracion_dias || 30} días
-                  </span>
-                  <span
-                    className={`flex items-center gap-1 text-xs rounded-full px-2.5 py-1 ${
-                      (p.duracion_dias || 30) >= 90 ? 'bg-sky-400/10 text-sky-200' : 'bg-white/[0.04] text-white/40'
-                    }`}
-                  >
-                    <Snowflake size={12} />
-                    {(p.duracion_dias || 30) >= 90 ? 'Puede congelar' : 'Sin congelar'}
-                  </span>
-                  {p.cantidad_sesiones && p.valor_con_iva ? (
-                    <span className="bg-white/[0.04] text-white/45 text-xs rounded-full px-2.5 py-1">
-                      ${Math.round(p.valor_con_iva / p.cantidad_sesiones).toLocaleString('es-CL')} por sesión
+                  <div className="flex flex-wrap gap-1.5 mt-4">
+                    <span className="flex items-center gap-1 bg-white/[0.06] text-white/75 text-xs rounded-full px-2.5 py-1">
+                      <Ticket size={12} className="text-cyan-brand" />
+                      {p.cantidad_sesiones
+                        ? `${p.cantidad_sesiones} sesiones`
+                        : 'Ilimitado'}
                     </span>
-                  ) : null}
+                    <span className="flex items-center gap-1 bg-white/[0.06] text-white/75 text-xs rounded-full px-2.5 py-1">
+                      <CalendarDays size={12} className="text-amber-300" />
+                      {p.duracion_dias || 30} días
+                    </span>
+                    <span
+                      className={`flex items-center gap-1 text-xs rounded-full px-2.5 py-1 ${
+                        (p.duracion_dias || 30) >= 90
+                          ? 'bg-sky-400/10 text-sky-200'
+                          : 'bg-white/[0.04] text-white/40'
+                      }`}
+                    >
+                      <Snowflake size={12} />
+                      {(p.duracion_dias || 30) >= 90
+                        ? 'Puede congelar'
+                        : 'Sin congelar'}
+                    </span>
+                    {p.cantidad_sesiones && p.valor_con_iva ? (
+                      <span className="bg-white/[0.04] text-white/45 text-xs rounded-full px-2.5 py-1">
+                        $
+                        {Math.round(
+                          p.valor_con_iva / p.cantidad_sesiones
+                        ).toLocaleString('es-CL')}{' '}
+                        por sesión
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            )}
-            {editando !== p.id && (
-              <p className="flex items-center gap-1.5 text-white/45 text-xs mt-3 pt-3 border-t border-white/[0.06]">
-                <Users size={13} />
-                {(() => {
-                  const n = usuarios.filter((u) => u.plan_id === p.id).length;
-                  return n === 0 ? 'Ningún alumno con este plan' : `${n} ${n === 1 ? 'alumno' : 'alumnos'} con este plan`;
-                })()}
-              </p>
-            )}
-            {errorEliminar?.planId === p.id && (
-              <p className="text-red-400 text-xs mt-2">{errorEliminar.mensaje}</p>
-            )}
-          </div>
-        ))}
+              )}
+              {editando !== p.id && (
+                <p className="flex items-center gap-1.5 text-white/45 text-xs mt-3 pt-3 border-t border-white/[0.06]">
+                  <Users size={13} />
+                  {(() => {
+                    const n = usuarios.filter((u) => u.plan_id === p.id).length;
+                    return n === 0
+                      ? 'Ningún alumno con este plan'
+                      : `${n} ${n === 1 ? 'alumno' : 'alumnos'} con este plan`;
+                  })()}
+                </p>
+              )}
+              {errorEliminar?.planId === p.id && (
+                <p className="text-red-400 text-xs mt-2">
+                  {errorEliminar.mensaje}
+                </p>
+              )}
+            </div>
+          ))}
       </div>
     </div>
   );

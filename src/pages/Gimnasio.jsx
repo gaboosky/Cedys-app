@@ -24,11 +24,17 @@ export default function Gimnasio() {
   const info = infoGimnasio || {};
   const numero = soloDigitos(info.whatsapp);
   const linkWhatsapp = numero
-    ? `https://wa.me/${numero}?text=${encodeURIComponent(`Hola, soy ${usuarioActual?.nombre || ''}. `)}`
+    ? `https://wa.me/${numero}?text=${encodeURIComponent(
+        `Hola, soy ${usuarioActual?.nombre || ''}. `
+      )}`
     : null;
-  const usuarioInstagram = String(info.instagram || '').replace(/^@/, '').trim();
+  const usuarioInstagram = String(info.instagram || '')
+    .replace(/^@/, '')
+    .trim();
   const linkMapa = info.direccion
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(info.direccion)}`
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        info.direccion
+      )}`
     : null;
   const lineasHorario = String(info.horario_atencion || '')
     .split('\n')
@@ -52,7 +58,8 @@ export default function Gimnasio() {
       texto: 'Instagram',
       icono: AtSign,
       fondo: 'bg-pink-500/10 border-pink-500/25',
-      circulo: 'bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600 text-white',
+      circulo:
+        'bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600 text-white',
     },
     linkMapa && {
       href: linkMapa,
@@ -69,15 +76,33 @@ export default function Gimnasio() {
       <div className="relative overflow-hidden rounded-3xl border border-cyan-brand/25 bg-gradient-to-br from-[#06343d] via-[#0b1b1f] to-ink p-5 mb-5">
         <div className="absolute -bottom-16 -left-10 w-48 h-48 rounded-full bg-cyan-brand/10 blur-3xl" />
         <div className="relative">
-          <img src={LOGO_CEDS_WORDMARK} alt={info.nombre || 'CED&S'} className="w-[130px] h-auto" />
-          <p className="text-white/70 text-sm mt-4">Aquí estamos para ayudarte. ¡Te esperamos! 💪</p>
-          {usuarioInstagram && <p className="text-cyan-brand/80 text-xs mt-1">@{usuarioInstagram}</p>}
+          <img
+            src={LOGO_CEDS_WORDMARK}
+            alt={info.nombre || 'CED&S'}
+            className="w-[130px] h-auto"
+          />
+          <p className="text-white/70 text-sm mt-4">
+            Aquí estamos para ayudarte. ¡Te esperamos! 💪
+          </p>
+          {usuarioInstagram && (
+            <p className="text-cyan-brand/80 text-xs mt-1">
+              @{usuarioInstagram}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Contacto rápido */}
       {contactos.length > 0 && (
-        <div className={`grid gap-2 mb-5 ${contactos.length === 3 ? 'grid-cols-3' : contactos.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        <div
+          className={`grid gap-2 mb-5 ${
+            contactos.length === 3
+              ? 'grid-cols-3'
+              : contactos.length === 2
+              ? 'grid-cols-2'
+              : 'grid-cols-1'
+          }`}
+        >
           {contactos.map((c) => {
             const Icono = c.icono;
             return (
@@ -88,10 +113,14 @@ export default function Gimnasio() {
                 rel="noopener noreferrer"
                 className={`flex flex-col items-center gap-2 border rounded-2xl py-4 transition-transform active:scale-95 ${c.fondo}`}
               >
-                <span className={`w-11 h-11 rounded-full flex items-center justify-center ${c.circulo}`}>
+                <span
+                  className={`w-11 h-11 rounded-full flex items-center justify-center ${c.circulo}`}
+                >
                   <Icono size={20} />
                 </span>
-                <span className="text-white text-xs font-medium">{c.texto}</span>
+                <span className="text-white text-xs font-medium">
+                  {c.texto}
+                </span>
               </a>
             );
           })}
@@ -104,8 +133,12 @@ export default function Gimnasio() {
           <MapPin size={17} />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-white/40 text-[11px] uppercase tracking-wide">Dirección</p>
-          <p className="text-white text-sm mt-0.5">{info.direccion || 'Pronto'}</p>
+          <p className="text-white/40 text-[11px] uppercase tracking-wide">
+            Dirección
+          </p>
+          <p className="text-white text-sm mt-0.5">
+            {info.direccion || 'Pronto'}
+          </p>
           {linkMapa && (
             <a
               href={linkMapa}
@@ -125,7 +158,9 @@ export default function Gimnasio() {
           <Clock size={17} />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-white/40 text-[11px] uppercase tracking-wide">Horario de atención</p>
+          <p className="text-white/40 text-[11px] uppercase tracking-wide">
+            Horario de atención
+          </p>
           {lineasHorario.length === 0 ? (
             <p className="text-white/35 text-sm mt-0.5">Pronto</p>
           ) : (
@@ -145,7 +180,10 @@ export default function Gimnasio() {
         <ScrollText size={13} /> Reglamento
       </p>
       <div className="flex flex-col gap-2 mb-4">
-        <Regla icono={CalendarX} titulo={`Cancela con ${horasAnticipacion} horas de anticipación`}>
+        <Regla
+          icono={CalendarX}
+          titulo={`Cancela con ${horasAnticipacion} horas de anticipación`}
+        >
           Si cancelas después, la sesión se descuenta igual.
         </Regla>
         <Regla icono={Timer} titulo="Máximo 15 minutos de atraso">
@@ -161,7 +199,9 @@ export default function Gimnasio() {
 
       {reglasGimnasio.length > 0 && (
         <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4">
-          <p className="text-white/40 text-[11px] uppercase tracking-wide mb-2">Además, en {info.nombre || 'CED&S'}</p>
+          <p className="text-white/40 text-[11px] uppercase tracking-wide mb-2">
+            Además, en {info.nombre || 'CED&S'}
+          </p>
           <div className="flex flex-col gap-2">
             {reglasGimnasio.map((r, i) => (
               <p key={i} className="text-white/80 text-sm flex gap-2">

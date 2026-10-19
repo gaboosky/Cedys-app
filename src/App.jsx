@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
+import { lazySeguro } from './lib/cargaSegura';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import BottomNav from './components/BottomNav';
@@ -10,44 +11,58 @@ import NuevaContrasena from './pages/NuevaContrasena';
 
 // Carga perezosa: cada pantalla se descarga solo cuando el usuario entra a ella,
 // en vez de bajar toda la app de una sola vez.
-const Perfil = lazy(() => import('./pages/Perfil'));
-const Horarios = lazy(() => import('./pages/Horarios'));
-const HorarioDetalle = lazy(() => import('./pages/HorarioDetalle'));
-const Reservas = lazy(() => import('./pages/Reservas'));
-const Mas = lazy(() => import('./pages/Mas'));
-const General = lazy(() => import('./pages/General'));
-const RutinaSemanas = lazy(() => import('./pages/rutinas/RutinaSemanas'));
-const RutinaDias = lazy(() => import('./pages/rutinas/RutinaDias'));
-const RutinaEjercicios = lazy(() => import('./pages/rutinas/RutinaEjercicios'));
-const MiRutina = lazy(() => import('./pages/MiRutina'));
-const MisEvaluaciones = lazy(() => import('./pages/coach/MisEvaluaciones'));
-const Progreso = lazy(() => import('./pages/Progreso'));
-const Privacidad = lazy(() => import('./pages/Privacidad'));
-const Terminos = lazy(() => import('./pages/Terminos'));
-const MisClases = lazy(() => import('./pages/coach/MisClases'));
-const Alumnos = lazy(() => import('./pages/coach/Alumnos'));
-const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
-const Usuarios = lazy(() => import('./pages/admin/Usuarios'));
-const ClasesAdmin = lazy(() => import('./pages/admin/ClasesAdmin'));
-const Planes = lazy(() => import('./pages/admin/Planes'));
-const Coaches = lazy(() => import('./pages/admin/Coaches'));
-const Configuracion = lazy(() => import('./pages/admin/Configuracion'));
-const Reportes = lazy(() => import('./pages/admin/Reportes'));
-const NotasCoach = lazy(() => import('./pages/admin/NotasCoach'));
-const ReservasActivas = lazy(() => import('./pages/admin/ReservasActivas'));
-const PerfilAlumno = lazy(() => import('./pages/admin/PerfilAlumno'));
-const IngresoDetalle = lazy(() => import('./pages/admin/IngresoDetalle'));
-const IngresosGraficos = lazy(() => import('./pages/admin/IngresosGraficos'));
-const Finanzas = lazy(() => import('./pages/admin/Finanzas'));
-const Renovaciones = lazy(() => import('./pages/admin/Renovaciones'));
-const Gimnasio = lazy(() => import('./pages/Gimnasio'));
-const Gastos = lazy(() => import('./pages/admin/Gastos'));
-const Avisos = lazy(() => import('./pages/admin/Avisos'));
-const Actividad = lazy(() => import('./pages/admin/Actividad'));
-const PagoCoaches = lazy(() => import('./pages/admin/PagoCoaches'));
-const ClasesRealizadas = lazy(() => import('./pages/admin/ClasesRealizadas'));
-const SolicitudesPrueba = lazy(() => import('./pages/admin/SolicitudesPrueba'));
-const SeguimientoPersonal = lazy(() => import('./pages/SeguimientoPersonal'));
+const Perfil = lazySeguro(() => import('./pages/Perfil'));
+const Horarios = lazySeguro(() => import('./pages/Horarios'));
+const HorarioDetalle = lazySeguro(() => import('./pages/HorarioDetalle'));
+const Reservas = lazySeguro(() => import('./pages/Reservas'));
+const Mas = lazySeguro(() => import('./pages/Mas'));
+const General = lazySeguro(() => import('./pages/General'));
+const RutinaSemanas = lazySeguro(() => import('./pages/rutinas/RutinaSemanas'));
+const RutinaDias = lazySeguro(() => import('./pages/rutinas/RutinaDias'));
+const RutinaEjercicios = lazySeguro(() =>
+  import('./pages/rutinas/RutinaEjercicios')
+);
+const MiRutina = lazySeguro(() => import('./pages/MiRutina'));
+const MisEvaluaciones = lazySeguro(() =>
+  import('./pages/coach/MisEvaluaciones')
+);
+const Progreso = lazySeguro(() => import('./pages/Progreso'));
+const Privacidad = lazySeguro(() => import('./pages/Privacidad'));
+const Terminos = lazySeguro(() => import('./pages/Terminos'));
+const MisClases = lazySeguro(() => import('./pages/coach/MisClases'));
+const Alumnos = lazySeguro(() => import('./pages/coach/Alumnos'));
+const Dashboard = lazySeguro(() => import('./pages/admin/Dashboard'));
+const Usuarios = lazySeguro(() => import('./pages/admin/Usuarios'));
+const ClasesAdmin = lazySeguro(() => import('./pages/admin/ClasesAdmin'));
+const Planes = lazySeguro(() => import('./pages/admin/Planes'));
+const Coaches = lazySeguro(() => import('./pages/admin/Coaches'));
+const Configuracion = lazySeguro(() => import('./pages/admin/Configuracion'));
+const Reportes = lazySeguro(() => import('./pages/admin/Reportes'));
+const NotasCoach = lazySeguro(() => import('./pages/admin/NotasCoach'));
+const ReservasActivas = lazySeguro(() =>
+  import('./pages/admin/ReservasActivas')
+);
+const PerfilAlumno = lazySeguro(() => import('./pages/admin/PerfilAlumno'));
+const IngresoDetalle = lazySeguro(() => import('./pages/admin/IngresoDetalle'));
+const IngresosGraficos = lazySeguro(() =>
+  import('./pages/admin/IngresosGraficos')
+);
+const Finanzas = lazySeguro(() => import('./pages/admin/Finanzas'));
+const Renovaciones = lazySeguro(() => import('./pages/admin/Renovaciones'));
+const Gimnasio = lazySeguro(() => import('./pages/Gimnasio'));
+const Gastos = lazySeguro(() => import('./pages/admin/Gastos'));
+const Avisos = lazySeguro(() => import('./pages/admin/Avisos'));
+const Actividad = lazySeguro(() => import('./pages/admin/Actividad'));
+const PagoCoaches = lazySeguro(() => import('./pages/admin/PagoCoaches'));
+const ClasesRealizadas = lazySeguro(() =>
+  import('./pages/admin/ClasesRealizadas')
+);
+const SolicitudesPrueba = lazySeguro(() =>
+  import('./pages/admin/SolicitudesPrueba')
+);
+const SeguimientoPersonal = lazySeguro(() =>
+  import('./pages/SeguimientoPersonal')
+);
 
 function CargandoPantalla() {
   return (
@@ -110,8 +125,14 @@ function AppShell() {
           <Route path="/pago-coaches" element={<PagoCoaches />} />
           <Route path="/clases-realizadas" element={<ClasesRealizadas />} />
           <Route path="/pruebas" element={<SolicitudesPrueba />} />
-          <Route path="/seguimiento" element={<Navigate to="/renovaciones?tab=sin_venir" replace />} />
-          <Route path="/seguimiento-personal/:usuarioId" element={<SeguimientoPersonal />} />
+          <Route
+            path="/seguimiento"
+            element={<Navigate to="/renovaciones?tab=sin_venir" replace />}
+          />
+          <Route
+            path="/seguimiento-personal/:usuarioId"
+            element={<SeguimientoPersonal />}
+          />
           <Route path="/clases-admin" element={<ClasesAdmin />} />
           <Route path="/planes" element={<Planes />} />
           <Route path="/coaches" element={<Coaches />} />
@@ -165,12 +186,23 @@ function Arrancando() {
 function Root() {
   const { usuarioActual, iniciando } = useAuth();
   // El link de "Olvidé mi contraseña" abre esta pantalla, haya o no sesión.
-  if (window.location.pathname === '/nueva-contrasena') return <NuevaContrasena />;
+  if (window.location.pathname === '/nueva-contrasena')
+    return <NuevaContrasena />;
   if (iniciando) return <Arrancando />;
   // cedys.cl/prueba abre directo el formulario de sesión de prueba y cedys.cl/registro el de registro
   if (!usuarioActual) {
     const ruta = window.location.pathname;
-    return <Login inicial={ruta === '/prueba' ? 'prueba' : ruta === '/registro' ? 'registro' : 'login'} />;
+    return (
+      <Login
+        inicial={
+          ruta === '/prueba'
+            ? 'prueba'
+            : ruta === '/registro'
+            ? 'registro'
+            : 'login'
+        }
+      />
+    );
   }
   return <AppShell />;
 }

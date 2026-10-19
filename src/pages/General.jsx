@@ -92,13 +92,28 @@ const FRASES = [
   'La disciplina es elegir lo que quieres a largo plazo.',
   'Entrenar también es cuidarte.',
   'Lo difícil hoy es lo fácil de mañana.',
-  'Llegar ya es la mitad del trabajo.',
+  'Lo que haces cada día pesa más que lo que haces de vez en cuando.',
   'El progreso no siempre se ve, pero siempre se siente.',
-  'Respira, enfócate y dale.',
+  'No esperes el momento perfecto: empieza con lo que tienes.',
   'Juntos se entrena mejor.',
+  'Ser un 1% mejor cada día cambia todo con el tiempo.',
+  'Lo que hoy te cuesta, mañana será tu fortaleza.',
+  'Cuidarte no es egoísmo, es la base para dar lo mejor de ti.',
+  'No te compares con otros: compárate con quien eras ayer.',
+  'Las metas grandes se logran con hábitos pequeños.',
+  'Caer es parte del camino; levantarse es lo que te hace avanzar.',
+  'Hoy es una nueva oportunidad para ser tu mejor versión.',
 ];
 
-const DIAS_NOMBRE = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DIAS_NOMBRE = [
+  'Domingo',
+  'Lunes',
+  'Martes',
+  'Miércoles',
+  'Jueves',
+  'Viernes',
+  'Sábado',
+];
 const DIAS_CORTOS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
 function saludoSegunHora() {
@@ -123,22 +138,37 @@ function cuandoEs(fecha, hoy) {
 }
 
 function Bienvenida() {
-  const { usuarioActual, reservas, horarios, sesionesRestantes, rolEfectivo, coachDeClase, horarioEstaCancelado } = useAuth();
+  const {
+    usuarioActual,
+    reservas,
+    horarios,
+    sesionesRestantes,
+    rolEfectivo,
+    coachDeClase,
+    horarioEstaCancelado,
+  } = useAuth();
   const vista = rolEfectivo || usuarioActual.rol;
   const esAlumno = vista === 'usuario';
   const esCoach = vista === 'coach';
-  const primerNombre = (usuarioActual.nombre || '').trim().split(/\s+/)[0] || '';
+  const primerNombre =
+    (usuarioActual.nombre || '').trim().split(/\s+/)[0] || '';
   const hoy = hoyLocalISO();
 
   const datos = useMemo(() => {
     const horarioDe = {};
     for (const h of horarios || []) horarioDe[h.id] = h;
     const ahora = new Date();
-    const horaAhora = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
-    const confirmadas = (reservas || []).filter((r) => r.estado === 'confirmada');
+    const horaAhora = `${String(ahora.getHours()).padStart(2, '0')}:${String(
+      ahora.getMinutes()
+    ).padStart(2, '0')}`;
+    const confirmadas = (reservas || []).filter(
+      (r) => r.estado === 'confirmada'
+    );
 
     // Personas que entrenan hoy en el gimnasio
-    const entrenanHoy = new Set(confirmadas.filter((r) => r.fecha === hoy).map((r) => r.usuario_id)).size;
+    const entrenanHoy = new Set(
+      confirmadas.filter((r) => r.fecha === hoy).map((r) => r.usuario_id)
+    ).size;
 
     // Mis reservas
     const mias = confirmadas.filter((r) => r.usuario_id === usuarioActual.id);
@@ -149,7 +179,9 @@ function Bienvenida() {
     const proxima = proximas[0] || null;
 
     const mes = hoy.slice(0, 7);
-    const esteMes = mias.filter((r) => r.fecha.startsWith(mes) && r.fecha <= hoy && r.asistio !== false).length;
+    const esteMes = mias.filter(
+      (r) => r.fecha.startsWith(mes) && r.fecha <= hoy && r.asistio !== false
+    ).length;
 
     // Semana actual (lunes a domingo)
     const diaSemana = (new Date(hoy + 'T12:00:00').getDay() + 6) % 7; // 0 = lunes
@@ -158,13 +190,19 @@ function Bienvenida() {
       const fecha = sumarDias(lunes, i);
       const r = mias.find((x) => x.fecha === fecha);
       let estado = 'nada';
-      if (r) estado = fecha < hoy ? (r.asistio === false ? 'nada' : 'fue') : 'reservada';
+      if (r)
+        estado =
+          fecha < hoy ? (r.asistio === false ? 'nada' : 'fue') : 'reservada';
       return { letra, fecha, estado, esHoy: fecha === hoy };
     });
-    const clasesSemana = semana.filter((d) => d.estado === 'fue' || d.estado === 'reservada').length;
+    const clasesSemana = semana.filter(
+      (d) => d.estado === 'fue' || d.estado === 'reservada'
+    ).length;
 
     // Para el equipo: clases y alumnos de hoy
-    const clasesHoy = new Set(confirmadas.filter((r) => r.fecha === hoy).map((r) => r.horario_id)).size;
+    const clasesHoy = new Set(
+      confirmadas.filter((r) => r.fecha === hoy).map((r) => r.horario_id)
+    ).size;
 
     // Para el coach: SOLO sus clases de hoy (las que dicta él, incluido si es reemplazo) y sus alumnos
     const nombreHoy = DIAS_NOMBRE[new Date(hoy + 'T12:00:00').getDay()];
@@ -177,10 +215,21 @@ function Bienvenida() {
     );
     const idsMisClases = new Set(misClasesHoy.map((h) => h.id));
     const misAlumnosHoy = new Set(
-      confirmadas.filter((r) => r.fecha === hoy && idsMisClases.has(r.horario_id)).map((r) => r.usuario_id)
+      confirmadas
+        .filter((r) => r.fecha === hoy && idsMisClases.has(r.horario_id))
+        .map((r) => r.usuario_id)
     ).size;
 
-    return { entrenanHoy, proxima, esteMes, semana, clasesSemana, clasesHoy, misClasesHoy: misClasesHoy.length, misAlumnosHoy };
+    return {
+      entrenanHoy,
+      proxima,
+      esteMes,
+      semana,
+      clasesSemana,
+      clasesHoy,
+      misClasesHoy: misClasesHoy.length,
+      misAlumnosHoy,
+    };
   }, [reservas, horarios, usuarioActual.id, hoy]);
 
   const restantes = esAlumno ? sesionesRestantes(usuarioActual) : null;
@@ -190,7 +239,9 @@ function Bienvenida() {
       <div className="absolute -bottom-16 -left-10 w-48 h-48 rounded-full bg-cyan-brand/10 blur-3xl" />
 
       <div className="relative">
-        <p className="text-cyan-brand/80 text-xs font-semibold">{saludoSegunHora()},</p>
+        <p className="text-cyan-brand/80 text-xs font-semibold">
+          {saludoSegunHora()},
+        </p>
         <p className="text-white font-display text-3xl leading-tight mt-0.5">
           {primerNombre} 👋
         </p>
@@ -211,7 +262,9 @@ function Bienvenida() {
                   <CalendarClock size={20} className="text-ink" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white/50 text-[11px] uppercase tracking-wide">Tu próxima clase</p>
+                  <p className="text-white/50 text-[11px] uppercase tracking-wide">
+                    Tu próxima clase
+                  </p>
                   <p className="text-white font-semibold">
                     {cuandoEs(datos.proxima.fecha, hoy)} · {datos.proxima.hora}
                   </p>
@@ -227,8 +280,12 @@ function Bienvenida() {
                   <CalendarClock size={20} className="text-ink" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-ink font-semibold">Reserva tu próxima clase</p>
-                  <p className="text-ink/70 text-xs">Aún no tienes clases agendadas</p>
+                  <p className="text-ink font-semibold">
+                    Reserva tu próxima clase
+                  </p>
+                  <p className="text-ink/70 text-xs">
+                    Aún no tienes clases agendadas
+                  </p>
                 </div>
                 <ChevronRight size={18} className="text-ink/60" />
               </Link>
@@ -237,16 +294,23 @@ function Bienvenida() {
             {/* Mi semana */}
             <div className="mt-4">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-white/50 text-[11px] uppercase tracking-wide">Mi semana</p>
+                <p className="text-white/50 text-[11px] uppercase tracking-wide">
+                  Mi semana
+                </p>
                 <p className="text-white/50 text-[11px]">
                   {datos.clasesSemana === 0
                     ? '¡A empezar!'
-                    : `${datos.clasesSemana} ${datos.clasesSemana === 1 ? 'clase' : 'clases'}`}
+                    : `${datos.clasesSemana} ${
+                        datos.clasesSemana === 1 ? 'clase' : 'clases'
+                      }`}
                 </p>
               </div>
               <div className="flex justify-between">
                 {datos.semana.map((d) => (
-                  <div key={d.fecha} className="flex flex-col items-center gap-1">
+                  <div
+                    key={d.fecha}
+                    className="flex flex-col items-center gap-1"
+                  >
                     <div
                       className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold ${
                         d.estado === 'fue'
@@ -254,7 +318,11 @@ function Bienvenida() {
                           : d.estado === 'reservada'
                           ? 'border-2 border-cyan-brand/70 text-cyan-brand'
                           : 'bg-white/[0.06] text-white/30'
-                      } ${d.esHoy ? 'ring-2 ring-white/70 ring-offset-2 ring-offset-[#0b1b1f]' : ''}`}
+                      } ${
+                        d.esHoy
+                          ? 'ring-2 ring-white/70 ring-offset-2 ring-offset-[#0b1b1f]'
+                          : ''
+                      }`}
                     >
                       {d.estado === 'fue' ? '✓' : d.letra}
                     </div>
@@ -265,10 +333,30 @@ function Bienvenida() {
 
             {/* Datos rápidos */}
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <Dato icono={Ticket} valor={restantes ?? '—'} texto={restantes === 1 ? 'sesión disponible' : 'sesiones disponibles'} />
-              <Dato icono={Flame} valor={datos.esteMes} texto={datos.esteMes === 1 ? 'clase este mes' : 'clases este mes'} />
+              <Dato
+                icono={Ticket}
+                valor={restantes ?? '—'}
+                texto={
+                  restantes === 1 ? 'sesión disponible' : 'sesiones disponibles'
+                }
+              />
+              <Dato
+                icono={Flame}
+                valor={datos.esteMes}
+                texto={
+                  datos.esteMes === 1 ? 'clase este mes' : 'clases este mes'
+                }
+              />
               {datos.entrenanHoy > 0 ? (
-                <Dato icono={Users} valor={datos.entrenanHoy} texto={datos.entrenanHoy === 1 ? 'persona entrena hoy' : 'personas entrenan hoy'} />
+                <Dato
+                  icono={Users}
+                  valor={datos.entrenanHoy}
+                  texto={
+                    datos.entrenanHoy === 1
+                      ? 'persona entrena hoy'
+                      : 'personas entrenan hoy'
+                  }
+                />
               ) : (
                 <Dato icono={Users} valor="💪" texto="¡Sé el primero hoy!" />
               )}
@@ -278,13 +366,41 @@ function Bienvenida() {
           <div className="mt-4 grid grid-cols-2 gap-2">
             {esCoach ? (
               <>
-                <Dato icono={CalendarClock} valor={datos.misClasesHoy} texto={datos.misClasesHoy === 1 ? 'clase mía hoy' : 'clases mías hoy'} />
-                <Dato icono={Users} valor={datos.misAlumnosHoy} texto={datos.misAlumnosHoy === 1 ? 'alumno en mis clases hoy' : 'alumnos en mis clases hoy'} />
+                <Dato
+                  icono={CalendarClock}
+                  valor={datos.misClasesHoy}
+                  texto={
+                    datos.misClasesHoy === 1
+                      ? 'clase mía hoy'
+                      : 'clases mías hoy'
+                  }
+                />
+                <Dato
+                  icono={Users}
+                  valor={datos.misAlumnosHoy}
+                  texto={
+                    datos.misAlumnosHoy === 1
+                      ? 'alumno en mis clases hoy'
+                      : 'alumnos en mis clases hoy'
+                  }
+                />
               </>
             ) : (
               <>
-                <Dato icono={CalendarClock} valor={datos.clasesHoy} texto={datos.clasesHoy === 1 ? 'clase con reservas hoy (gym)' : 'clases con reservas hoy (gym)'} />
-                <Dato icono={Users} valor={datos.entrenanHoy} texto="alumnos entrenan hoy (gym)" />
+                <Dato
+                  icono={CalendarClock}
+                  valor={datos.clasesHoy}
+                  texto={
+                    datos.clasesHoy === 1
+                      ? 'clase con reservas hoy (gym)'
+                      : 'clases con reservas hoy (gym)'
+                  }
+                />
+                <Dato
+                  icono={Users}
+                  valor={datos.entrenanHoy}
+                  texto="alumnos entrenan hoy (gym)"
+                />
               </>
             )}
           </div>
@@ -298,7 +414,9 @@ function Dato({ icono: Icono, valor, texto }) {
   return (
     <div className="bg-black/25 border border-white/[0.07] rounded-2xl px-2 py-3 text-center">
       <Icono size={15} className="text-cyan-brand mx-auto" />
-      <p className="text-white font-display text-2xl leading-none mt-1.5">{valor}</p>
+      <p className="text-white font-display text-2xl leading-none mt-1.5">
+        {valor}
+      </p>
       <p className="text-white/45 text-[10px] leading-tight mt-1">{texto}</p>
     </div>
   );
@@ -309,7 +427,10 @@ function haceCuanto(fecha) {
   if (dias <= 0) return 'Hoy';
   if (dias === 1) return 'Ayer';
   if (dias < 7) return `Hace ${dias} días`;
-  return new Date(fecha).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' });
+  return new Date(fecha).toLocaleDateString('es-CL', {
+    day: 'numeric',
+    month: 'long',
+  });
 }
 
 function FormularioNoticia({
@@ -391,7 +512,9 @@ function FormularioNoticia({
           <input
             type="checkbox"
             checked={!!form.avisar}
-            onChange={(e) => setForm((prev) => ({ ...prev, avisar: e.target.checked }))}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, avisar: e.target.checked }))
+            }
             className="w-4 h-4 accent-cyan-500"
           />
           Avisar a todos al celular
@@ -439,7 +562,9 @@ export default function General() {
     crearNoticia(noticia);
     if (avisar) {
       enviarAvisoMasivo(
-        usuarios.filter((u) => u.estado === 'activo' && u.id !== usuarioActual.id).map((u) => u.id),
+        usuarios
+          .filter((u) => u.estado === 'activo' && u.id !== usuarioActual.id)
+          .map((u) => u.id),
         `Nueva noticia: ${noticia.titulo}`
       );
     }
@@ -455,7 +580,6 @@ export default function General() {
     });
     setEditandoId(null);
   }
-
 
   const [ultimaNoticia, ...restoNoticias] = noticias;
 
@@ -484,7 +608,12 @@ export default function General() {
 
       {mostrarForm && (
         <FormularioNoticia
-          valorInicial={{ titulo: '', contenido: '', imagen_url: '', avisar: true }}
+          valorInicial={{
+            titulo: '',
+            contenido: '',
+            imagen_url: '',
+            avisar: true,
+          }}
           onGuardar={handleCrearNoticia}
           onCancelar={() => setMostrarForm(false)}
           textoBoton="Publicar"
@@ -517,8 +646,11 @@ export default function General() {
             <div className="flex items-start justify-between gap-2 mb-1">
               <p className="text-cyan-brand text-[10px] font-semibold tracking-[0.2em] uppercase flex items-center gap-2">
                 Última publicación
-                {Date.now() - new Date(ultimaNoticia.created_at).getTime() < 3 * 86400000 && (
-                  <span className="bg-cyan-brand text-ink rounded-full px-2 py-0.5 tracking-normal">Nuevo</span>
+                {Date.now() - new Date(ultimaNoticia.created_at).getTime() <
+                  3 * 86400000 && (
+                  <span className="bg-cyan-brand text-ink rounded-full px-2 py-0.5 tracking-normal">
+                    Nuevo
+                  </span>
                 )}
               </p>
               {esAdmin && (
@@ -652,7 +784,9 @@ export default function General() {
           <p className="text-white text-xs font-medium">Instagram</p>
         </a>
         <a
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(DIRECCION)}`}
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+            DIRECCION
+          )}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex flex-col items-center gap-2 bg-cyan-brand/10 border border-cyan-brand/25 rounded-2xl py-4 transition-transform active:scale-95"
@@ -671,7 +805,13 @@ export default function General() {
       <div className="flex flex-col gap-2 mb-8">
         {PREGUNTAS_FRECUENTES.map((original, i) => {
           // Las horas de anticipación salen de Configuración → Políticas
-          const item = { ...original, respuesta: original.respuesta.replace('{HORAS}', String(horasAnticipacion ?? 3)) };
+          const item = {
+            ...original,
+            respuesta: original.respuesta.replace(
+              '{HORAS}',
+              String(horasAnticipacion ?? 3)
+            ),
+          };
           const abierta = faqAbierta === i;
           return (
             <div
@@ -709,11 +849,17 @@ export default function General() {
 
       {/* Legal */}
       <div className="flex items-center justify-center gap-4 text-xs text-white/35">
-        <Link to="/terminos" className="flex items-center gap-1 hover:text-white/60">
+        <Link
+          to="/terminos"
+          className="flex items-center gap-1 hover:text-white/60"
+        >
           <FileText size={12} /> Términos y condiciones
         </Link>
         <span>·</span>
-        <Link to="/privacidad" className="flex items-center gap-1 hover:text-white/60">
+        <Link
+          to="/privacidad"
+          className="flex items-center gap-1 hover:text-white/60"
+        >
           <Shield size={12} /> Privacidad
         </Link>
       </div>

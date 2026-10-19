@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase, crearClienteTemporal } from '../lib/supabase';
 import { validarCorreo } from '../lib/validarCorreo';
 
@@ -70,6 +70,8 @@ export function AuthProvider({ children }) {
   const [vistaComo, setVistaComo] = useState(null);
   const [horasAnticipacion, setHorasAnticipacion] = useState(4);
   const [diasRenovacion, setDiasRenovacion] = useState(30);
+  // Tarjetas de "Indicadores clave" (Finanzas) que el admin decidió esconder
+  const [kpisOcultos, setKpisOcultos] = useState([]);
   // Datos del gimnasio que ve el alumno (dirección, WhatsApp, horario, reglamento)
   const [infoGimnasio, setInfoGimnasio] = useState({});
   const [noticias, setNoticias] = useState([]);
@@ -94,9 +96,38 @@ export function AuthProvider({ children }) {
   const [solicitudesPrueba, setSolicitudesPrueba] = useState([]);
   const [planesSeguimiento, setPlanesSeguimiento] = useState([]);
   const [mediciones, setMediciones] = useState([]);
+  // Días de rutina que el alumno completó (con la clase de ese día, si tenía)
+  const [diasRutinaHechos, setDiasRutinaHechos] = useState([]);
 
   useEffect(() => {
     iniciar();
+  }, []);
+
+  // Cierra la sesión SOLO en este dispositivo (antes se cerraba en todos,
+  // y el otro teléfono/PC quedaba "entrado" pero sin permisos reales).
+  const cierreIntencional = useRef(false);
+  async function cerrarSesionLocal() {
+    cierreIntencional.current = true;
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } finally {
+      setTimeout(() => (cierreIntencional.current = false), 1500);
+    }
+  }
+
+  // Si la sesión se pierde sola (venció o se cerró desde otro lado),
+  // se vuelve a la pantalla de entrada con un aviso, en vez de seguir
+  // mostrando la app y fallar al guardar.
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((evento) => {
+      if (evento !== 'SIGNED_OUT') return;
+      if (!cierreIntencional.current) {
+        setError('Tu sesión se cerró. Vuelve a entrar para seguir.');
+      }
+      setUsuarioActual(null);
+      setVistaComo(null);
+    });
+    return () => data.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -299,7 +330,7 @@ export function AuthProvider({ children }) {
         localStorage.getItem('cedys_no_mantener') === '1' &&
         !sessionStorage.getItem('cedys_sesion_viva')
       ) {
-        await supabase.auth.signOut();
+        await cerrarSesionLocal();
         localStorage.removeItem('cedys_no_mantener');
       }
     } catch (e) {
@@ -351,6 +382,7 @@ export function AuthProvider({ children }) {
       setLogoUrl(resConfigApp.data.logo_url);
       setHorasAnticipacion(resConfigApp.data.horas_anticipacion ?? 4);
       setDiasRenovacion(resConfigApp.data.dias_renovacion ?? 30);
+      setKpisOcultos(resConfigApp.data.kpis_ocultos || []);
       setInfoGimnasio({
         nombre: resConfigApp.data.gimnasio_nombre || 'CED&S',
         direccion: resConfigApp.data.direccion || '',
@@ -423,6 +455,7 @@ export function AuthProvider({ children }) {
       resPruebas,
       resPlanesSeg,
       resMediciones,
+      resDiasRutina,
     ] = await Promise.all(
       [
         esStaff
@@ -581,6 +614,20 @@ export function AuthProvider({ children }) {
         esStaff
           ? traerTodo(() => supabase.from('mediciones').select('*').order('id'))
           : supabase.from('mediciones').select('*').eq('usuario_id', yo.id),
+        esStaff
+          ? traerTodo(() =>
+              supabase
+                .from('rutina_dias_hechos')
+                .select('*')
+                .gte('fecha', haceDias(400))
+                .order('fecha', { ascending: false })
+                .order('id')
+            )
+          : supabase
+              .from('rutina_dias_hechos')
+              .select('*')
+              .eq('usuario_id', yo.id)
+              .order('fecha', { ascending: false }),
       ].map(sinError)
     );
 
@@ -613,6 +660,7 @@ export function AuthProvider({ children }) {
     if (resPruebas.data) setSolicitudesPrueba(resPruebas.data);
     if (resPlanesSeg.data) setPlanesSeguimiento(resPlanesSeg.data);
     if (resMediciones.data) setMediciones(resMediciones.data);
+    if (resDiasRutina?.data) setDiasRutinaHechos(resDiasRutina.data);
 
     // El alumno ve su ficha completa; del resto solo nombre/rol/foto (vista usuarios_publico),
     // para ver quién va a cada clase.
@@ -651,6 +699,17 @@ export function AuthProvider({ children }) {
       setHorasAnticipacion(datos.horas_anticipacion);
     if (datos.dias_renovacion !== undefined)
       setDiasRenovacion(datos.dias_renovacion);
+  }
+
+  async function guardarKpisOcultos(lista) {
+    setKpisOcultos(lista);
+    const { error } = await supabase
+      .from('configuracion_app')
+      .update({ kpis_ocultos: lista })
+      .eq('id', 'global');
+    if (error)
+      return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+    return { ok: true };
   }
 
   async function actualizarInfoGimnasio(datos) {
@@ -738,19 +797,19 @@ export function AuthProvider({ children }) {
 
     if (!encontrado) {
       setError('No encontramos tu perfil. Contacta al administrador.');
-      await supabase.auth.signOut();
+      await cerrarSesionLocal();
       return false;
     }
     if (encontrado.estado === 'pendiente') {
       setError('Tu cuenta está pendiente de aprobación por el administrador.');
-      await supabase.auth.signOut();
+      await cerrarSesionLocal();
       return false;
     }
     if (encontrado.estado === 'inactivo') {
       setError(
         'Tu cuenta está desactivada. Contacta al gimnasio para más información.'
       );
-      await supabase.auth.signOut();
+      await cerrarSesionLocal();
       return false;
     }
 
@@ -759,7 +818,7 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    await supabase.auth.signOut();
+    await cerrarSesionLocal();
     setUsuarioActual(null);
     setVistaComo(null);
   }
@@ -814,7 +873,7 @@ export function AuthProvider({ children }) {
     const { error: errClave } = await supabase.auth.updateUser({
       password: nueva,
     });
-    await supabase.auth.signOut();
+    await cerrarSesionLocal();
     if (errClave) {
       if (
         (errClave.message || '')
@@ -1652,6 +1711,10 @@ export function AuthProvider({ children }) {
     const fila = {
       ...datos,
       obs_salud: (datos.obs_salud || '').trim() || null,
+      // RUT y nacionalidad los completa el gimnasio en la ficha (vacío = null,
+      // porque el RUT no se puede repetir y dos "vacíos" chocarían).
+      rut: (datos.rut || '').trim() || null,
+      nacionalidad: (datos.nacionalidad || '').trim() || null,
       auth_user_id: authData.user.id,
       rol: 'usuario',
       estado: 'pendiente',
@@ -1672,7 +1735,7 @@ export function AuthProvider({ children }) {
     if (error)
       return { ok: false, mensaje: 'Error al registrar: ' + error.message };
 
-    await supabase.auth.signOut();
+    await cerrarSesionLocal();
     return {
       ok: true,
       mensaje: 'Solicitud enviada. Espera la aprobación del administrador.',
@@ -1877,6 +1940,116 @@ export function AuthProvider({ children }) {
       ...prev.filter((p) => String(p.usuario_id) !== String(usuarioId)),
     ]);
     return { ok: true, mensaje: 'Plan de seguimiento guardado.' };
+  }
+
+  // ---- Rutina: registro de días hechos ----
+  // Se guarda qué semana y día de la rutina hizo, y se vincula con la clase
+  // que tenía reservada ese día (la más cercana a la hora en que lo marcó).
+  function claseDeHoyPara(usuarioId) {
+    const hoy = hoyLocalISO();
+    const ahora = new Date();
+    const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes();
+    const candidatas = reservas
+      .filter(
+        (r) =>
+          String(r.usuario_id) === String(usuarioId) &&
+          r.fecha === hoy &&
+          r.estado !== 'cancelada' &&
+          r.asistio !== false
+      )
+      .map((r) => {
+        const h = horarios.find((x) => x.id === r.horario_id);
+        const [hh, mm] = String(h?.hora || '00:00')
+          .split(':')
+          .map(Number);
+        return {
+          reserva: r,
+          horario: h,
+          distancia: Math.abs(hh * 60 + mm - minutosAhora),
+        };
+      })
+      .sort((a, b) => a.distancia - b.distancia);
+    return candidatas[0] || null;
+  }
+
+  async function marcarDiaRutina({
+    rutinaId,
+    semanaId,
+    diaId,
+    semanaNumero,
+    diaNombre,
+  }) {
+    if (!usuarioActual) return { ok: false };
+    const clase = claseDeHoyPara(usuarioActual.id);
+    const fila = {
+      usuario_id: String(usuarioActual.id),
+      rutina_id: String(rutinaId),
+      semana_id: String(semanaId),
+      dia_id: String(diaId),
+      semana_numero: semanaNumero ?? null,
+      dia_nombre: diaNombre || null,
+      fecha: hoyLocalISO(),
+      reserva_id: clase ? String(clase.reserva.id) : null,
+    };
+    const { data, error } = await supabase
+      .from('rutina_dias_hechos')
+      .upsert(fila, { onConflict: 'usuario_id,dia_id,fecha' })
+      .select()
+      .single();
+    if (error)
+      return {
+        ok: false,
+        mensaje: 'No se pudo guardar el registro: ' + error.message,
+      };
+    setDiasRutinaHechos((prev) => [
+      data,
+      ...prev.filter((d) => d.id !== data.id),
+    ]);
+    return {
+      ok: true,
+      registro: data,
+      hora: clase?.horario?.hora?.slice(0, 5) || null,
+    };
+  }
+
+  async function desmarcarDiaRutina(diaId) {
+    if (!usuarioActual) return { ok: false };
+    const hoy = hoyLocalISO();
+    const { error } = await supabase
+      .from('rutina_dias_hechos')
+      .delete()
+      .eq('usuario_id', String(usuarioActual.id))
+      .eq('dia_id', String(diaId))
+      .eq('fecha', hoy);
+    if (error) return { ok: false };
+    setDiasRutinaHechos((prev) =>
+      prev.filter(
+        (d) =>
+          !(
+            String(d.usuario_id) === String(usuarioActual.id) &&
+            String(d.dia_id) === String(diaId) &&
+            d.fecha === hoy
+          )
+      )
+    );
+    return { ok: true };
+  }
+
+  // Borra solo el plan (objetivo, semanas, metas). Las mediciones se conservan.
+  async function eliminarPlanSeguimiento(usuarioId) {
+    const { error } = await supabase
+      .from('planes_seguimiento')
+      .delete()
+      .eq('usuario_id', String(usuarioId));
+    if (error)
+      return { ok: false, mensaje: 'No se pudo eliminar: ' + error.message };
+    setPlanesSeguimiento((prev) =>
+      prev.filter((p) => String(p.usuario_id) !== String(usuarioId))
+    );
+    return {
+      ok: true,
+      mensaje: 'Plan eliminado. Las mediciones se conservan.',
+    };
   }
 
   async function guardarMedicion(usuarioId, datos, medicionId = null) {
@@ -3770,6 +3943,8 @@ export function AuthProvider({ children }) {
         actualizarInfoGimnasio,
         cambiarContrasena,
         actualizarPoliticas,
+        kpisOcultos,
+        guardarKpisOcultos,
         listaEspera,
         estaEnListaEspera,
         listaEsperaDe,
@@ -3801,6 +3976,10 @@ export function AuthProvider({ children }) {
         planesSeguimiento,
         mediciones,
         guardarPlanSeguimiento,
+        eliminarPlanSeguimiento,
+        diasRutinaHechos,
+        marcarDiaRutina,
+        desmarcarDiaRutina,
         guardarMedicion,
         eliminarMedicion,
         regalarSesionReferido,

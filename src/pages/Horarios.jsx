@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { reservaBloqueada, horaAFecha } from '../lib/horarioUtils';
-import { Check, AlertCircle, Ticket, Sunrise, Sunset, ChevronRight, Clock } from 'lucide-react';
+import {
+  Check,
+  AlertCircle,
+  Ticket,
+  Sunrise,
+  Sunset,
+  ChevronRight,
+  Clock,
+} from 'lucide-react';
 
 // Convierte un Date a "YYYY-MM-DD" usando el calendario LOCAL (no UTC).
 // fecha.toISOString() convierte a UTC y puede saltar al día siguiente en horario
@@ -69,7 +77,10 @@ export default function Horarios() {
 
   function contarInscritos(horarioId, fecha) {
     return reservas.filter(
-      (r) => r.horario_id === horarioId && r.fecha === fecha && r.estado === 'confirmada'
+      (r) =>
+        r.horario_id === horarioId &&
+        r.fecha === fecha &&
+        r.estado === 'confirmada'
     ).length;
   }
 
@@ -92,7 +103,9 @@ export default function Horarios() {
 
   function clasesDelDia(dia) {
     return horarios
-      .filter((h) => (h.fecha_unica ? h.fecha_unica === dia.key : h.dia === dia.nombreDia))
+      .filter((h) =>
+        h.fecha_unica ? h.fecha_unica === dia.key : h.dia === dia.nombreDia
+      )
       .sort((a, b) => a.hora.localeCompare(b.hora));
   }
 
@@ -103,12 +116,20 @@ export default function Horarios() {
     const reservada = estaReservada(h.id, dia.key);
     const cancelada = horarioEstaCancelado(h.id, dia.key);
     const yaPaso = horaAFecha(dia.key, h.hora).getTime() <= Date.now();
-    const cerradaPorTiempo = reservaBloqueada(dia.key, h.hora, horasAnticipacion);
+    const cerradaPorTiempo = reservaBloqueada(
+      dia.key,
+      h.hora,
+      horasAnticipacion
+    );
     // Clase de hoy que ya cerró reservas pero aún no empieza: se puede pedir hora fuera de plazo.
-    const fueraDePlazo = !reservada && !cancelada && cerradaPorTiempo && dia.esHoy && !yaPaso;
-    const solicitudPendiente = solicitudFueraPlazoDe(h.id, dia.key)?.estado === 'pendiente';
+    const fueraDePlazo =
+      !reservada && !cancelada && cerradaPorTiempo && dia.esHoy && !yaPaso;
+    const solicitudPendiente =
+      solicitudFueraPlazoDe(h.id, dia.key)?.estado === 'pendiente';
     // Las clases llenas SÍ se pueden abrir (para anotarse en la lista de espera).
-    const deshabilitada = !reservada && (cancelada || yaPaso || (cerradaPorTiempo && !fueraDePlazo));
+    const deshabilitada =
+      !reservada &&
+      (cancelada || yaPaso || (cerradaPorTiempo && !fueraDePlazo));
 
     let etiqueta;
     let tono = 'neutro';
@@ -140,12 +161,25 @@ export default function Horarios() {
       etiqueta = `${cupos} cupos libres`;
       tono = 'libre';
     }
-    return { inscritos, cupos, lleno, reservada, cancelada, yaPaso, fueraDePlazo, solicitudPendiente, deshabilitada, etiqueta, tono };
+    return {
+      inscritos,
+      cupos,
+      lleno,
+      reservada,
+      cancelada,
+      yaPaso,
+      fueraDePlazo,
+      solicitudPendiente,
+      deshabilitada,
+      etiqueta,
+      tono,
+    };
   }
 
   // Día que se muestra: el elegido, o hoy (si a hoy ya no le quedan clases, el siguiente día).
   const diaPorDefecto =
-    dias.find((d) => clasesDelDia(d).some((h) => !estadoDe(h, d).yaPaso)) || dias[0];
+    dias.find((d) => clasesDelDia(d).some((h) => !estadoDe(h, d).yaPaso)) ||
+    dias[0];
   const diaActivo = dias.find((d) => d.key === diaElegido) || diaPorDefecto;
   const clasesActivas = diaActivo ? clasesDelDia(diaActivo) : [];
 
@@ -159,15 +193,22 @@ export default function Horarios() {
       <div className="px-6">
         {avisoPlan && (
           <div className="flex items-start gap-2 bg-yellow-400/10 border border-yellow-400/30 rounded-xl px-3 py-2.5 mb-4">
-            <AlertCircle size={16} className="text-yellow-300 shrink-0 mt-0.5" />
+            <AlertCircle
+              size={16}
+              className="text-yellow-300 shrink-0 mt-0.5"
+            />
             <p className="text-yellow-100/90 text-sm">{avisoPlan}</p>
           </div>
         )}
 
         <div className="flex items-end justify-between mb-4">
           <div>
-            <p className="text-white font-display text-2xl leading-none">¿Cuándo entrenas?</p>
-            <p className="text-white/40 text-xs mt-1.5">Elige un día y reserva tu clase</p>
+            <p className="text-white font-display text-2xl leading-none">
+              ¿Cuándo entrenas?
+            </p>
+            <p className="text-white/40 text-xs mt-1.5">
+              Elige un día y reserva tu clase
+            </p>
           </div>
           {restantes !== null && (
             <div className="flex items-center gap-1.5 bg-cyan-brand/10 border border-cyan-brand/30 rounded-full pl-2 pr-3 py-1 shrink-0">
@@ -181,27 +222,42 @@ export default function Horarios() {
       </div>
 
       {/* Selector de días */}
-      <div className="flex gap-2 overflow-x-auto px-6 pb-2 no-scrollbar" style={{ scrollbarWidth: 'none' }}>
+      <div
+        className="flex gap-2 overflow-x-auto px-6 pb-2 no-scrollbar"
+        style={{ scrollbarWidth: 'none' }}
+      >
         {dias.map((d) => {
           const activo = d.key === diaActivo?.key;
-          const tengoClase = clasesDelDia(d).some((h) => estaReservada(h.id, d.key));
+          const tengoClase = clasesDelDia(d).some((h) =>
+            estaReservada(h.id, d.key)
+          );
           return (
             <button
               key={d.key}
               onClick={() => setDiaElegido(d.key)}
-              className={`relative shrink-0 w-[52px] rounded-2xl py-2.5 flex flex-col items-center border transition-all active:scale-95 ${
+              className={`relative shrink-0 w-[54px] rounded-2xl py-2.5 flex flex-col items-center border transition-colors duration-150 [-webkit-tap-highlight-color:transparent] select-none ${
                 activo
-                  ? 'bg-cyan-brand border-cyan-brand text-ink shadow-[0_6px_20px_-6px_rgba(0,200,230,0.6)]'
+                  ? 'bg-cyan-brand border-cyan-brand text-ink'
                   : 'bg-white/[0.04] border-white/10 text-white'
               }`}
             >
-              <span className={`text-[10px] uppercase font-semibold ${activo ? 'text-ink/70' : 'text-white/40'}`}>
+              <span
+                className={`text-[10px] uppercase font-semibold whitespace-nowrap ${
+                  activo ? 'text-ink/70' : 'text-white/40'
+                }`}
+              >
                 {d.esHoy ? 'Hoy' : d.diaCorto}
               </span>
-              <span className="font-display text-xl leading-tight">{d.numero}</span>
+              <span className="font-display text-xl leading-tight">
+                {d.numero}
+              </span>
               <span
                 className={`w-1.5 h-1.5 rounded-full mt-0.5 ${
-                  tengoClase ? (activo ? 'bg-ink' : 'bg-cyan-brand') : 'bg-transparent'
+                  tengoClase
+                    ? activo
+                      ? 'bg-ink'
+                      : 'bg-cyan-brand'
+                    : 'bg-transparent'
                 }`}
               />
             </button>
@@ -225,7 +281,9 @@ export default function Horarios() {
         )}
 
         {PERIODOS.map((periodo) => {
-          const delPeriodo = clasesActivas.filter((h) => h.hora >= periodo.desde && h.hora < periodo.hasta);
+          const delPeriodo = clasesActivas.filter(
+            (h) => h.hora >= periodo.desde && h.hora < periodo.hasta
+          );
           if (delPeriodo.length === 0) return null;
           const Icono = periodo.icono;
           return (
@@ -263,7 +321,10 @@ export default function Horarios() {
                   return (
                     <button
                       key={h.id}
-                      onClick={() => !e.deshabilitada && seleccionarHorario(h.id, diaActivo.key)}
+                      onClick={() =>
+                        !e.deshabilitada &&
+                        seleccionarHorario(h.id, diaActivo.key)
+                      }
                       disabled={e.deshabilitada}
                       className={`w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-all duration-200 ${
                         destacada
@@ -281,12 +342,22 @@ export default function Horarios() {
                     >
                       {/* Hora */}
                       <div className="w-[62px] shrink-0">
-                        <p className={`font-display text-2xl leading-none ${e.cancelada ? 'line-through decoration-red-400/50' : ''}`}>
+                        <p
+                          className={`font-display text-2xl leading-none ${
+                            e.cancelada
+                              ? 'line-through decoration-red-400/50'
+                              : ''
+                          }`}
+                        >
                           {h.hora}
                         </p>
                       </div>
 
-                      <div className={`w-px self-stretch ${destacada ? 'bg-ink/20' : 'bg-white/10'}`} />
+                      <div
+                        className={`w-px self-stretch ${
+                          destacada ? 'bg-ink/20' : 'bg-white/10'
+                        }`}
+                      />
 
                       {/* Coach y cupos */}
                       <div className="flex-1 min-w-0">
@@ -294,13 +365,25 @@ export default function Horarios() {
                           {coach && (
                             <span
                               className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                                destacada ? 'bg-ink/15 text-ink' : apagada ? 'bg-white/5 text-white/30' : 'bg-cyan-brand/15 text-cyan-brand'
+                                destacada
+                                  ? 'bg-ink/15 text-ink'
+                                  : apagada
+                                  ? 'bg-white/5 text-white/30'
+                                  : 'bg-cyan-brand/15 text-cyan-brand'
                               }`}
                             >
                               {iniciales}
                             </span>
                           )}
-                          <p className={`text-sm truncate ${destacada ? 'text-ink/80' : apagada ? 'text-white/30' : 'text-white/70'}`}>
+                          <p
+                            className={`text-sm truncate ${
+                              destacada
+                                ? 'text-ink/80'
+                                : apagada
+                                ? 'text-white/30'
+                                : 'text-white/70'
+                            }`}
+                          >
                             {coach ? `con ${coach.split(' ')[0]}` : 'Clase'}
                           </p>
                         </div>
@@ -324,7 +407,11 @@ export default function Horarios() {
                             ))}
                           </div>
                         )}
-                        <p className={`text-[11px] font-medium mt-1 ${colorEtiqueta}`}>{e.etiqueta}</p>
+                        <p
+                          className={`text-[11px] font-medium mt-1 ${colorEtiqueta}`}
+                        >
+                          {e.etiqueta}
+                        </p>
                       </div>
 
                       {destacada ? (
@@ -332,7 +419,12 @@ export default function Horarios() {
                           <Check size={17} className="text-ink" />
                         </div>
                       ) : (
-                        !e.deshabilitada && <ChevronRight size={18} className="text-white/30 shrink-0" />
+                        !e.deshabilitada && (
+                          <ChevronRight
+                            size={18}
+                            className="text-white/30 shrink-0"
+                          />
+                        )
                       )}
                     </button>
                   );

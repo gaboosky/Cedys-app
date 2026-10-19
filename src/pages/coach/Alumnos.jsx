@@ -44,7 +44,10 @@ function soloDigitos(s) {
 }
 
 function diasEntre(desdeISO, hastaISO) {
-  return Math.round((Date.parse(hastaISO + 'T12:00:00') - Date.parse(desdeISO + 'T12:00:00')) / 86400000);
+  return Math.round(
+    (Date.parse(hastaISO + 'T12:00:00') - Date.parse(desdeISO + 'T12:00:00')) /
+      86400000
+  );
 }
 
 function Avatar({ u, tam = 'w-10 h-10', texto = 'text-sm' }) {
@@ -55,7 +58,9 @@ function Avatar({ u, tam = 'w-10 h-10', texto = 'text-sm' }) {
       {u.foto_url ? (
         <img src={u.foto_url} alt="" className="w-full h-full object-cover" />
       ) : (
-        <span className={`font-display text-cyan-brand ${texto}`}>{(u.nombre || '?').charAt(0).toUpperCase()}</span>
+        <span className={`font-display text-cyan-brand ${texto}`}>
+          {(u.nombre || '?').charAt(0).toUpperCase()}
+        </span>
       )}
     </div>
   );
@@ -121,7 +126,9 @@ export default function Alumnos() {
       u.estado !== 'pendiente' &&
       (u.rol === 'usuario' || (esStaff(u) && conReservas.has(u.id)))
   );
-  const enAlcance = todosLosAlumnos.filter((u) => (alcance === 'mios' ? misAlumnosIds.has(u.id) : true));
+  const enAlcance = todosLosAlumnos.filter((u) =>
+    alcance === 'mios' ? misAlumnosIds.has(u.id) : true
+  );
 
   function abrirFicha(id) {
     setBusqueda('');
@@ -129,7 +136,13 @@ export default function Alumnos() {
     if (!misAlumnosIds.has(id)) setAlcance('todos');
     setForzado(id);
     setAbierto(id);
-    setTimeout(() => document.getElementById(`alumno-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    setTimeout(
+      () =>
+        document
+          .getElementById(`alumno-${id}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      60
+    );
   }
 
   // 1) Vienen a mis clases (hoy y mañana)
@@ -156,15 +169,23 @@ export default function Alumnos() {
     // Cuenta como visita: clase pasada a la que no faltó, o clase de hoy ya marcada como presente
     const fue = r.asistio === true || (r.fecha < hoy && r.asistio !== false);
     if (fue && r.fecha <= hoy && r.estado === 'confirmada') {
-      if (!ultimaVisita[r.usuario_id] || r.fecha > ultimaVisita[r.usuario_id]) ultimaVisita[r.usuario_id] = r.fecha;
+      if (!ultimaVisita[r.usuario_id] || r.fecha > ultimaVisita[r.usuario_id])
+        ultimaVisita[r.usuario_id] = r.fecha;
     }
   }
-  const tieneProxima = new Set(reservas.filter((r) => r.fecha >= hoy && r.estado === 'confirmada').map((r) => r.usuario_id));
-  const conSeguimiento = new Set((planesSeguimiento || []).map((p) => String(p.usuario_id)));
+  const tieneProxima = new Set(
+    reservas
+      .filter((r) => r.fecha >= hoy && r.estado === 'confirmada')
+      .map((r) => r.usuario_id)
+  );
+  const conSeguimiento = new Set(
+    (planesSeguimiento || []).map((p) => String(p.usuario_id))
+  );
   const ultimaMedicion = {};
   for (const m of mediciones || []) {
     const k = String(m.usuario_id);
-    if (!ultimaMedicion[k] || m.fecha > ultimaMedicion[k]) ultimaMedicion[k] = m.fecha;
+    if (!ultimaMedicion[k] || m.fecha > ultimaMedicion[k])
+      ultimaMedicion[k] = m.fecha;
   }
 
   const alertas = [];
@@ -173,20 +194,37 @@ export default function Alumnos() {
     if (esStaff(u) && !u.plan_id) continue; // a un coach sin plan no le marcamos alertas
     const rutina = rutinaActivaDe(u.id);
     if (!rutina) {
-      alertas.push({ u, tipo: 'sin_rutina', icono: ClipboardX, texto: 'No tiene rutina asignada', color: 'text-violet-300 bg-violet-400/15' });
-    } else if (rutina.fecha_asignacion && diasEntre(rutina.fecha_asignacion, hoy) >= 42) {
+      alertas.push({
+        u,
+        tipo: 'sin_rutina',
+        icono: ClipboardX,
+        texto: 'No tiene rutina asignada',
+        color: 'text-violet-300 bg-violet-400/15',
+      });
+    } else if (
+      rutina.fecha_asignacion &&
+      diasEntre(rutina.fecha_asignacion, hoy) >= 42
+    ) {
       alertas.push({
         u,
         tipo: 'rutina_larga',
         icono: Hourglass,
-        texto: `Misma rutina hace ${Math.floor(diasEntre(rutina.fecha_asignacion, hoy) / 7)} semanas`,
+        texto: `Misma rutina hace ${Math.floor(
+          diasEntre(rutina.fecha_asignacion, hoy) / 7
+        )} semanas`,
         color: 'text-amber-300 bg-amber-400/15',
       });
     }
     const ultima = ultimaVisita[u.id];
     const diasSin = ultima ? diasEntre(ultima, hoy) : null;
     if (diasSin !== null && diasSin >= 10 && !tieneProxima.has(u.id)) {
-      alertas.push({ u, tipo: 'sin_venir', icono: UserX, texto: `No viene hace ${diasSin} días`, color: 'text-red-300 bg-red-500/15' });
+      alertas.push({
+        u,
+        tipo: 'sin_venir',
+        icono: UserX,
+        texto: `No viene hace ${diasSin} días`,
+        color: 'text-red-300 bg-red-500/15',
+      });
     }
     if (conSeguimiento.has(String(u.id))) {
       const um = ultimaMedicion[String(u.id)];
@@ -196,7 +234,10 @@ export default function Alumnos() {
           u,
           tipo: 'medicion',
           icono: Ruler,
-          texto: dm === null ? 'Falta su primera medición' : `Última medición hace ${dm} días`,
+          texto:
+            dm === null
+              ? 'Falta su primera medición'
+              : `Última medición hace ${dm} días`,
           color: 'text-cyan-brand bg-cyan-brand/15',
         });
       }
@@ -240,7 +281,9 @@ export default function Alumnos() {
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
       <p className="font-display text-3xl text-white leading-tight">Alumnos</p>
-      <p className="text-white/40 text-xs mt-1 mb-4">Quién viene, quién necesita algo y cómo van</p>
+      <p className="text-white/40 text-xs mt-1 mb-4">
+        Quién viene, quién necesita algo y cómo van
+      </p>
 
       <div className="flex bg-white/[0.04] border border-white/10 rounded-xl p-1 mb-5">
         {[
@@ -270,12 +313,16 @@ export default function Alumnos() {
             <div key={d.fecha}>
               <p className="text-white/50 text-xs mb-1.5">{d.etiqueta}</p>
               {d.clases.length === 0 ? (
-                <p className="text-white/30 text-sm">Nadie reservado todavía.</p>
+                <p className="text-white/30 text-sm">
+                  Nadie reservado todavía.
+                </p>
               ) : (
                 <div className="flex flex-col gap-2">
                   {d.clases.map(([hora, lista]) => (
                     <div key={hora} className="flex items-start gap-3">
-                      <span className="font-display text-lg text-white w-14 shrink-0 leading-7">{hora.slice(0, 5)}</span>
+                      <span className="font-display text-lg text-white w-14 shrink-0 leading-7">
+                        {hora.slice(0, 5)}
+                      </span>
                       <div className="flex flex-wrap gap-1.5">
                         {lista.map((u) => (
                           <button
@@ -289,7 +336,9 @@ export default function Alumnos() {
                           >
                             <Avatar u={u} tam="w-5 h-5" texto="text-[10px]" />
                             {(u.nombre || '').split(' ')[0]}
-                            {(u.obs_salud || '').trim() && <HeartPulse size={11} className="text-red-300" />}
+                            {(u.obs_salud || '').trim() && (
+                              <HeartPulse size={11} className="text-red-300" />
+                            )}
                           </button>
                         ))}
                       </div>
@@ -301,7 +350,8 @@ export default function Alumnos() {
           ))}
         </div>
         <p className="relative text-white/30 text-[11px] mt-3 flex items-center gap-1">
-          <HeartPulse size={11} className="text-red-300" /> = tiene OBS de salud. Toca un nombre para ver su ficha.
+          <HeartPulse size={11} className="text-red-300" /> = tiene OBS de
+          salud. Toca un nombre para ver su ficha.
         </p>
       </div>
 
@@ -320,12 +370,18 @@ export default function Alumnos() {
                   onClick={() => abrirFicha(al.u.id)}
                   className="flex items-center gap-3 bg-white/[0.04] border border-white/10 rounded-2xl p-3 text-left transition-transform active:scale-[0.98]"
                 >
-                  <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${al.color}`}>
+                  <span
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${al.color}`}
+                  >
                     <Icono size={17} />
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-white text-sm truncate">{al.u.nombre}</span>
-                    <span className="block text-white/45 text-xs truncate">{al.texto}</span>
+                    <span className="block text-white text-sm truncate">
+                      {al.u.nombre}
+                    </span>
+                    <span className="block text-white/45 text-xs truncate">
+                      {al.texto}
+                    </span>
                   </span>
                   <ChevronRight size={16} className="text-white/30 shrink-0" />
                 </button>
@@ -349,11 +405,18 @@ export default function Alumnos() {
           <p className="flex items-center gap-1.5 text-white/40 text-xs uppercase tracking-wide mb-2">
             <TrendingUp size={13} /> Avances de la semana 🎉
           </p>
-          <div className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1" style={{ scrollbarWidth: 'none' }}>
+          <div
+            className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1"
+            style={{ scrollbarWidth: 'none' }}
+          >
             {avances.map((r) => {
               const u = usuarioDe[r.usuario_id];
               if (!u) return null;
-              const pct = Math.round(((Number(r.peso) - Number(r.peso_anterior)) / Number(r.peso_anterior)) * 100);
+              const pct = Math.round(
+                ((Number(r.peso) - Number(r.peso_anterior)) /
+                  Number(r.peso_anterior)) *
+                  100
+              );
               return (
                 <button
                   key={r.id}
@@ -362,12 +425,19 @@ export default function Alumnos() {
                 >
                   <div className="flex items-center gap-2">
                     <Avatar u={u} tam="w-7 h-7" texto="text-xs" />
-                    <span className="text-white text-sm truncate">{(u.nombre || '').split(' ')[0]}</span>
+                    <span className="text-white text-sm truncate">
+                      {(u.nombre || '').split(' ')[0]}
+                    </span>
                   </div>
-                  <p className="text-white/55 text-xs mt-2 truncate">{r.ejercicio}</p>
+                  <p className="text-white/55 text-xs mt-2 truncate">
+                    {r.ejercicio}
+                  </p>
                   <p className="text-green-300 text-sm font-semibold mt-0.5">
                     +{kg(Number(r.peso) - Number(r.peso_anterior))} kg{' '}
-                    <span className="text-green-300/60 text-xs font-normal">({pct > 0 ? '+' : ''}{pct}%)</span>
+                    <span className="text-green-300/60 text-xs font-normal">
+                      ({pct > 0 ? '+' : ''}
+                      {pct}%)
+                    </span>
                   </p>
                   <p className="text-white/35 text-[11px]">
                     {kg(r.peso_anterior)} → {kg(r.peso)} kg
@@ -380,9 +450,14 @@ export default function Alumnos() {
       )}
 
       {/* 4) Lista con filtros */}
-      <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Lista de alumnos</p>
+      <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+        Lista de alumnos
+      </p>
       <div className="relative mb-3">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+        <Search
+          size={15}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none"
+        />
         <input
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -390,7 +465,10 @@ export default function Alumnos() {
           className="w-full bg-white/[0.04] border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-white text-sm outline-none focus:border-cyan-brand"
         />
       </div>
-      <div className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1 mb-4" style={{ scrollbarWidth: 'none' }}>
+      <div
+        className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-1 mb-4"
+        style={{ scrollbarWidth: 'none' }}
+      >
         {[
           { valor: 'todos', label: 'Todos' },
           { valor: 'obs', label: 'Con OBS de salud' },
@@ -452,12 +530,21 @@ export default function Alumnos() {
                           {a.rol === 'head_coach' ? 'Admin' : 'Coach'}
                         </span>
                       )}
-                      {(a.obs_salud || '').trim() && <HeartPulse size={13} className="text-red-300 shrink-0" />}
+                      {(a.obs_salud || '').trim() && (
+                        <HeartPulse
+                          size={13}
+                          className="text-red-300 shrink-0"
+                        />
+                      )}
                     </p>
                     <p className="text-white/40 text-xs truncate">
                       {rutinaActiva ? rutinaActiva.nombre : 'Sin rutina'}
                       {' · '}
-                      {diasSin === null ? 'sin clases aún' : diasSin === 0 ? 'vino hoy' : `vino hace ${diasSin} d`}
+                      {diasSin === null
+                        ? 'sin clases aún'
+                        : diasSin === 0
+                        ? 'vino hoy'
+                        : `vino hace ${diasSin} d`}
                     </p>
                   </div>
                 </button>
@@ -477,7 +564,11 @@ export default function Alumnos() {
                   className="p-1.5 text-white/40"
                   aria-label="Ver ficha"
                 >
-                  {abiertoAqui ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  {abiertoAqui ? (
+                    <ChevronUp size={18} />
+                  ) : (
+                    <ChevronDown size={18} />
+                  )}
                 </button>
               </div>
               {abiertoAqui && <FichaAlumno alumno={a} />}
@@ -509,7 +600,28 @@ function FichaAlumno({ alumno }) {
     historialRutinasDe,
     observacionDe,
     guardarObservacion,
+    diasRutinaHechos = [],
+    horarios,
   } = useAuth();
+
+  // Últimos días de rutina que completó (con la clase de ese día)
+  const rutinaReciente = diasRutinaHechos
+    .filter((d) => String(d.usuario_id) === String(alumno.id))
+    .sort(
+      (a, b) =>
+        b.fecha.localeCompare(a.fecha) ||
+        String(b.creado_en).localeCompare(String(a.creado_en))
+    )
+    .slice(0, 5)
+    .map((d) => {
+      const reserva = d.reserva_id
+        ? reservas.find((r) => String(r.id) === String(d.reserva_id))
+        : null;
+      const h = reserva
+        ? (horarios || []).find((x) => x.id === reserva.horario_id)
+        : null;
+      return { ...d, hora: h?.hora?.slice(0, 5) || null };
+    });
 
   const plan = alumno.plan_id ? planes[alumno.plan_id] : null;
   const vence = plan ? fechaVenceDe(alumno, planes, diasRenovacion) : null;
@@ -524,7 +636,9 @@ function FichaAlumno({ alumno }) {
     d.setDate(d.getDate() - 30);
     return isoLocal(d);
   })();
-  const pasadas = reservas.filter((r) => r.usuario_id === alumno.id && r.fecha >= hace30 && r.fecha <= hoy);
+  const pasadas = reservas.filter(
+    (r) => r.usuario_id === alumno.id && r.fecha >= hace30 && r.fecha <= hoy
+  );
   const asistio = pasadas.filter((r) => r.asistio === true).length;
   const falto = pasadas.filter((r) => r.asistio === false).length;
 
@@ -535,19 +649,30 @@ function FichaAlumno({ alumno }) {
   const [modo, setModo] = useState('seleccionar'); // seleccionar | importar
   const [seleccion, setSeleccion] = useState('');
   const [msgRutina, setMsgRutina] = useState(null);
-  const [importForm, setImportForm] = useState({ nombre: '', link: '', archivo: null });
+  const [importForm, setImportForm] = useState({
+    nombre: '',
+    link: '',
+    archivo: null,
+  });
   const [importando, setImportando] = useState(false);
 
   // Rutinas para asignar: sin repetir nombres confusos (se indica de quién es cada una)
   const duenoDe = (rutinaId) => {
-    const asign = (usuarioRutinas || []).find((ur) => ur.rutina_id === rutinaId && ur.activa);
-    return asign ? usuarios.find((u) => u.id === asign.usuario_id)?.nombre : null;
+    const asign = (usuarioRutinas || []).find(
+      (ur) => ur.rutina_id === rutinaId && ur.activa
+    );
+    return asign
+      ? usuarios.find((u) => u.id === asign.usuario_id)?.nombre
+      : null;
   };
   const opcionesRutina = [...rutinas]
     .sort((x, y) => (x.nombre || '').localeCompare(y.nombre || ''))
     .map((r) => {
       const dueno = duenoDe(r.id);
-      return { id: r.id, etiqueta: dueno ? `${r.nombre} (de ${dueno.split(' ')[0]})` : r.nombre };
+      return {
+        id: r.id,
+        etiqueta: dueno ? `${r.nombre} (de ${dueno.split(' ')[0]})` : r.nombre,
+      };
     });
 
   async function guardarObs() {
@@ -557,7 +682,8 @@ function FichaAlumno({ alumno }) {
   }
 
   async function handleAsignar() {
-    if (!seleccion) return setMsgRutina({ ok: false, mensaje: 'Elige una rutina.' });
+    if (!seleccion)
+      return setMsgRutina({ ok: false, mensaje: 'Elige una rutina.' });
     await asignarRutina(alumno.id, seleccion);
     const nombre = rutinas.find((r) => r.id === seleccion)?.nombre;
     setMsgRutina({ ok: true, mensaje: `Rutina "${nombre}" asignada.` });
@@ -566,7 +692,10 @@ function FichaAlumno({ alumno }) {
 
   async function handleImportar() {
     if (!importForm.nombre.trim() || !importForm.archivo) {
-      return setMsgRutina({ ok: false, mensaje: 'Ponle un nombre a la rutina y elige el archivo Excel.' });
+      return setMsgRutina({
+        ok: false,
+        mensaje: 'Ponle un nombre a la rutina y elige el archivo Excel.',
+      });
     }
     setImportando(true);
     setMsgRutina(null);
@@ -574,23 +703,38 @@ function FichaAlumno({ alumno }) {
       const { leerArchivoExcel } = await import('../../lib/excelRutinaParser');
       const datosSemanas = await leerArchivoExcel(importForm.archivo);
       if (Object.keys(datosSemanas).length === 0) {
-        setMsgRutina({ ok: false, mensaje: 'No encontré hojas con formato "Semana X" en ese archivo.' });
+        setMsgRutina({
+          ok: false,
+          mensaje: 'No encontré hojas con formato "Semana X" en ese archivo.',
+        });
         setImportando(false);
         return;
       }
-      const nueva = await crearRutina(importForm.nombre.trim(), importForm.link.trim());
+      const nueva = await crearRutina(
+        importForm.nombre.trim(),
+        importForm.link.trim()
+      );
       await importarContenidoRutina(nueva.id, datosSemanas);
       await asignarRutina(alumno.id, nueva.id);
-      setMsgRutina({ ok: true, mensaje: `Rutina importada con ${Object.keys(datosSemanas).length} semana(s) y asignada.` });
+      setMsgRutina({
+        ok: true,
+        mensaje: `Rutina importada con ${
+          Object.keys(datosSemanas).length
+        } semana(s) y asignada.`,
+      });
       setImportForm({ nombre: '', link: '', archivo: null });
       setModo('seleccionar');
     } catch {
-      setMsgRutina({ ok: false, mensaje: 'No pude leer ese archivo. Revisa que sea un .xlsx válido.' });
+      setMsgRutina({
+        ok: false,
+        mensaje: 'No pude leer ese archivo. Revisa que sea un .xlsx válido.',
+      });
     }
     setImportando(false);
   }
 
-  const campo = 'bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand';
+  const campo =
+    'bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand';
 
   return (
     <div className="border-t border-white/10 p-4 flex flex-col gap-5">
@@ -608,17 +752,30 @@ function FichaAlumno({ alumno }) {
       {/* Contacto y plan */}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-black/20 rounded-xl px-3 py-2">
-          <p className="text-white/35 text-[10px] uppercase tracking-wide">Plan</p>
+          <p className="text-white/35 text-[10px] uppercase tracking-wide">
+            Plan
+          </p>
           <p className="text-white text-sm">{plan?.nombre || 'Sin plan'}</p>
           <p className="text-white/45 text-[11px]">
-            {restantes !== null ? `${restantes} sesiones disponibles` : plan ? 'Ilimitado' : ''}
+            {restantes !== null
+              ? `${restantes} sesiones disponibles`
+              : plan
+              ? 'Ilimitado'
+              : ''}
           </p>
-          {vence && <p className="text-white/45 text-[11px]">Vence {formatearFecha(vence)}</p>}
+          {vence && (
+            <p className="text-white/45 text-[11px]">
+              Vence {formatearFecha(vence)}
+            </p>
+          )}
         </div>
         <div className="bg-black/20 rounded-xl px-3 py-2">
-          <p className="text-white/35 text-[10px] uppercase tracking-wide">Últimos 30 días</p>
+          <p className="text-white/35 text-[10px] uppercase tracking-wide">
+            Últimos 30 días
+          </p>
           <p className="text-white text-sm">
-            {asistio} clase{asistio !== 1 ? 's' : ''} asistida{asistio !== 1 ? 's' : ''}
+            {asistio} clase{asistio !== 1 ? 's' : ''} asistida
+            {asistio !== 1 ? 's' : ''}
           </p>
           <p className="text-white/45 text-[11px]">
             {falto} falta{falto !== 1 ? 's' : ''}
@@ -644,13 +801,45 @@ function FichaAlumno({ alumno }) {
         </div>
       )}
 
+      {/* Días de rutina que completó */}
+      <div className="bg-black/20 rounded-xl px-3 py-2.5">
+        <p className="text-white/35 text-[10px] uppercase tracking-wide mb-1">
+          Rutina hecha (últimos días)
+        </p>
+        {rutinaReciente.length === 0 ? (
+          <p className="text-white/45 text-xs">
+            Aún no marca días de rutina como completados en la app.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {rutinaReciente.map((d) => (
+              <p
+                key={d.id}
+                className="text-xs flex items-center justify-between gap-2"
+              >
+                <span className="text-white/85 truncate">
+                  {d.semana_numero ? `Sem ${d.semana_numero} · ` : ''}
+                  {d.dia_nombre || 'Día'}
+                </span>
+                <span className="text-white/45 shrink-0">
+                  {formatearFecha(d.fecha)}
+                  {d.hora ? ` · ${d.hora}` : ''}
+                </span>
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* OBS que escribió el propio alumno (enfermedad, lesión, etc.) */}
       {alumno.obs_salud && (
         <div className="bg-red-500/10 border border-red-400/30 rounded-xl px-3 py-2.5">
           <p className="text-red-200/80 text-[10px] uppercase tracking-wide flex items-center gap-1.5 mb-0.5">
             <HeartPulse size={12} /> OBS del alumno
           </p>
-          <p className="text-white/90 text-sm whitespace-pre-line">{alumno.obs_salud}</p>
+          <p className="text-white/90 text-sm whitespace-pre-line">
+            {alumno.obs_salud}
+          </p>
         </div>
       )}
 
@@ -661,7 +850,10 @@ function FichaAlumno({ alumno }) {
             <AlertTriangle size={12} /> Observaciones
           </p>
           {!editandoObs && (
-            <button onClick={() => setEditandoObs(true)} className="text-cyan-brand text-xs">
+            <button
+              onClick={() => setEditandoObs(true)}
+              className="text-cyan-brand text-xs"
+            >
               {obs ? 'Editar' : 'Agregar'}
             </button>
           )}
@@ -676,7 +868,10 @@ function FichaAlumno({ alumno }) {
               className={campo + ' resize-none'}
             />
             <div className="flex gap-2">
-              <button onClick={guardarObs} className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-xs">
+              <button
+                onClick={guardarObs}
+                className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2 text-xs"
+              >
                 Guardar
               </button>
               <button
@@ -691,17 +886,27 @@ function FichaAlumno({ alumno }) {
             </div>
           </div>
         ) : (
-          <p className={`text-sm ${obs ? 'text-orange-100/90' : 'text-white/30'}`}>
+          <p
+            className={`text-sm ${
+              obs ? 'text-orange-100/90' : 'text-white/30'
+            }`}
+          >
             {obs || 'Sin observaciones. Solo las ven los coaches y el admin.'}
           </p>
         )}
-        {msgObs && !editandoObs && msgObs.ok && <p className="text-cyan-brand text-xs mt-1">{msgObs.mensaje}</p>}
-        {msgObs && !msgObs.ok && <p className="text-red-400 text-xs mt-1">{msgObs.mensaje}</p>}
+        {msgObs && !editandoObs && msgObs.ok && (
+          <p className="text-cyan-brand text-xs mt-1">{msgObs.mensaje}</p>
+        )}
+        {msgObs && !msgObs.ok && (
+          <p className="text-red-400 text-xs mt-1">{msgObs.mensaje}</p>
+        )}
       </div>
 
       {/* Rutina */}
       <div>
-        <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Rutina actual</p>
+        <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+          Rutina actual
+        </p>
         {rutinaActiva ? (
           <button
             onClick={() => navigate(`/rutinas/${rutinaActiva.id}`)}
@@ -710,7 +915,9 @@ function FichaAlumno({ alumno }) {
             <Dumbbell size={16} className="text-cyan-brand" />
             <div className="text-left flex-1">
               <p className="text-white text-sm">{rutinaActiva.nombre}</p>
-              <p className="text-white/40 text-xs">desde {formatearFecha(rutinaActiva.fecha_asignacion)}</p>
+              <p className="text-white/40 text-xs">
+                desde {formatearFecha(rutinaActiva.fecha_asignacion)}
+              </p>
             </div>
             <ChevronRight size={16} className="text-cyan-brand/60" />
           </button>
@@ -720,7 +927,9 @@ function FichaAlumno({ alumno }) {
       </div>
 
       <div>
-        <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Asignar rutina</p>
+        <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+          Asignar rutina
+        </p>
         {modo === 'seleccionar' ? (
           <div className="flex gap-2">
             <select
@@ -738,7 +947,10 @@ function FichaAlumno({ alumno }) {
                 </option>
               ))}
             </select>
-            <button onClick={handleAsignar} className="bg-cyan-brand text-ink font-semibold rounded-lg px-4 text-sm">
+            <button
+              onClick={handleAsignar}
+              className="bg-cyan-brand text-ink font-semibold rounded-lg px-4 text-sm"
+            >
               Asignar
             </button>
           </div>
@@ -746,23 +958,31 @@ function FichaAlumno({ alumno }) {
           <div className="flex flex-col gap-2 bg-black/20 border border-white/10 rounded-lg p-3">
             <input
               value={importForm.nombre}
-              onChange={(e) => setImportForm({ ...importForm, nombre: e.target.value })}
+              onChange={(e) =>
+                setImportForm({ ...importForm, nombre: e.target.value })
+              }
               placeholder="Nombre de la rutina"
               className={campo}
             />
             <input
               value={importForm.link}
-              onChange={(e) => setImportForm({ ...importForm, link: e.target.value })}
+              onChange={(e) =>
+                setImportForm({ ...importForm, link: e.target.value })
+              }
               placeholder="Link de Google Sheets (opcional, solo referencia)"
               className={campo}
             />
             <label className="flex items-center justify-center gap-2 bg-white/5 border border-dashed border-white/20 rounded-lg py-3 text-sm text-white/60 cursor-pointer">
               <Upload size={15} />
-              {importForm.archivo ? importForm.archivo.name : 'Elegir archivo Excel (.xlsx)'}
+              {importForm.archivo
+                ? importForm.archivo.name
+                : 'Elegir archivo Excel (.xlsx)'}
               <input
                 type="file"
                 accept=".xlsx"
-                onChange={(e) => setImportForm({ ...importForm, archivo: e.target.files[0] })}
+                onChange={(e) =>
+                  setImportForm({ ...importForm, archivo: e.target.files[0] })
+                }
                 className="hidden"
               />
             </label>
@@ -776,7 +996,11 @@ function FichaAlumno({ alumno }) {
           </div>
         )}
         {msgRutina && (
-          <p className={`text-xs mt-2 flex items-center gap-1 ${msgRutina.ok ? 'text-cyan-brand' : 'text-red-400'}`}>
+          <p
+            className={`text-xs mt-2 flex items-center gap-1 ${
+              msgRutina.ok ? 'text-cyan-brand' : 'text-red-400'
+            }`}
+          >
             {msgRutina.ok && <Check size={12} />} {msgRutina.mensaje}
           </p>
         )}
@@ -787,17 +1011,23 @@ function FichaAlumno({ alumno }) {
           }}
           className="flex items-center gap-1 text-cyan-brand text-xs font-medium mt-2"
         >
-          <Upload size={13} /> {modo === 'importar' ? 'Elegir una existente' : 'Importar rutina desde Excel'}
+          <Upload size={13} />{' '}
+          {modo === 'importar'
+            ? 'Elegir una existente'
+            : 'Importar rutina desde Excel'}
         </button>
       </div>
 
       {historial.length > 0 && (
         <div>
-          <p className="text-white/40 text-xs uppercase tracking-wide mb-2">Rutinas anteriores</p>
+          <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
+            Rutinas anteriores
+          </p>
           <div className="flex flex-col gap-1">
             {historial.map((h) => (
               <p key={h.id} className="text-white/40 text-xs">
-                {h.rutina?.nombre} · {formatearFecha(h.fecha_asignacion)} a {formatearFecha(h.fecha_fin)}
+                {h.rutina?.nombre} · {formatearFecha(h.fecha_asignacion)} a{' '}
+                {formatearFecha(h.fecha_fin)}
               </p>
             ))}
           </div>

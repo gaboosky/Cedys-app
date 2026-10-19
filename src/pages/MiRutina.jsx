@@ -42,11 +42,16 @@ export default function MiRutina() {
 
   const rutinaActiva = rutinaActivaDe(usuarioActual.id);
   const ultimoDia = rutinaActiva ? leerUltimoDia(rutinaActiva.id) : null;
-  const primerNombre = (usuarioActual.nombre || '').trim().split(/\s+/)[0] || '';
+  const primerNombre =
+    (usuarioActual.nombre || '').trim().split(/\s+/)[0] || '';
   const semanasActiva = rutinaActiva?.fecha_asignacion
     ? Math.max(
         1,
-        Math.floor((Date.now() - new Date(rutinaActiva.fecha_asignacion + 'T00:00:00').getTime()) / (7 * 86400000)) + 1
+        Math.floor(
+          (Date.now() -
+            new Date(rutinaActiva.fecha_asignacion + 'T00:00:00').getTime()) /
+            (7 * 86400000)
+        ) + 1
       )
     : null;
   const historial = historialRutinasDe(usuarioActual.id).filter(
@@ -103,9 +108,15 @@ export default function MiRutina() {
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
-      <p className="font-display text-3xl text-white leading-tight">Mi Rutina</p>
+      <p className="font-display text-3xl text-white leading-tight">
+        Mi Rutina
+      </p>
       <p className="text-white/40 text-xs mt-1 mb-5">
-        {rutinaActiva ? `¡Vamos${primerNombre ? ', ' + primerNombre : ''}! Hoy toca darlo todo 💪` : 'Tu plan de entrenamiento'}
+        {rutinaActiva
+          ? `¡Vamos${
+              primerNombre ? ', ' + primerNombre : ''
+            }! Hoy toca darlo todo 💪`
+          : 'Tu plan de entrenamiento'}
       </p>
 
       {rutinaActiva ? (
@@ -117,20 +128,27 @@ export default function MiRutina() {
           />
           <div className="relative">
             <span className="inline-flex items-center gap-1.5 bg-cyan-brand/15 border border-cyan-brand/30 text-cyan-brand text-[11px] font-semibold rounded-full px-2.5 py-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-brand animate-pulse" /> Rutina activa
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-brand animate-pulse" />{' '}
+              Rutina activa
             </span>
-            <p className="font-display text-white leading-tight mt-3" style={{ fontSize: '2rem' }}>
+            <p
+              className="font-display text-white leading-tight mt-3"
+              style={{ fontSize: '2rem' }}
+            >
               {rutinaActiva.nombre}
             </p>
             <p className="text-white/45 text-xs mt-1.5 flex items-center gap-1.5">
-              <Calendar size={12} /> Desde el {formatearFecha(rutinaActiva.fecha_asignacion)}
+              <Calendar size={12} /> Desde el{' '}
+              {formatearFecha(rutinaActiva.fecha_asignacion)}
               {semanasActiva ? ` · semana ${semanasActiva} con este plan` : ''}
             </p>
 
             {ultimoDia && (
               <button
                 onClick={() =>
-                  navigate(`/rutinas/${rutinaActiva.id}/semanas/${ultimoDia.semanaId}/dias/${ultimoDia.diaId}`)
+                  navigate(
+                    `/rutinas/${rutinaActiva.id}/semanas/${ultimoDia.semanaId}/dias/${ultimoDia.diaId}`
+                  )
                 }
                 className="w-full flex items-center gap-3 bg-white/[0.07] border border-white/10 rounded-2xl p-3 mt-5 text-left transition-transform active:scale-[0.98]"
               >
@@ -138,7 +156,9 @@ export default function MiRutina() {
                   <RotateCcw size={18} className="text-cyan-brand" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white/45 text-[11px] uppercase tracking-wide">Continuar donde quedaste</p>
+                  <p className="text-white/45 text-[11px] uppercase tracking-wide">
+                    Continuar donde quedaste
+                  </p>
                   <p className="text-white font-semibold truncate">
                     Semana {ultimoDia.semanaNumero} · {ultimoDia.diaNombre}
                   </p>
@@ -153,7 +173,8 @@ export default function MiRutina() {
                 ultimoDia ? 'mt-2' : 'mt-5'
               }`}
             >
-              <Play size={16} fill="currentColor" /> {ultimoDia ? 'VER TODA LA RUTINA' : 'COMENZAR ENTRENAMIENTO'}
+              <Play size={16} fill="currentColor" />{' '}
+              {ultimoDia ? 'VER TODA LA RUTINA' : 'COMENZAR ENTRENAMIENTO'}
             </button>
           </div>
         </div>
@@ -164,9 +185,12 @@ export default function MiRutina() {
             <div className="w-16 h-16 rounded-2xl bg-cyan-brand/15 flex items-center justify-center mx-auto mb-4">
               <Dumbbell size={30} className="text-cyan-brand" />
             </div>
-            <p className="text-white font-display text-2xl mb-1">Aún no tienes una rutina</p>
+            <p className="text-white font-display text-2xl mb-1">
+              Aún no tienes una rutina
+            </p>
             <p className="text-white/50 text-sm mb-6">
-              Tu coach puede asignarte un plan de entrenamiento o puedes importar tu propia rutina.
+              Tu coach puede asignarte un plan de entrenamiento o puedes
+              importar tu propia rutina.
             </p>
             {!mostrarForm && (
               <button

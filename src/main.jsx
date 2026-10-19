@@ -2,6 +2,7 @@ import { StrictMode, Component } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.jsx';
+import { esErrorDeCarga, recargarUnaVez } from './lib/cargaSegura';
 
 // Si algo se rompe dentro de la app, muestra una pantalla amable en vez de quedar en blanco.
 class ErrorBoundary extends Component {
@@ -14,6 +15,8 @@ class ErrorBoundary extends Component {
   }
   componentDidCatch(error, info) {
     console.error('Error en la app:', error, info);
+    // Versión vieja en pantalla: se recarga sola una vez para traer la nueva
+    if (esErrorDeCarga(error)) recargarUnaVez();
   }
   render() {
     if (this.state.error) {
@@ -21,7 +24,15 @@ class ErrorBoundary extends Component {
       return (
         <Fallback
           error={this.state.error}
-          resetError={() => this.setState({ error: null })}
+          resetError={() => {
+            // Recargar de verdad (si solo se re-dibuja, el error vuelve igual)
+            try {
+              sessionStorage.removeItem('cedys_recarga_por_version');
+            } catch {
+              /* nada */
+            }
+            window.location.reload();
+          }}
         />
       );
     }
@@ -62,6 +73,19 @@ function PantallaError({ error, resetError }) {
       >
         Intenta de nuevo. Si sigue pasando, avísale al gimnasio.
       </p>
+      {error?.message && (
+        <p
+          style={{
+            color: 'rgba(255,255,255,0.25)',
+            fontSize: '11px',
+            marginBottom: '16px',
+            maxWidth: '320px',
+            wordBreak: 'break-word',
+          }}
+        >
+          Detalle: {String(error.message).slice(0, 160)}
+        </p>
+      )}
       <button
         onClick={resetError}
         style={{

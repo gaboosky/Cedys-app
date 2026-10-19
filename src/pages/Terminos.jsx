@@ -106,7 +106,7 @@ export default function Terminos() {
             <li>
               No se realizan reembolsos de dinero, excepto en los casos que
               estipule la ley del consumidor o expulsión del centro. Los planes
-              sí son transferibles a otra persona.
+              No,no son transferibles a otra persona.
             </li>
             <li>
               En caso de expulsión por violaciones graves a las normas de
@@ -114,8 +114,8 @@ export default function Terminos() {
             </li>
             <li>
               Para cancelar una clase y recuperar la sesión, avisa con al menos{' '}
-              {horas} horas de anticipación (por la app o WhatsApp). Sin ese aviso, la
-              sesión se descuenta igual.
+              {horas} horas de anticipación (por la app o WhatsApp). Sin ese
+              aviso, la sesión se descuenta igual.
             </li>
             <li>
               Se recomienda llegar 5 a 10 minutos antes de la clase. Se acepta

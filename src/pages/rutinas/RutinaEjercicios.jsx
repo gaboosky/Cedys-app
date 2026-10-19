@@ -1,8 +1,31 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { ArrowLeft, ExternalLink, Pencil, Check, X, TrendingUp, TrendingDown, Minus, Sparkles, ChevronRight, PartyPopper, Flame, Dumbbell, Wind } from 'lucide-react';
-import { mensajeProgreso, formatearKg, formatearPct, variacionPct, fechaHoraRegistro, ultimoCambioDe, pesoVigente } from '../../lib/cargas';
+import {
+  ArrowLeft,
+  ExternalLink,
+  Pencil,
+  Check,
+  X,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Sparkles,
+  ChevronRight,
+  PartyPopper,
+  Flame,
+  Dumbbell,
+  Wind,
+} from 'lucide-react';
+import {
+  mensajeProgreso,
+  formatearKg,
+  formatearPct,
+  variacionPct,
+  fechaHoraRegistro,
+  ultimoCambioDe,
+  pesoVigente,
+} from '../../lib/cargas';
 
 const SECCIONES = [
   { key: 'calentamiento', label: 'Calentamiento', icono: Flame },
@@ -13,15 +36,27 @@ const SECCIONES = [
 // Lo que marca el alumno se guarda en este celular y se reinicia cada día.
 function hoyISO() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}-${String(d.getDate()).padStart(2, '0')}`;
 }
 function leerHechos(diaId) {
   try {
-    const g = JSON.parse(localStorage.getItem('cedys_rutina_hechos_' + diaId) || 'null');
+    const g = JSON.parse(
+      localStorage.getItem('cedys_rutina_hechos_' + diaId) || 'null'
+    );
     return g && g.fecha === hoyISO() ? g.ids : [];
   } catch {
     return [];
   }
+}
+function fechaCortaDia(iso) {
+  return new Date(iso + 'T12:00:00').toLocaleDateString('es-CL', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+  });
 }
 function guardarLocal(clave, valor) {
   try {
@@ -35,7 +70,17 @@ function guardarLocal(clave, valor) {
 export default function RutinaEjercicios() {
   const { rutinaId, semanaId, diaId } = useParams();
   const navigate = useNavigate();
-  const { obtenerEjercicios, obtenerDias, obtenerSemanas } = useAuth();
+  const {
+    obtenerEjercicios,
+    obtenerDias,
+    obtenerSemanas,
+    diasRutinaHechos = [],
+    marcarDiaRutina,
+    desmarcarDiaRutina,
+    usuarioActual,
+  } = useAuth();
+  const [registroHoy, setRegistroHoy] = useState(null); // { hora } cuando se guardó el día
+
   const [ejercicios, setEjercicios] = useState(null);
   const [editando, setEditando] = useState(null); // ejercicio abierto en la ventana
   const [hechos, setHechos] = useState(() => leerHechos(diaId));
@@ -51,7 +96,9 @@ export default function RutinaEjercicios() {
 
   useEffect(() => {
     obtenerDias(semanaId).then(setDias);
-    obtenerSemanas(rutinaId).then((lista) => setSemana(lista.find((s) => s.id === semanaId) || null));
+    obtenerSemanas(rutinaId).then((lista) =>
+      setSemana(lista.find((s) => s.id === semanaId) || null)
+    );
   }, [rutinaId, semanaId]);
 
   const dia = dias.find((d) => d.id === diaId);
@@ -72,21 +119,63 @@ export default function RutinaEjercicios() {
   }, [dia?.id, semana?.id]);
 
   function actualizarEjercicio(id, cambios) {
-    setEjercicios((prev) => prev.map((e) => (e.id === id ? { ...e, ...cambios } : e)));
+    setEjercicios((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...cambios } : e))
+    );
   }
 
   function alternarHecho(id) {
-    setHechos((prev) => {
-      const nuevos = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      guardarLocal('cedys_rutina_hechos_' + diaId, { fecha: hoyISO(), ids: nuevos });
-      const todos = ejercicios && ejercicios.length > 0 && ejercicios.every((e) => nuevos.includes(e.id));
-      guardarLocal('cedys_rutina_completo_' + diaId, todos ? hoyISO() : null);
-      return nuevos;
+    const antes = hechos;
+    const nuevos = antes.includes(id)
+      ? antes.filter((x) => x !== id)
+      : [...antes, id];
+    setHechos(nuevos);
+    guardarLocal('cedys_rutina_hechos_' + diaId, {
+      fecha: hoyISO(),
+      ids: nuevos,
     });
+    const lista = ejercicios || [];
+    const estabaCompleto =
+      lista.length > 0 && lista.every((e) => antes.includes(e.id));
+    const quedaCompleto =
+      lista.length > 0 && lista.every((e) => nuevos.includes(e.id));
+    guardarLocal(
+      'cedys_rutina_completo_' + diaId,
+      quedaCompleto ? hoyISO() : null
+    );
+    // Al terminar todos los ejercicios queda registrado el día (y la clase de hoy)
+    if (quedaCompleto && !estabaCompleto && marcarDiaRutina) {
+      marcarDiaRutina({
+        rutinaId,
+        semanaId,
+        diaId,
+        semanaNumero: semana?.numero,
+        diaNombre: dia?.nombre,
+      }).then((r) =>
+        setRegistroHoy(r?.ok ? { hora: r.hora } : { error: true })
+      );
+    }
+    if (!quedaCompleto && estabaCompleto && desmarcarDiaRutina) {
+      desmarcarDiaRutina(diaId);
+      setRegistroHoy(null);
+    }
   }
 
+  // Veces que hizo este día (registro guardado)
+  const vecesHecho = diasRutinaHechos
+    .filter(
+      (d) =>
+        String(d.dia_id) === String(diaId) &&
+        String(d.usuario_id) === String(usuarioActual?.id)
+    )
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const ultimaVez = vecesHecho.find((d) => d.fecha !== hoyISO()) || null;
+  const registradoHoy = vecesHecho.some((d) => d.fecha === hoyISO());
+
   const total = ejercicios?.length || 0;
-  const listos = ejercicios ? ejercicios.filter((e) => hechos.includes(e.id)).length : 0;
+  const listos = ejercicios
+    ? ejercicios.filter((e) => hechos.includes(e.id)).length
+    : 0;
   const completo = total > 0 && listos === total;
   let numero = 0;
 
@@ -106,14 +195,20 @@ export default function RutinaEjercicios() {
           <p className="text-cyan-brand text-[11px] font-semibold tracking-[0.2em] uppercase">
             {semana ? `Semana ${semana.numero}` : 'Entrenamiento'}
           </p>
-          <p className="font-display text-white text-2xl leading-tight mt-1">{dia?.nombre || 'Ejercicios'}</p>
+          <p className="font-display text-white text-2xl leading-tight mt-1">
+            {dia?.nombre || 'Ejercicios'}
+          </p>
           {total > 0 && (
             <>
               <div className="flex items-center justify-between mt-3 mb-1.5">
                 <p className="text-white/50 text-xs">
-                  {completo ? '¡Todo listo!' : `${listos} de ${total} ejercicios`}
+                  {completo
+                    ? '¡Todo listo!'
+                    : `${listos} de ${total} ejercicios`}
                 </p>
-                <p className="text-cyan-brand text-xs font-semibold">{Math.round((listos / total) * 100)}%</p>
+                <p className="text-cyan-brand text-xs font-semibold">
+                  {Math.round((listos / total) * 100)}%
+                </p>
               </div>
               <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                 <div
@@ -122,20 +217,35 @@ export default function RutinaEjercicios() {
                 />
               </div>
               {listos === 0 && (
-                <p className="text-white/35 text-[11px] mt-2">Toca el círculo de cada ejercicio cuando lo termines.</p>
+                <p className="text-white/35 text-[11px] mt-2">
+                  Toca el círculo de cada ejercicio cuando lo termines.
+                </p>
+              )}
+              {ultimaVez && (
+                <p className="text-white/45 text-[11px] mt-1">
+                  La última vez lo hiciste el {fechaCortaDia(ultimaVez.fecha)}
+                  {vecesHecho.length > 1
+                    ? ` · ${vecesHecho.length} veces en total`
+                    : ''}
+                  .
+                </p>
               )}
             </>
           )}
         </div>
       </div>
 
-      {ejercicios === null && <p className="text-white/30 text-sm">Cargando...</p>}
+      {ejercicios === null && (
+        <p className="text-white/30 text-sm">Cargando...</p>
+      )}
 
       {ejercicios &&
         SECCIONES.map(({ key, label, icono: Icono }) => {
           const items = ejercicios.filter((e) => e.seccion === key);
           if (items.length === 0) return null;
-          const listosSeccion = items.filter((e) => hechos.includes(e.id)).length;
+          const listosSeccion = items.filter((e) =>
+            hechos.includes(e.id)
+          ).length;
           return (
             <div key={key} className="mb-7">
               <div className="flex items-center justify-between mb-3">
@@ -168,19 +278,52 @@ export default function RutinaEjercicios() {
       {completo && (
         <div className="relative overflow-hidden text-center rounded-3xl border border-cyan-brand/30 bg-cyan-brand/10 px-5 py-6 mb-4">
           <PartyPopper size={34} className="text-cyan-brand mx-auto mb-2" />
-          <p className="text-white font-display text-2xl">¡Entrenamiento completado!</p>
-          <p className="text-white/55 text-sm mt-1">Buen trabajo. Hidrátate y descansa 💪</p>
+          <p className="text-white font-display text-2xl">
+            ¡Entrenamiento completado!
+          </p>
+          <p className="text-white/55 text-sm mt-1">
+            Buen trabajo. Hidrátate y descansa 💪
+          </p>
+          {((registroHoy && !registroHoy.error) ||
+            (!registroHoy && registradoHoy)) && (
+            <p className="text-cyan-brand/90 text-xs mt-3 bg-black/20 rounded-xl px-3 py-2">
+              ✓ Quedó registrado: {semana ? `Semana ${semana.numero} · ` : ''}
+              {dia?.nombre}
+              {registroHoy?.hora
+                ? `, junto a tu clase de hoy a las ${registroHoy.hora}`
+                : registroHoy
+                ? ' (hoy no tenías clase reservada)'
+                : ''}
+              .
+            </p>
+          )}
+          {registroHoy?.error && (
+            <p className="text-orange-300 text-xs mt-3">
+              No se pudo guardar el registro. Revisa tu conexión.
+            </p>
+          )}
+          <p className="text-white/35 text-[11px] mt-2">
+            Los ejercicios marcados se reinician mañana.
+          </p>
         </div>
       )}
 
       {siguienteDia && (
         <button
-          onClick={() => navigate(`/rutinas/${rutinaId}/semanas/${semanaId}/dias/${siguienteDia.id}`)}
+          onClick={() =>
+            navigate(
+              `/rutinas/${rutinaId}/semanas/${semanaId}/dias/${siguienteDia.id}`
+            )
+          }
           className="w-full flex items-center justify-between bg-white/[0.04] border border-white/10 rounded-2xl p-4 transition-transform active:scale-[0.98]"
         >
           <div className="text-left">
-            <p className="text-white/40 text-[11px] uppercase tracking-wide">Siguiente día</p>
-            <p className="text-white font-display text-lg leading-tight">{siguienteDia.nombre}</p>
+            <p className="text-white/40 text-[11px] uppercase tracking-wide">
+              Siguiente día
+            </p>
+            <p className="text-white font-display text-lg leading-tight">
+              {siguienteDia.nombre}
+            </p>
           </div>
           <ChevronRight size={18} className="text-cyan-brand/70" />
         </button>
@@ -210,7 +353,8 @@ function TarjetaEjercicio({ ej, numero, hecho, onHecho, onEditar }) {
   const mensaje = ultimoCambio
     ? mensajeProgreso(
         Number(ultimoCambio.peso),
-        ultimoCambio.peso_anterior !== null && ultimoCambio.peso_anterior !== undefined
+        ultimoCambio.peso_anterior !== null &&
+          ultimoCambio.peso_anterior !== undefined
           ? Number(ultimoCambio.peso_anterior)
           : null
       )
@@ -231,7 +375,9 @@ function TarjetaEjercicio({ ej, numero, hecho, onHecho, onEditar }) {
   return (
     <div
       className={`rounded-2xl border px-3 py-3 transition-colors ${
-        hecho ? 'bg-cyan-brand/[0.06] border-cyan-brand/25' : 'bg-white/[0.04] border-white/10'
+        hecho
+          ? 'bg-cyan-brand/[0.06] border-cyan-brand/25'
+          : 'bg-white/[0.04] border-white/10'
       }`}
     >
       <div className="flex items-start gap-2.5">
@@ -239,17 +385,25 @@ function TarjetaEjercicio({ ej, numero, hecho, onHecho, onEditar }) {
           onClick={onHecho}
           aria-label={hecho ? 'Marcar como pendiente' : 'Marcar como hecho'}
           className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border transition-all active:scale-90 ${
-            hecho ? 'bg-cyan-brand border-cyan-brand text-ink' : 'border-white/25 text-white/50'
+            hecho
+              ? 'bg-cyan-brand border-cyan-brand text-ink'
+              : 'border-white/25 text-white/50'
           }`}
         >
-          {hecho ? <Check size={15} strokeWidth={3} /> : <span className="text-xs font-semibold">{numero}</span>}
+          {hecho ? (
+            <Check size={15} strokeWidth={3} />
+          ) : (
+            <span className="text-xs font-semibold">{numero}</span>
+          )}
         </button>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2">
             <p
               className={`flex-1 text-[15px] font-medium leading-snug pt-0.5 ${
-                hecho ? 'text-white/50 line-through decoration-white/30' : 'text-white'
+                hecho
+                  ? 'text-white/50 line-through decoration-white/30'
+                  : 'text-white'
               }`}
             >
               {ej.ejercicio}
@@ -268,7 +422,11 @@ function TarjetaEjercicio({ ej, numero, hecho, onHecho, onEditar }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
-            {detalles.length > 0 && <span className="text-white/50 text-xs">{detalles.join(' · ')}</span>}
+            {detalles.length > 0 && (
+              <span className="text-white/50 text-xs">
+                {detalles.join(' · ')}
+              </span>
+            )}
             <button
               onClick={onEditar}
               className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-transform active:scale-95 ${
@@ -281,7 +439,9 @@ function TarjetaEjercicio({ ej, numero, hecho, onHecho, onEditar }) {
             </button>
           </div>
 
-          {ej.notas && <p className="text-white/45 text-xs mt-1.5 italic">{ej.notas}</p>}
+          {ej.notas && (
+            <p className="text-white/45 text-xs mt-1.5 italic">{ej.notas}</p>
+          )}
 
           {/* Mensaje fijo del último cambio de peso */}
           {mensaje && <MensajeProgreso mensaje={mensaje} />}
@@ -294,7 +454,9 @@ function TarjetaEjercicio({ ej, numero, hecho, onHecho, onEditar }) {
 function VentanaPeso({ ej, rutinaId, onCerrar, onGuardado }) {
   const { registrosPeso, registrarPeso } = useAuth();
   const pesoActual = pesoVigente(ej, registrosPeso).valor;
-  const [valor, setValor] = useState(pesoActual !== null ? String(pesoActual) : '');
+  const [valor, setValor] = useState(
+    pesoActual !== null ? String(pesoActual) : ''
+  );
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
 
@@ -329,19 +491,33 @@ function VentanaPeso({ ej, rutinaId, onCerrar, onGuardado }) {
       <div className="relative w-full sm:max-w-sm bg-ink border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="min-w-0">
-            <p className="text-white/40 text-[11px] uppercase tracking-wide">Editar peso</p>
-            <p className="text-white font-display text-lg leading-tight">{ej.ejercicio}</p>
+            <p className="text-white/40 text-[11px] uppercase tracking-wide">
+              Editar peso
+            </p>
+            <p className="text-white font-display text-lg leading-tight">
+              {ej.ejercicio}
+            </p>
             <p className="text-white/40 text-xs mt-0.5">
-              Peso actual: {pesoActual !== null ? formatearKg(pesoActual) : ej.peso_referencia || 'sin peso'}
+              Peso actual:{' '}
+              {pesoActual !== null
+                ? formatearKg(pesoActual)
+                : ej.peso_referencia || 'sin peso'}
             </p>
           </div>
-          <button onClick={onCerrar} className="text-white/40 p-1 hover:text-white" aria-label="Cerrar">
+          <button
+            onClick={onCerrar}
+            className="text-white/40 p-1 hover:text-white"
+            aria-label="Cerrar"
+          >
             <X size={20} />
           </button>
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={() => ajustar(-2.5)} className="w-14 h-12 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 text-sm shrink-0">
+          <button
+            onClick={() => ajustar(-2.5)}
+            className="w-14 h-12 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 text-sm shrink-0"
+          >
             −2,5
           </button>
           <div className="relative flex-1">
@@ -355,9 +531,14 @@ function VentanaPeso({ ej, rutinaId, onCerrar, onGuardado }) {
               autoFocus
               className="w-full bg-black/30 border border-white/15 rounded-xl pl-3 pr-10 py-3 text-white text-xl text-center outline-none focus:border-cyan-brand"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 text-sm pointer-events-none">kg</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 text-sm pointer-events-none">
+              kg
+            </span>
           </div>
-          <button onClick={() => ajustar(2.5)} className="w-14 h-12 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 text-sm shrink-0">
+          <button
+            onClick={() => ajustar(2.5)}
+            className="w-14 h-12 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 text-sm shrink-0"
+          >
             +2,5
           </button>
         </div>
@@ -372,26 +553,47 @@ function VentanaPeso({ ej, rutinaId, onCerrar, onGuardado }) {
           >
             <Check size={16} /> {guardando ? 'Guardando...' : 'Guardar'}
           </button>
-          <button onClick={onCerrar} className="flex-1 bg-white/10 text-white rounded-xl py-2.5 text-sm">
+          <button
+            onClick={onCerrar}
+            className="flex-1 bg-white/10 text-white rounded-xl py-2.5 text-sm"
+          >
             Cancelar
           </button>
         </div>
 
         {historial.length > 0 && (
           <div className="mt-4">
-            <p className="text-white/35 text-[11px] uppercase tracking-wide mb-1.5">Cambios anteriores</p>
+            <p className="text-white/35 text-[11px] uppercase tracking-wide mb-1.5">
+              Cambios anteriores
+            </p>
             <div className="flex flex-col gap-1 max-h-36 overflow-y-auto">
               {historial.slice(0, 10).map((r) => {
-                const tieneAnterior = r.peso_anterior !== null && r.peso_anterior !== undefined;
-                const pct = tieneAnterior ? variacionPct(r.peso, r.peso_anterior) : null;
+                const tieneAnterior =
+                  r.peso_anterior !== null && r.peso_anterior !== undefined;
+                const pct = tieneAnterior
+                  ? variacionPct(r.peso, r.peso_anterior)
+                  : null;
                 return (
-                  <div key={r.id} className="flex items-center justify-between text-xs bg-black/20 rounded-lg px-3 py-1.5">
-                    <span className="text-white/45">{fechaHoraRegistro(r.creado_en)}</span>
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between text-xs bg-black/20 rounded-lg px-3 py-1.5"
+                  >
+                    <span className="text-white/45">
+                      {fechaHoraRegistro(r.creado_en)}
+                    </span>
                     <span className="text-white tabular-nums">
-                      {tieneAnterior ? `${formatearKg(r.peso_anterior)} → ` : ''}
+                      {tieneAnterior
+                        ? `${formatearKg(r.peso_anterior)} → `
+                        : ''}
                       {formatearKg(r.peso)}
                       {pct !== null && pct !== 0 && (
-                        <span className={`ml-1.5 ${pct > 0 ? 'text-cyan-brand' : 'text-white/45'}`}>{formatearPct(pct)}</span>
+                        <span
+                          className={`ml-1.5 ${
+                            pct > 0 ? 'text-cyan-brand' : 'text-white/45'
+                          }`}
+                        >
+                          {formatearPct(pct)}
+                        </span>
                       )}
                     </span>
                   </div>
@@ -406,11 +608,15 @@ function VentanaPeso({ ej, rutinaId, onCerrar, onGuardado }) {
 }
 
 function MensajeProgreso({ mensaje }) {
-  const Icono = { sube: TrendingUp, primero: Sparkles, igual: Minus, baja: TrendingDown }[mensaje.tipo];
+  const Icono = {
+    sube: TrendingUp,
+    primero: Sparkles,
+    igual: Minus,
+    baja: TrendingDown,
+  }[mensaje.tipo];
   return (
     <p className="flex items-center gap-1.5 mt-1.5 text-yellow-200/90 text-xs">
       <Icono size={13} className="shrink-0" /> {mensaje.titulo}
     </p>
   );
 }
-

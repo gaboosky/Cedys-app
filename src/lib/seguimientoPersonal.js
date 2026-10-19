@@ -147,6 +147,7 @@ export function resumenSeguimiento({ plan, mediciones, reservas, usuarioId }) {
   let semana = null;
   let fin = null;
   let sesiones = null;
+  let cumplimiento = null;
   if (plan) {
     const transcurridos = Math.floor((t(hoy) - t(plan.fecha_inicio)) / DIA);
     semana = Math.min(
@@ -155,15 +156,64 @@ export function resumenSeguimiento({ plan, mediciones, reservas, usuarioId }) {
     );
     fin = sumarDias(plan.fecha_inicio, plan.semanas * 7 - 1);
     const meta = plan.semanas * plan.sesiones_semana;
-    const hechas = (reservas || []).filter(
-      (r) =>
-        String(r.usuario_id) === String(usuarioId) &&
-        r.asistio === true &&
-        r.fecha >= plan.fecha_inicio &&
-        r.fecha <= fin &&
-        r.fecha <= hoy
-    ).length;
+    // Cuenta como sesión hecha: clase reservada a la que asistió. Si el coach no
+    // marcó asistencia, una clase ya pasada cuenta igual (salvo que la marque "no vino").
+    const fechasHechas = (reservas || [])
+      .filter(
+        (r) =>
+          String(r.usuario_id) === String(usuarioId) &&
+          r.estado !== 'cancelada' &&
+          r.fecha >= plan.fecha_inicio &&
+          r.fecha <= fin &&
+          (r.asistio === true || (r.asistio !== false && r.fecha < hoy))
+      )
+      .map((r) => r.fecha);
+    const hechas = fechasHechas.length;
     sesiones = { hechas, meta };
+
+    // Cumplimiento semana a semana
+    const semanas = [];
+    for (let i = 0; i < plan.semanas; i++) {
+      const desdeS = sumarDias(plan.fecha_inicio, i * 7);
+      const hastaS = sumarDias(plan.fecha_inicio, i * 7 + 6);
+      const n = fechasHechas.filter((f) => f >= desdeS && f <= hastaS).length;
+      const estado =
+        desdeS > hoy ? 'futura' : hastaS < hoy ? 'cerrada' : 'actual';
+      semanas.push({
+        numero: i + 1,
+        desde: desdeS,
+        hasta: hastaS,
+        hechas: n,
+        meta: plan.sesiones_semana,
+        estado,
+      });
+    }
+    const cerradas = semanas.filter((s) => s.estado === 'cerrada');
+    const esperadas = cerradas.length * plan.sesiones_semana;
+    const hechasCerradas = cerradas.reduce(
+      (a, s) => a + Math.min(s.hechas, s.meta),
+      0
+    );
+    const pct =
+      esperadas === 0 ? null : Math.round((hechasCerradas / esperadas) * 100);
+    const actual = semanas.find((s) => s.estado === 'actual') || null;
+    const nivel =
+      pct === null
+        ? 'inicio'
+        : pct >= 90
+        ? 'bien'
+        : pct >= 70
+        ? 'atencion'
+        : 'atrasado';
+    cumplimiento = {
+      semanas,
+      pct,
+      nivel,
+      actual,
+      semanasCumplidas: cerradas.filter((s) => s.hechas >= s.meta).length,
+      semanasCerradas: cerradas.length,
+      terminado: hoy > fin,
+    };
   }
 
   const medidas = MEDIDAS.map((m) => {
@@ -241,6 +291,7 @@ export function resumenSeguimiento({ plan, mediciones, reservas, usuarioId }) {
     semana,
     fin,
     sesiones,
+    cumplimiento,
     medidas,
     ritmoSemanal,
     meta,

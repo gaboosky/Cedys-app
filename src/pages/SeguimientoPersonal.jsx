@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Pencil, Target, Ruler } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Target, Ruler, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import SeguimientoDashboard from '../components/SeguimientoDashboard';
 import HistorialMediciones from '../components/HistorialMediciones';
@@ -15,7 +15,7 @@ import { hoyLocalISO } from '../lib/ingresos';
 const CAMPO =
   'w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand placeholder-white/25';
 
-function FormularioPlan({ plan, onGuardar, onCancelar }) {
+function FormularioPlan({ plan, onGuardar, onCancelar, onEliminar }) {
   const [form, setForm] = useState({
     objetivo: plan?.objetivo || 'bajar_peso',
     objetivo_detalle: plan?.objetivo_detalle || '',
@@ -28,6 +28,7 @@ function FormularioPlan({ plan, onGuardar, onCancelar }) {
   });
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
+  const [confirmarBorrar, setConfirmarBorrar] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   async function guardar() {
@@ -164,6 +165,45 @@ function FormularioPlan({ plan, onGuardar, onCancelar }) {
           Cancelar
         </button>
       </div>
+      {plan && onEliminar && (
+        <div className="border-t border-white/10 pt-3">
+          {confirmarBorrar ? (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+              <p className="text-red-200 text-xs">
+                ¿Eliminar este plan? Se borra el objetivo, las semanas y las
+                metas. Las mediciones del alumno se conservan.
+              </p>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={async () => {
+                    setGuardando(true);
+                    const r = await onEliminar();
+                    setGuardando(false);
+                    if (!r.ok) setMensaje(r);
+                  }}
+                  disabled={guardando}
+                  className="flex-1 bg-red-500 text-white font-semibold rounded-lg py-2 text-xs disabled:opacity-50"
+                >
+                  Sí, eliminar plan
+                </button>
+                <button
+                  onClick={() => setConfirmarBorrar(false)}
+                  className="px-3 bg-white/10 text-white rounded-lg text-xs"
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmarBorrar(true)}
+              className="flex items-center gap-1.5 text-red-300/80 text-xs"
+            >
+              <Trash2 size={13} /> Eliminar plan
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -267,6 +307,7 @@ export default function SeguimientoPersonal() {
     mediciones,
     reservas,
     guardarPlanSeguimiento,
+    eliminarPlanSeguimiento,
     guardarMedicion,
     eliminarMedicion,
   } = useAuth();
@@ -294,6 +335,15 @@ export default function SeguimientoPersonal() {
 
   async function guardarPlan(form) {
     const res = await guardarPlanSeguimiento(usuarioId, form);
+    if (res.ok) {
+      setEditandoPlan(false);
+      mostrar(res.mensaje);
+    }
+    return res;
+  }
+
+  async function eliminarPlan() {
+    const res = await eliminarPlanSeguimiento(usuarioId);
     if (res.ok) {
       setEditandoPlan(false);
       mostrar(res.mensaje);
@@ -358,6 +408,7 @@ export default function SeguimientoPersonal() {
           <FormularioPlan
             plan={plan}
             onGuardar={guardarPlan}
+            onEliminar={eliminarPlan}
             onCancelar={() => setEditandoPlan(false)}
           />
         </div>

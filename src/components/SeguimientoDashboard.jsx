@@ -7,6 +7,11 @@ import {
   Flag,
   Scale,
   Minus,
+  CheckCircle2,
+  AlertTriangle,
+  AlertOctagon,
+  Sparkles,
+  Info,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -203,6 +208,180 @@ function Grafico({ medida, meta }) {
   );
 }
 
+const NIVEL = {
+  bien: {
+    icono: CheckCircle2,
+    chip: 'Al día',
+    clase: 'bg-green-400/10 text-green-300 border-green-400/30',
+    alumno: '¡Vas al día con tu plan! Sigue así.',
+    staff: 'Está cumpliendo el plan.',
+  },
+  atencion: {
+    icono: AlertTriangle,
+    chip: 'Un poco atrás',
+    clase: 'bg-yellow-400/10 text-yellow-200 border-yellow-400/30',
+    alumno: 'Vas un poco atrás. Intenta no saltarte sesiones esta semana.',
+    staff: 'Se ha saltado algunas sesiones. Buen momento para motivarlo.',
+  },
+  atrasado: {
+    icono: AlertOctagon,
+    chip: 'Atrasado',
+    clase: 'bg-red-500/10 text-red-300 border-red-500/30',
+    alumno:
+      'Estás faltando a varias sesiones. Habla con tu coach si necesitas ajustar el plan.',
+    staff:
+      'Está faltando seguido. Conviene conversar con él o ajustar el plan.',
+  },
+  inicio: {
+    icono: Sparkles,
+    chip: 'Recién empieza',
+    clase: 'bg-cyan-brand/10 text-cyan-brand border-cyan-brand/30',
+    alumno:
+      'Tu plan recién empieza. Al cerrar la primera semana verás cómo vas.',
+    staff: 'Aún no cierra la primera semana del plan.',
+  },
+};
+
+function colorSemana(s) {
+  if (s.estado === 'futura')
+    return 'bg-white/[0.04] border-white/10 text-white/25';
+  if (s.hechas >= s.meta) return 'bg-cyan-brand border-cyan-brand text-ink';
+  if (s.estado === 'actual')
+    return 'bg-cyan-brand/10 border-cyan-brand text-cyan-brand';
+  if (s.hechas > 0)
+    return 'bg-yellow-400/20 border-yellow-400/40 text-yellow-100';
+  return 'bg-red-500/15 border-red-500/30 text-red-200';
+}
+
+// ¿Está cumpliendo el plan? (sesiones por semana vs. lo planificado)
+function Cumplimiento({ c, vistaStaff }) {
+  const [ayuda, setAyuda] = useState(false);
+  const n = NIVEL[c.nivel];
+  const Icono = n.icono;
+  const a = c.actual;
+  const faltan = a ? Math.max(0, a.meta - a.hechas) : 0;
+  return (
+    <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-white text-sm font-medium">
+          {vistaStaff ? '¿Está cumpliendo el plan?' : '¿Cómo voy con mi plan?'}
+        </p>
+        <span
+          className={`shrink-0 flex items-center gap-1 text-[10px] font-semibold border rounded-full px-2 py-0.5 ${n.clase}`}
+        >
+          <Icono size={11} /> {n.chip}
+        </span>
+      </div>
+
+      <div className="flex items-end gap-3 mt-2">
+        <p className="text-white font-display text-4xl leading-none tabular-nums">
+          {c.pct === null ? '—' : `${c.pct}%`}
+        </p>
+        <p className="text-white/50 text-xs pb-0.5 leading-snug">
+          {c.pct === null
+            ? 'de cumplimiento'
+            : `de las sesiones planificadas · ${c.semanasCumplidas} de ${
+                c.semanasCerradas
+              } semana${c.semanasCerradas !== 1 ? 's' : ''} completa${
+                c.semanasCerradas !== 1 ? 's' : ''
+              }`}
+        </p>
+      </div>
+      <p className="text-white/75 text-xs mt-2">
+        {vistaStaff ? n.staff : n.alumno}
+      </p>
+
+      {a && (
+        <div className="mt-3 bg-black/20 rounded-xl p-3">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-white/60">
+              Esta semana (semana {a.numero})
+            </span>
+            <span className="text-white font-semibold tabular-nums">
+              {a.hechas} de {a.meta}
+            </span>
+          </div>
+          <div className="flex gap-1 mt-2">
+            {Array.from({ length: a.meta }).map((_, i) => (
+              <div
+                key={i}
+                className={`h-2 flex-1 rounded-full ${
+                  i < a.hechas ? 'bg-cyan-brand' : 'bg-white/10'
+                }`}
+              />
+            ))}
+          </div>
+          <p
+            className={`text-[11px] mt-1.5 ${
+              faltan === 0 ? 'text-cyan-brand' : 'text-white/45'
+            }`}
+          >
+            {faltan === 0
+              ? '¡Semana cumplida!'
+              : `${vistaStaff ? 'Le falta' : 'Te falta'}${
+                  faltan > 1 ? 'n' : ''
+                } ${faltan} sesi${
+                  faltan > 1 ? 'ones' : 'ón'
+                } para cumplir la semana.`}
+          </p>
+        </div>
+      )}
+
+      <div
+        className="flex gap-1.5 overflow-x-auto mt-3 pb-1"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {c.semanas.map((s) => (
+          <div
+            key={s.numero}
+            title={`Semana ${s.numero}: ${s.hechas} de ${s.meta}`}
+            className={`shrink-0 w-9 rounded-lg border py-1 flex flex-col items-center ${colorSemana(
+              s
+            )} ${
+              s.estado === 'actual'
+                ? 'ring-1 ring-cyan-brand ring-offset-1 ring-offset-ink'
+                : ''
+            }`}
+          >
+            <span className="text-[9px] font-semibold opacity-70">
+              S{s.numero}
+            </span>
+            <span className="text-[11px] font-semibold tabular-nums leading-tight">
+              {s.estado === 'futura' ? '·' : s.hechas}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-white/45 mt-1.5">
+        <span className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-sm bg-cyan-brand" /> Cumplida
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-sm bg-yellow-400/50" /> Incompleta
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-sm bg-red-500/40" /> Sin sesiones
+        </span>
+      </div>
+
+      <button
+        onClick={() => setAyuda(!ayuda)}
+        className="flex items-center gap-1 text-cyan-brand/80 text-[11px] mt-2.5"
+      >
+        <Info size={12} /> ¿Cómo se cuentan las sesiones?
+      </button>
+      {ayuda && (
+        <p className="text-white/55 text-[11px] mt-1 leading-snug">
+          Cada clase reservada desde el inicio del plan suma 1 sesión cuando ya
+          pasó. Si el coach marca "no vino", no cuenta. La meta es{' '}
+          {c.semanas[0]?.meta} sesiones por semana; el % considera solo las
+          semanas ya terminadas.
+        </p>
+      )}
+    </div>
+  );
+}
+
 // Dashboard de avance del alumno (lo ven el alumno, su coach y el admin).
 export default function SeguimientoDashboard({
   usuarioId,
@@ -253,6 +432,10 @@ export default function SeguimientoDashboard({
         </div>
       )}
 
+      {r.cumplimiento && (
+        <Cumplimiento c={r.cumplimiento} vistaStaff={vistaStaff} />
+      )}
+
       <div className="grid grid-cols-2 gap-2">
         {r.sesiones && (
           <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-3.5 flex items-center gap-3">
@@ -265,7 +448,7 @@ export default function SeguimientoDashboard({
             </Anillo>
             <div className="min-w-0">
               <p className="text-white/40 text-[10px] uppercase tracking-wide">
-                Sesiones
+                Sesiones del plan
               </p>
               <p className="text-white font-display text-xl leading-tight">
                 {r.sesiones.hechas}

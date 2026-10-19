@@ -9,7 +9,19 @@ import {
   Settings,
   Dumbbell,
   FileBarChart,
-  MessageSquare, Star, Wallet, RefreshCw, MapPin, Receipt, Megaphone, History, HandCoins, CalendarCheck, UserX, Search } from 'lucide-react';
+  MessageSquare,
+  Star,
+  Wallet,
+  RefreshCw,
+  MapPin,
+  Receipt,
+  Megaphone,
+  History,
+  HandCoins,
+  CalendarCheck,
+  UserX,
+  Search,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LOGO_CEDS_WORDMARK } from '../assets/logoWordmark';
 import BuscadorRapido from './BuscadorRapido';
@@ -175,9 +187,11 @@ export default function Header() {
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            backgroundImage: 'radial-gradient(rgba(3,205,230,0.18) 1px, transparent 1px)',
+            backgroundImage:
+              'radial-gradient(rgba(3,205,230,0.18) 1px, transparent 1px)',
             backgroundSize: '12px 12px',
-            WebkitMaskImage: 'linear-gradient(90deg, transparent 40%, #000 100%)',
+            WebkitMaskImage:
+              'linear-gradient(90deg, transparent 40%, #000 100%)',
             maskImage: 'linear-gradient(90deg, transparent 40%, #000 100%)',
           }}
         />
@@ -208,7 +222,11 @@ export default function Header() {
 
           <div className="flex justify-center">
             {/* Siempre el logo de la app: está hecho para fondo oscuro */}
-            <img src={LOGO_CEDS_WORDMARK} alt="CED&S" className="w-[104px] h-auto object-contain" />
+            <img
+              src={LOGO_CEDS_WORDMARK}
+              alt="CED&S"
+              className="w-[104px] h-auto object-contain"
+            />
           </div>
 
           <div className="flex items-center justify-end gap-0.5">
@@ -237,8 +255,12 @@ export default function Header() {
         </div>
 
         <div className="relative px-6 pt-1 pb-2.5 text-center">
-          <p className="font-display text-lg text-white leading-none tracking-wide">{titulo}</p>
-          {subtitulo && <p className="text-white/40 text-[11px] mt-1">{subtitulo}</p>}
+          <p className="font-display text-lg text-white leading-none tracking-wide">
+            {titulo}
+          </p>
+          {subtitulo && (
+            <p className="text-white/40 text-[11px] mt-1">{subtitulo}</p>
+          )}
         </div>
         <div className="h-[2px] bg-gradient-to-r from-transparent via-cyan-brand to-transparent opacity-80" />
       </header>
@@ -370,20 +392,24 @@ export default function Header() {
                 El gimnasio
               </NavLink>
 
-              {(usuarioActual.rol === 'coach' || usuarioActual.rol === 'head_coach') && rolEfectivo !== 'usuario' && (
-                <NavLink
-                  to="/mis-evaluaciones"
-                  onClick={() => setMenuAbierto(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                      isActive ? 'bg-cyan-brand/15 text-cyan-brand' : 'text-white/70 hover:bg-white/5'
-                    }`
-                  }
-                >
-                  <Star size={18} />
-                  Mis evaluaciones
-                </NavLink>
-              )}
+              {(usuarioActual.rol === 'coach' ||
+                usuarioActual.rol === 'head_coach') &&
+                rolEfectivo !== 'usuario' && (
+                  <NavLink
+                    to="/mis-evaluaciones"
+                    onClick={() => setMenuAbierto(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'text-white/70 hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <Star size={18} />
+                    Mis evaluaciones
+                  </NavLink>
+                )}
 
               {usuarioActual.rol === 'head_coach' &&
                 MENU_ADMIN.map((grupo) => (
@@ -398,7 +424,9 @@ export default function Header() {
                         onClick={() => setMenuAbierto(false)}
                         className={({ isActive }) =>
                           `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                            isActive ? 'bg-cyan-brand/15 text-cyan-brand' : 'text-white/70 hover:bg-white/5'
+                            isActive
+                              ? 'bg-cyan-brand/15 text-cyan-brand'
+                              : 'text-white/70 hover:bg-white/5'
                           }`
                         }
                       >

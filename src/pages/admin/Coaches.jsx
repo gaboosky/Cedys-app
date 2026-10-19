@@ -43,7 +43,11 @@ export default function Coaches() {
   const [convirtiendoId, setConvirtiendoId] = useState(null);
 
   const [editandoId, setEditandoId] = useState(null);
-  const [formEdicion, setFormEdicion] = useState({ nombre: '', telefono: '', valor_clase: '' });
+  const [formEdicion, setFormEdicion] = useState({
+    nombre: '',
+    telefono: '',
+    valor_clase: '',
+  });
   const [eliminandoId, setEliminandoId] = useState(null);
 
   async function handleCrear(e) {
@@ -121,7 +125,8 @@ export default function Coaches() {
         className="flex items-center justify-between bg-cyan-brand/[0.07] border border-cyan-brand/30 rounded-2xl px-4 py-3 mb-4"
       >
         <span className="flex items-center gap-2 text-white text-sm">
-          <HandCoins size={17} className="text-cyan-brand" /> Clases realizadas y pago del mes
+          <HandCoins size={17} className="text-cyan-brand" /> Clases realizadas
+          y pago del mes
         </span>
         <ChevronRight size={16} className="text-cyan-brand/70" />
       </Link>
@@ -305,19 +310,30 @@ export default function Coaches() {
                     className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
                   />
                   <div>
-                    <label className="text-white/40 text-xs mb-1 block">Valor que se le paga por clase</label>
+                    <label className="text-white/40 text-xs mb-1 block">
+                      Valor que se le paga por clase
+                    </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm pointer-events-none">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm pointer-events-none">
+                        $
+                      </span>
                       <input
                         type="number"
                         inputMode="numeric"
                         value={formEdicion.valor_clase}
-                        onChange={(e) => setFormEdicion({ ...formEdicion, valor_clase: e.target.value })}
+                        onChange={(e) =>
+                          setFormEdicion({
+                            ...formEdicion,
+                            valor_clase: e.target.value,
+                          })
+                        }
                         placeholder="Ej: 15000"
                         className="w-full bg-black/30 border border-white/10 rounded-lg pl-7 pr-3 py-2 text-white text-sm"
                       />
                     </div>
-                    <p className="text-white/30 text-[11px] mt-1">Se usa en "Pago a coaches" para calcular su pago del mes.</p>
+                    <p className="text-white/30 text-[11px] mt-1">
+                      Se usa en "Pago a coaches" para calcular su pago del mes.
+                    </p>
                   </div>
                   {c.rol !== 'head_coach' && (
                     <div>
@@ -389,9 +405,17 @@ export default function Coaches() {
                       <p className="text-white/30 text-xs">
                         {horariosDelCoach.length} horario(s) asignado(s)
                       </p>
-                      <p className={`text-xs mt-1 ${tarifasCoach?.[c.id] ? 'text-cyan-brand' : 'text-yellow-200/80'}`}>
+                      <p
+                        className={`text-xs mt-1 ${
+                          tarifasCoach?.[c.id]
+                            ? 'text-cyan-brand'
+                            : 'text-yellow-200/80'
+                        }`}
+                      >
                         {tarifasCoach?.[c.id]
-                          ? `$${Number(tarifasCoach[c.id]).toLocaleString('es-CL')} por clase`
+                          ? `$${Number(tarifasCoach[c.id]).toLocaleString(
+                              'es-CL'
+                            )} por clase`
                           : 'Sin valor por clase · toca ✏️ para definirlo'}
                       </p>
                     </div>
@@ -399,7 +423,8 @@ export default function Coaches() {
                     {eliminandoEste ? (
                       <div className="flex flex-col gap-1 items-end max-w-[150px]">
                         <span className="text-yellow-200 text-xs text-right">
-                          ¿Quitar de coach? Pasa a ser alumno y conserva su cuenta.
+                          ¿Quitar de coach? Pasa a ser alumno y conserva su
+                          cuenta.
                         </span>
                         <div className="flex gap-1">
                           <button
