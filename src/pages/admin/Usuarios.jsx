@@ -525,9 +525,10 @@ export default function Usuarios() {
     setDialogo({ tipo, usuario });
   }
 
-  const planesOrdenados = Object.values(planes).sort((a, b) =>
-    (a.nombre || '').localeCompare(b.nombre || '')
-  );
+  // Solo planes normales (los HIIT se venden desde la pestaña HIIT)
+  const planesOrdenados = Object.values(planes)
+    .filter((p) => p.tipo !== 'hiit')
+    .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
 
   return (
     <div className="min-h-screen bg-ink pb-24 px-4 md:px-8 pt-6">

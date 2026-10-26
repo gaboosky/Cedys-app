@@ -58,6 +58,7 @@ const TITULOS = {
   '/mas': 'Más',
   '/general': 'General',
   '/mi-rutina': 'Mi Rutina',
+  '/hiit': 'HIIT',
   '/progreso': 'Progreso',
   '/mis-evaluaciones': 'Mis evaluaciones',
 };
@@ -88,6 +89,7 @@ const SUBTITULOS = {
   '/mas': 'Más opciones',
   '/general': 'Noticias y novedades del gym',
   '/mi-rutina': 'Tu plan de entrenamiento',
+  '/hiit': 'Alta intensidad en grupos pequeños',
   '/progreso': 'Tu evolución en el tiempo',
   '/mis-evaluaciones': 'Lo que opinan de tus clases',
 };

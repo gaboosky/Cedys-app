@@ -17,8 +17,15 @@ import {
 
 // Vista de la semana: todas las clases de lunes a sábado de un vistazo
 function VistaSemana({ onElegirDia }) {
-  const { horarios, reservas, horarioEstaCancelado, coachDeClase, ausenciaDe } =
-    useAuth();
+  const {
+    horarios: todosHorarios,
+    reservas,
+    horarioEstaCancelado,
+    coachDeClase,
+    ausenciaDe,
+  } = useAuth();
+  // Las clases HIIT se manejan en su propia pestaña
+  const horarios = todosHorarios.filter((h) => h.tipo !== 'hiit');
   const [offset, setOffset] = useState(0);
   const base = new Date();
   base.setHours(12, 0, 0, 0);
@@ -369,7 +376,7 @@ function horarioAplicaEnFecha(h, diaClave, diaNombre) {
 export default function ClasesAdmin() {
   const {
     usuarioActual,
-    horarios,
+    horarios: todosHorarios,
     usuarios,
     reservas,
     crearClase,
@@ -381,6 +388,8 @@ export default function ClasesAdmin() {
     reactivarHorarioFecha,
     cancelarReservaAdmin,
   } = useAuth();
+  // Las clases HIIT se manejan en su propia pestaña
+  const horarios = todosHorarios.filter((h) => h.tipo !== 'hiit');
 
   const [mostrarFormFija, setMostrarFormFija] = useState(false);
   const [mostrarFormPuntual, setMostrarFormPuntual] = useState(false);

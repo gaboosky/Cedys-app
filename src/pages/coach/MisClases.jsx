@@ -624,6 +624,11 @@ function TarjetaClase({ h, fecha, abierta, setAbierta, inscritosDe, modo }) {
           >
             {h.hora}
           </p>
+          {h.tipo === 'hiit' && (
+            <span className="text-[10px] font-semibold text-orange-300 bg-orange-400/10 border border-orange-400/30 rounded-full px-2 py-0.5">
+              HIIT
+            </span>
+          )}
           {cancelada && (
             <span className="text-[10px] bg-red-500/15 text-red-300 px-1.5 py-0.5 rounded">
               Cancelada

@@ -56,7 +56,7 @@ function proximosDiasHabiles(cantidad = 7) {
 
 export default function Horarios() {
   const {
-    horarios,
+    horarios: todosHorarios,
     reservas,
     usuarioActual,
     sesionesRestantes,
@@ -66,6 +66,8 @@ export default function Horarios() {
     motivoNoPuedeReservar,
     coachDeClase,
   } = useAuth();
+  // Las clases HIIT tienen su propia pestaña
+  const horarios = todosHorarios.filter((h) => h.tipo !== 'hiit');
   const navigate = useNavigate();
   const [seleccionado, setSeleccionado] = useState(null);
   const [diaElegido, setDiaElegido] = useState(null);

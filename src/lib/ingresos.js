@@ -15,7 +15,13 @@ export const TIPOS_PAGO = {
   primer_pago: 'Primer pago',
   renovacion: 'Renovación',
   manual: 'Pago manual',
+  hiit: 'Plan HIIT',
 };
+
+// Pagos que renuevan el plan normal (los pagos manuales y los de HIIT no cuentan)
+export function esPagoDePlan(p) {
+  return p && p.tipo !== 'manual' && p.tipo !== 'hiit';
+}
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -195,20 +201,18 @@ export function alumnosActivosPorMes(
   meses
 ) {
   const porUsuario = Object.fromEntries(usuarios.map((u) => [u.id, u]));
-  const periodos = pagos
-    .filter((p) => p.tipo !== 'manual')
-    .map((p) => {
-      const dur = duracionPlanDe(
-        porUsuario[p.usuario_id],
-        planes,
-        diasRenovacion,
-        p.plan_id
-      );
-      const hasta = p.vence
-        ? sumarDias(p.vence, -1)
-        : sumarDias(p.fecha, dur - 1);
-      return { usuario: p.usuario_id, desde: p.fecha, hasta };
-    });
+  const periodos = pagos.filter(esPagoDePlan).map((p) => {
+    const dur = duracionPlanDe(
+      porUsuario[p.usuario_id],
+      planes,
+      diasRenovacion,
+      p.plan_id
+    );
+    const hasta = p.vence
+      ? sumarDias(p.vence, -1)
+      : sumarDias(p.fecha, dur - 1);
+    return { usuario: p.usuario_id, desde: p.fecha, hasta };
+  });
   const resultado = {};
   for (const m of meses) {
     const [anio, mes] = m.split('-').map(Number);

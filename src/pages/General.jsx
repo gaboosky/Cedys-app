@@ -137,6 +137,48 @@ function cuandoEs(fecha, hoy) {
   return DIAS_NOMBRE[new Date(fecha + 'T12:00:00').getDay()];
 }
 
+// Aviso del HIIT en la portada (solo si hay clases HIIT próximas)
+function BannerHiit() {
+  const {
+    horariosHiit = [],
+    usuarioActual,
+    saldoHiitDe,
+    rolEfectivo,
+  } = useAuth();
+  const hoy = hoyLocalISO();
+  const proximas = horariosHiit.filter(
+    (h) => h.fecha_unica && h.fecha_unica >= hoy
+  );
+  if (proximas.length === 0 || rolEfectivo !== 'usuario') return null;
+  const s = saldoHiitDe
+    ? saldoHiitDe(usuarioActual)
+    : { vigente: false, prueba: true };
+  const texto = s.vigente
+    ? `Tienes ${s.saldo} clase${
+        s.saldo !== 1 ? 's' : ''
+      } HIIT. ¡Reserva la próxima!`
+    : s.prueba
+    ? 'Grupos de máximo 8 personas. Tu primera clase es gratis.'
+    : 'Grupos de máximo 8 personas. Contrata tu plan HIIT.';
+  return (
+    <Link
+      to="/hiit"
+      className="relative overflow-hidden flex items-center gap-3 rounded-2xl border border-orange-400/40 bg-gradient-to-r from-[#3a1a06] to-[#1c1009] p-4 mb-4"
+    >
+      <div className="w-11 h-11 rounded-xl bg-orange-400 text-ink flex items-center justify-center shrink-0">
+        <Flame size={22} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-orange-300 text-[10px] font-semibold tracking-[0.2em] uppercase">
+          Nuevo · HIIT
+        </p>
+        <p className="text-white text-sm font-medium leading-snug">{texto}</p>
+      </div>
+      <ChevronRight size={18} className="text-orange-300" />
+    </Link>
+  );
+}
+
 function Bienvenida() {
   const {
     usuarioActual,
@@ -235,7 +277,7 @@ function Bienvenida() {
   const restantes = esAlumno ? sesionesRestantes(usuarioActual) : null;
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-cyan-brand/20 bg-gradient-to-br from-[#06343d] via-[#0b1b1f] to-ink p-5 mb-6">
+    <div className="relative overflow-hidden rounded-3xl border border-cyan-brand/20 bg-gradient-to-br from-[#06343d] via-[#0b1b1f] to-ink p-5 mb-4">
       <div className="absolute -bottom-16 -left-10 w-48 h-48 rounded-full bg-cyan-brand/10 blur-3xl" />
 
       <div className="relative">
@@ -412,11 +454,11 @@ function Bienvenida() {
 
 function Dato({ icono: Icono, valor, texto }) {
   return (
-    <div className="bg-black/25 border border-white/[0.07] rounded-2xl px-2 py-3 text-center">
-      <Icono size={15} className="text-cyan-brand mx-auto" />
-      <p className="text-white font-display text-2xl leading-none mt-1.5">
-        {valor}
-      </p>
+    <div className="bg-black/20 rounded-xl px-2.5 py-2.5">
+      <div className="flex items-center gap-1.5">
+        <Icono size={13} className="text-cyan-brand/80 shrink-0" />
+        <p className="text-white font-display text-xl leading-none">{valor}</p>
+      </div>
       <p className="text-white/45 text-[10px] leading-tight mt-1">{texto}</p>
     </div>
   );
@@ -431,6 +473,86 @@ function haceCuanto(fecha) {
     day: 'numeric',
     month: 'long',
   });
+}
+
+// Una publicación del muro: título, fecha y un adelanto; se abre al tocarla.
+function Noticia({ n, abierta, onAlternar, esAdmin, onEditar, onEliminar }) {
+  const nueva = Date.now() - new Date(n.created_at).getTime() < 3 * 86400000;
+  const largo =
+    (n.contenido || '').length > 120 ||
+    (n.contenido || '').includes('\n') ||
+    !!n.imagen_url;
+  return (
+    <div className="px-4 py-3.5">
+      <div className="flex items-start gap-3">
+        <button
+          onClick={largo ? onAlternar : undefined}
+          className="flex-1 min-w-0 text-left"
+        >
+          <div className="flex items-center gap-2">
+            {nueva && (
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-brand shrink-0" />
+            )}
+            <p className="text-white text-[15px] font-medium leading-snug">
+              {n.titulo}
+            </p>
+          </div>
+          <p className="text-white/35 text-[11px] mt-0.5">
+            {haceCuanto(n.created_at)}
+            {nueva ? ' · Nuevo' : ''}
+          </p>
+        </button>
+        {n.imagen_url && !abierta && (
+          <img
+            src={n.imagen_url}
+            alt=""
+            onClick={onAlternar}
+            className="w-12 h-12 rounded-lg object-cover shrink-0"
+          />
+        )}
+        {esAdmin && (
+          <div className="flex gap-2.5 shrink-0 pt-0.5">
+            <button
+              onClick={onEditar}
+              className="text-white/35 hover:text-cyan-brand"
+              aria-label="Editar"
+            >
+              <Pencil size={13} />
+            </button>
+            <button
+              onClick={onEliminar}
+              className="text-white/35 hover:text-red-400"
+              aria-label="Eliminar"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        )}
+      </div>
+      {abierta && n.imagen_url && (
+        <img
+          src={n.imagen_url}
+          alt=""
+          className="w-full rounded-xl mt-2.5 max-h-64 object-cover"
+        />
+      )}
+      <p
+        className={`text-white/60 text-sm mt-1.5 whitespace-pre-line leading-relaxed ${
+          abierta ? '' : 'line-clamp-2'
+        }`}
+      >
+        {renderizarContenido(n.contenido)}
+      </p>
+      {largo && (
+        <button
+          onClick={onAlternar}
+          className="text-cyan-brand/80 text-xs mt-1"
+        >
+          {abierta ? 'Ver menos' : 'Leer más'}
+        </button>
+      )}
+    </div>
+  );
 }
 
 function FormularioNoticia({
@@ -555,6 +677,8 @@ export default function General() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [faqAbierta, setFaqAbierta] = useState(null);
+  const [abierta, setAbierta] = useState(null);
+  const [verTodas, setVerTodas] = useState(false);
 
   function handleCrearNoticia(datos) {
     if (!datos.titulo || !datos.contenido) return;
@@ -581,15 +705,14 @@ export default function General() {
     setEditandoId(null);
   }
 
-  const [ultimaNoticia, ...restoNoticias] = noticias;
-
   return (
     <div className="min-h-screen bg-ink pb-24 px-6 pt-6">
       <Bienvenida />
       <SaludoCumpleanos />
       <EvaluacionPendiente />
+      <BannerHiit />
       {/* Muro de noticias */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2.5 mt-1">
         <p className="text-white/40 text-xs uppercase tracking-wide">
           Novedades del gym
         </p>
@@ -599,7 +722,7 @@ export default function General() {
               setMostrarForm(!mostrarForm);
               setEditandoId(null);
             }}
-            className="flex items-center gap-1 bg-cyan-brand/10 border border-cyan-brand/30 text-cyan-brand text-xs font-semibold px-3 py-1.5 rounded-full transition-transform active:scale-95"
+            className="flex items-center gap-1 text-cyan-brand text-xs font-semibold"
           >
             <Plus size={13} /> Nueva
           </button>
@@ -621,167 +744,77 @@ export default function General() {
         />
       )}
 
-      {noticias.length === 0 && (
-        <div className="text-center py-10 mb-8">
-          <Newspaper size={32} className="text-white/15 mx-auto mb-3" />
-          <p className="text-white/30 text-sm">Aún no hay publicaciones.</p>
+      {noticias.length === 0 ? (
+        <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl py-6 text-center mb-7">
+          <Newspaper size={22} className="text-white/20 mx-auto mb-2" />
+          <p className="text-white/35 text-sm">Aún no hay publicaciones.</p>
         </div>
-      )}
-
-      {ultimaNoticia &&
-        (editandoId === ultimaNoticia.id ? (
-          <FormularioNoticia
-            valorInicial={{
-              titulo: ultimaNoticia.titulo,
-              contenido: ultimaNoticia.contenido,
-              imagen_url: ultimaNoticia.imagen_url || '',
-            }}
-            onGuardar={handleGuardarEdicion}
-            onCancelar={() => setEditandoId(null)}
-            textoBoton="Guardar cambios"
-          />
-        ) : (
-          <div className="relative bg-white/[0.04] border border-cyan-brand/25 rounded-3xl p-5 mb-3 overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-cyan-brand" />
-            <div className="flex items-start justify-between gap-2 mb-1">
-              <p className="text-cyan-brand text-[10px] font-semibold tracking-[0.2em] uppercase flex items-center gap-2">
-                Última publicación
-                {Date.now() - new Date(ultimaNoticia.created_at).getTime() <
-                  3 * 86400000 && (
-                  <span className="bg-cyan-brand text-ink rounded-full px-2 py-0.5 tracking-normal">
-                    Nuevo
-                  </span>
-                )}
-              </p>
-              {esAdmin && (
-                <div className="flex gap-2 shrink-0">
-                  <button
-                    onClick={() => {
-                      setEditandoId(ultimaNoticia.id);
-                      setMostrarForm(false);
-                    }}
-                    className="text-cyan-brand/70 hover:text-cyan-brand transition-colors"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    onClick={() => eliminarNoticia(ultimaNoticia.id)}
-                    className="text-red-400/60 hover:text-red-400 transition-colors"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              )}
-            </div>
-            <p className="text-white font-display text-xl leading-tight mt-2">
-              {ultimaNoticia.titulo}
-            </p>
-            {ultimaNoticia.imagen_url && (
-              <img
-                src={ultimaNoticia.imagen_url}
-                alt=""
-                className="w-full rounded-xl mt-3 max-h-64 object-cover"
-              />
-            )}
-            <p className="text-white/60 text-sm mt-1.5 whitespace-pre-line">
-              {renderizarContenido(ultimaNoticia.contenido)}
-            </p>
-            <p className="text-white/30 text-xs mt-3">
-              {haceCuanto(ultimaNoticia.created_at)}
-            </p>
-          </div>
-        ))}
-
-      {restoNoticias.length > 0 && (
-        <div className="flex flex-col gap-2 mb-8">
-          {restoNoticias.map((n) =>
+      ) : (
+        <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl divide-y divide-white/[0.06] mb-2">
+          {noticias.slice(0, verTodas ? noticias.length : 3).map((n) =>
             editandoId === n.id ? (
-              <FormularioNoticia
-                key={n.id}
-                valorInicial={{
-                  titulo: n.titulo,
-                  contenido: n.contenido,
-                  imagen_url: n.imagen_url || '',
-                }}
-                onGuardar={handleGuardarEdicion}
-                onCancelar={() => setEditandoId(null)}
-                textoBoton="Guardar cambios"
-              />
-            ) : (
-              <div
-                key={n.id}
-                className="bg-white/[0.04] border border-white/10 rounded-2xl p-4"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-white font-display text-lg leading-tight">
-                    {n.titulo}
-                  </p>
-                  {esAdmin && (
-                    <div className="flex gap-2 shrink-0">
-                      <button
-                        onClick={() => {
-                          setEditandoId(n.id);
-                          setMostrarForm(false);
-                        }}
-                        className="text-cyan-brand/70 hover:text-cyan-brand transition-colors"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => eliminarNoticia(n.id)}
-                        className="text-red-400/60 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {n.imagen_url && (
-                  <img
-                    src={n.imagen_url}
-                    alt=""
-                    className="w-full rounded-lg mt-2 max-h-48 object-cover"
-                  />
-                )}
-                <p className="text-white/60 text-sm mt-1 whitespace-pre-line">
-                  {renderizarContenido(n.contenido)}
-                </p>
-                <p className="text-white/25 text-xs mt-2">
-                  {haceCuanto(n.created_at)}
-                </p>
+              <div key={n.id} className="p-3">
+                <FormularioNoticia
+                  valorInicial={{
+                    titulo: n.titulo,
+                    contenido: n.contenido,
+                    imagen_url: n.imagen_url || '',
+                  }}
+                  onGuardar={handleGuardarEdicion}
+                  onCancelar={() => setEditandoId(null)}
+                  textoBoton="Guardar cambios"
+                />
               </div>
+            ) : (
+              <Noticia
+                key={n.id}
+                n={n}
+                abierta={abierta === n.id}
+                onAlternar={() => setAbierta(abierta === n.id ? null : n.id)}
+                esAdmin={esAdmin}
+                onEditar={() => {
+                  setEditandoId(n.id);
+                  setMostrarForm(false);
+                }}
+                onEliminar={() => eliminarNoticia(n.id)}
+              />
             )
           )}
         </div>
       )}
-      {ultimaNoticia && restoNoticias.length === 0 && <div className="mb-8" />}
+      {noticias.length > 3 ? (
+        <button
+          onClick={() => setVerTodas(!verTodas)}
+          className="w-full text-center text-cyan-brand/80 text-xs py-2 mb-5"
+        >
+          {verTodas
+            ? 'Ver menos'
+            : `Ver ${noticias.length - 3} publicaciones anteriores`}
+        </button>
+      ) : (
+        <div className="mb-5" />
+      )}
 
       {/* Contacto rápido */}
-      <p className="text-white/40 text-xs uppercase tracking-wide mb-3">
-        Estamos cerca
+      <p className="text-white/40 text-xs uppercase tracking-wide mb-2.5">
+        Contacto
       </p>
-      <div className="grid grid-cols-3 gap-2 mb-8">
+      <div className="grid grid-cols-3 gap-2 mb-7">
         <a
           href={`https://wa.me/${WHATSAPP_NUMERO}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex flex-col items-center gap-2 bg-[#25D366]/10 border border-[#25D366]/25 rounded-2xl py-4 transition-transform active:scale-95"
+          className="flex items-center justify-center gap-1.5 bg-white/[0.03] border border-white/[0.07] rounded-xl py-2.5 text-white/80 text-xs active:scale-95 transition-transform"
         >
-          <div className="w-11 h-11 rounded-full bg-[#25D366] flex items-center justify-center">
-            <MessageCircle size={20} className="text-white" />
-          </div>
-          <p className="text-white text-xs font-medium">WhatsApp</p>
+          <MessageCircle size={15} className="text-[#25D366]" /> WhatsApp
         </a>
         <a
           href={`https://instagram.com/${INSTAGRAM_USUARIO}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex flex-col items-center gap-2 bg-pink-500/10 border border-pink-500/25 rounded-2xl py-4 transition-transform active:scale-95"
+          className="flex items-center justify-center gap-1.5 bg-white/[0.03] border border-white/[0.07] rounded-xl py-2.5 text-white/80 text-xs active:scale-95 transition-transform"
         >
-          <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-amber-400 via-pink-500 to-purple-600 flex items-center justify-center">
-            <AtSign size={20} className="text-white" />
-          </div>
-          <p className="text-white text-xs font-medium">Instagram</p>
+          <AtSign size={15} className="text-pink-400" /> Instagram
         </a>
         <a
           href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -789,20 +822,17 @@ export default function General() {
           )}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex flex-col items-center gap-2 bg-cyan-brand/10 border border-cyan-brand/25 rounded-2xl py-4 transition-transform active:scale-95"
+          className="flex items-center justify-center gap-1.5 bg-white/[0.03] border border-white/[0.07] rounded-xl py-2.5 text-white/80 text-xs active:scale-95 transition-transform"
         >
-          <div className="w-11 h-11 rounded-full bg-cyan-brand flex items-center justify-center">
-            <MapPin size={20} className="text-ink" />
-          </div>
-          <p className="text-white text-xs font-medium">Cómo llegar</p>
+          <MapPin size={15} className="text-cyan-brand" /> Cómo llegar
         </a>
       </div>
 
       {/* Preguntas frecuentes */}
-      <p className="text-white/40 text-xs uppercase tracking-wide mb-3">
+      <p className="text-white/40 text-xs uppercase tracking-wide mb-2.5">
         Preguntas frecuentes
       </p>
-      <div className="flex flex-col gap-2 mb-8">
+      <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl divide-y divide-white/[0.06] mb-7">
         {PREGUNTAS_FRECUENTES.map((original, i) => {
           // Las horas de anticipación salen de Configuración → Políticas
           const item = {
@@ -812,33 +842,24 @@ export default function General() {
               String(horasAnticipacion ?? 3)
             ),
           };
-          const abierta = faqAbierta === i;
+          const ab = faqAbierta === i;
           return (
-            <div
-              key={i}
-              className="bg-white/[0.04] border border-white/10 rounded-2xl overflow-hidden"
-            >
+            <div key={i}>
               <button
-                onClick={() => setFaqAbierta(abierta ? null : i)}
-                className="w-full flex items-center justify-between gap-3 p-4 text-left"
+                onClick={() => setFaqAbierta(ab ? null : i)}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left"
               >
-                <div className="flex items-center gap-2">
-                  <HelpCircle
-                    size={15}
-                    className="text-cyan-brand/70 shrink-0"
-                  />
-                  <p className="text-white text-sm font-medium">
-                    {item.pregunta}
-                  </p>
-                </div>
-                {abierta ? (
-                  <ChevronUp size={16} className="text-white/40 shrink-0" />
+                <p className={`text-sm ${ab ? 'text-white' : 'text-white/80'}`}>
+                  {item.pregunta}
+                </p>
+                {ab ? (
+                  <ChevronUp size={15} className="text-white/35 shrink-0" />
                 ) : (
-                  <ChevronDown size={16} className="text-white/40 shrink-0" />
+                  <ChevronDown size={15} className="text-white/35 shrink-0" />
                 )}
               </button>
-              {abierta && (
-                <p className="text-white/60 text-sm px-4 pb-4 pl-11">
+              {ab && (
+                <p className="text-white/55 text-sm px-4 pb-4 -mt-1 leading-relaxed">
                   {item.respuesta}
                 </p>
               )}

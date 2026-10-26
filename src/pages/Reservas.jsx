@@ -477,6 +477,11 @@ export default function Reservas() {
                           style={{ fontSize: '3rem' }}
                         >
                           {proxima.horario.hora}
+                          {proxima.horario?.tipo === 'hiit' && (
+                            <span className="ml-2 align-middle text-[10px] font-sans font-semibold text-orange-300 bg-orange-400/10 border border-orange-400/30 rounded-full px-2 py-0.5">
+                              HIIT
+                            </span>
+                          )}
                         </p>
                         <p className="text-white/50 text-sm mt-1">
                           {proxima.dia_semana.charAt(0).toUpperCase() +
@@ -553,6 +558,11 @@ export default function Reservas() {
                         <div className="flex-1 min-w-0">
                           <p className="text-white font-display text-2xl leading-none">
                             {r.horario.hora}
+                            {r.horario?.tipo === 'hiit' && (
+                              <span className="ml-2 align-middle text-[10px] font-sans font-semibold text-orange-300 bg-orange-400/10 border border-orange-400/30 rounded-full px-2 py-0.5">
+                                HIIT
+                              </span>
+                            )}
                           </p>
                           <p className="text-white/45 text-xs mt-1 truncate">
                             {cuantoFalta(r.fecha, r.horario.hora)}
@@ -734,6 +744,11 @@ export default function Reservas() {
                   <div className="flex-1 min-w-0">
                     <p className="text-white/85 font-display text-2xl leading-none">
                       {r.horario.hora}
+                      {r.horario?.tipo === 'hiit' && (
+                        <span className="ml-2 align-middle text-[10px] font-sans font-semibold text-orange-300 bg-orange-400/10 border border-orange-400/30 rounded-full px-2 py-0.5">
+                          HIIT
+                        </span>
+                      )}
                     </p>
                     {r.horario.coach_nombre && (
                       <p className="text-white/40 text-xs mt-1 truncate">

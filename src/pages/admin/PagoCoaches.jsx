@@ -50,6 +50,7 @@ export default function PagoCoaches() {
     coachDeClase,
     tarifasCoach,
     guardarTarifaCoach,
+    hiitConfig,
     gastos,
     guardarGasto,
     evaluaciones,
@@ -125,16 +126,25 @@ export default function PagoCoaches() {
   const lista = Object.values(porCoach)
     .map((c) => {
       const valorClase = tarifasCoach?.[c.id] || 0;
+      const valorHiit = hiitConfig?.tarifa || 0;
       const clases = [...c.clases].sort(
         (a, b) =>
           a.fecha.localeCompare(b.fecha) ||
           a.horario.hora.localeCompare(b.horario.hora)
       );
+      // Las clases HIIT tienen su propia tarifa
+      const clasesHiit = clases.filter(
+        (x) => x.horario?.tipo === 'hiit'
+      ).length;
+      const clasesNormales = clases.length - clasesHiit;
       return {
         ...c,
         clases,
         valorClase,
-        total: clases.length * valorClase,
+        valorHiit,
+        clasesHiit,
+        clasesNormales,
+        total: clasesNormales * valorClase + clasesHiit * valorHiit,
         alumnos: clases.reduce((acc, x) => acc + x.presentes, 0),
         evals: (evaluaciones || []).filter(
           (e) => e.coach_id === c.id && e.fecha >= desde && e.fecha <= hasta
@@ -181,6 +191,8 @@ export default function PagoCoaches() {
       'Clases realizadas': c.clases.length,
       'Alumnos atendidos': c.alumnos,
       'Valor por clase': c.valorClase,
+      'Clases HIIT': c.clasesHiit,
+      'Valor clase HIIT': c.valorHiit,
       'Total a pagar': c.total,
       'Clases sin finalizar (no cuentan)': c.pendientes,
       'Evaluación promedio':
@@ -198,6 +210,7 @@ export default function PagoCoaches() {
         Coach: c.nombre,
         Fecha: x.fecha,
         Hora: x.horario.hora,
+        Tipo: x.horario?.tipo === 'hiit' ? 'HIIT' : 'Normal',
         'Alumnos presentes': x.presentes,
         Nota: x.porAdmin ? 'Registrada por admin (sin alumnos)' : x.comentario,
       }))
@@ -423,8 +436,8 @@ export default function PagoCoaches() {
                 {/* La cuenta, en simple */}
                 <div className="mt-3 bg-black/20 rounded-xl px-3 py-2.5 flex flex-col gap-1 text-xs">
                   <span className="text-white/70">
-                    <b className="text-white">{c.clases.length}</b> clase
-                    {c.clases.length !== 1 ? 's' : ''} ×{' '}
+                    <b className="text-white">{c.clasesNormales}</b> clase
+                    {c.clasesNormales !== 1 ? 's' : ''} ×{' '}
                     {editandoValor === c.id ? null : (
                       <button
                         onClick={() => {
@@ -443,10 +456,25 @@ export default function PagoCoaches() {
                       <>
                         {' '}
                         ={' '}
-                        <b className="text-white">{formatearPesos(c.total)}</b>
+                        <b className="text-white">
+                          {formatearPesos(c.clasesNormales * c.valorClase)}
+                        </b>
                       </>
                     ) : null}
                   </span>
+                  {c.clasesHiit > 0 && (
+                    <span className="text-white/70">
+                      <b className="text-white">{c.clasesHiit}</b> clase
+                      {c.clasesHiit !== 1 ? 's' : ''} HIIT ×{' '}
+                      <span className="text-orange-300 font-semibold">
+                        {formatearPesos(c.valorHiit)}
+                      </span>{' '}
+                      ={' '}
+                      <b className="text-white">
+                        {formatearPesos(c.clasesHiit * c.valorHiit)}
+                      </b>
+                    </span>
+                  )}
                   <span className="text-white/50">
                     {c.alumnos} alumno{c.alumnos !== 1 ? 's' : ''} atendido
                     {c.alumnos !== 1 ? 's' : ''}

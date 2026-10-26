@@ -11,7 +11,17 @@ import {
 } from 'lucide-react';
 
 export default function Planes() {
-  const { planes, guardarPlan, crearPlan, eliminarPlan, usuarios } = useAuth();
+  const {
+    planes: todosPlanes,
+    guardarPlan,
+    crearPlan,
+    eliminarPlan,
+    usuarios,
+  } = useAuth();
+  // Los planes HIIT se editan en la pestaña HIIT
+  const planes = Object.fromEntries(
+    Object.entries(todosPlanes).filter(([, p]) => p.tipo !== 'hiit')
+  );
   const [eliminando, setEliminando] = useState(null);
   const [errorEliminar, setErrorEliminar] = useState(null);
 
