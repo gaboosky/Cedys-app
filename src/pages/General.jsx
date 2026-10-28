@@ -139,24 +139,13 @@ function cuandoEs(fecha, hoy) {
 
 // Aviso del HIIT en la portada (solo si hay clases HIIT próximas)
 function BannerHiit() {
-  const {
-    horariosHiit = [],
-    usuarioActual,
-    saldoHiitDe,
-    rolEfectivo,
-  } = useAuth();
+  const { horariosHiit = [], usuarioActual, saldoHiitDe, rolEfectivo } = useAuth();
   const hoy = hoyLocalISO();
-  const proximas = horariosHiit.filter(
-    (h) => h.fecha_unica && h.fecha_unica >= hoy
-  );
+  const proximas = horariosHiit.filter((h) => h.fecha_unica && h.fecha_unica >= hoy);
   if (proximas.length === 0 || rolEfectivo !== 'usuario') return null;
-  const s = saldoHiitDe
-    ? saldoHiitDe(usuarioActual)
-    : { vigente: false, prueba: true };
+  const s = saldoHiitDe ? saldoHiitDe(usuarioActual) : { vigente: false, prueba: true };
   const texto = s.vigente
-    ? `Tienes ${s.saldo} clase${
-        s.saldo !== 1 ? 's' : ''
-      } HIIT. ¡Reserva la próxima!`
+    ? `Tienes ${s.saldo} clase${s.saldo !== 1 ? 's' : ''} HIIT. ¡Reserva la próxima!`
     : s.prueba
     ? 'Grupos de máximo 8 personas. Tu primera clase es gratis.'
     : 'Grupos de máximo 8 personas. Contrata tu plan HIIT.';
@@ -169,9 +158,7 @@ function BannerHiit() {
         <Flame size={22} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-orange-300 text-[10px] font-semibold tracking-[0.2em] uppercase">
-          Nuevo · HIIT
-        </p>
+        <p className="text-orange-300 text-[10px] font-semibold tracking-[0.2em] uppercase">Nuevo · HIIT</p>
         <p className="text-white text-sm font-medium leading-snug">{texto}</p>
       </div>
       <ChevronRight size={18} className="text-orange-300" />
@@ -478,24 +465,14 @@ function haceCuanto(fecha) {
 // Una publicación del muro: título, fecha y un adelanto; se abre al tocarla.
 function Noticia({ n, abierta, onAlternar, esAdmin, onEditar, onEliminar }) {
   const nueva = Date.now() - new Date(n.created_at).getTime() < 3 * 86400000;
-  const largo =
-    (n.contenido || '').length > 120 ||
-    (n.contenido || '').includes('\n') ||
-    !!n.imagen_url;
+  const largo = (n.contenido || '').length > 120 || (n.contenido || '').includes('\n') || !!n.imagen_url;
   return (
     <div className="px-4 py-3.5">
       <div className="flex items-start gap-3">
-        <button
-          onClick={largo ? onAlternar : undefined}
-          className="flex-1 min-w-0 text-left"
-        >
+        <button onClick={largo ? onAlternar : undefined} className="flex-1 min-w-0 text-left">
           <div className="flex items-center gap-2">
-            {nueva && (
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-brand shrink-0" />
-            )}
-            <p className="text-white text-[15px] font-medium leading-snug">
-              {n.titulo}
-            </p>
+            {nueva && <span className="w-1.5 h-1.5 rounded-full bg-cyan-brand shrink-0" />}
+            <p className="text-white text-[15px] font-medium leading-snug">{n.titulo}</p>
           </div>
           <p className="text-white/35 text-[11px] mt-0.5">
             {haceCuanto(n.created_at)}
@@ -503,51 +480,25 @@ function Noticia({ n, abierta, onAlternar, esAdmin, onEditar, onEliminar }) {
           </p>
         </button>
         {n.imagen_url && !abierta && (
-          <img
-            src={n.imagen_url}
-            alt=""
-            onClick={onAlternar}
-            className="w-12 h-12 rounded-lg object-cover shrink-0"
-          />
+          <img src={n.imagen_url} alt="" onClick={onAlternar} className="w-12 h-12 rounded-lg object-cover shrink-0" />
         )}
         {esAdmin && (
           <div className="flex gap-2.5 shrink-0 pt-0.5">
-            <button
-              onClick={onEditar}
-              className="text-white/35 hover:text-cyan-brand"
-              aria-label="Editar"
-            >
+            <button onClick={onEditar} className="text-white/35 hover:text-cyan-brand" aria-label="Editar">
               <Pencil size={13} />
             </button>
-            <button
-              onClick={onEliminar}
-              className="text-white/35 hover:text-red-400"
-              aria-label="Eliminar"
-            >
+            <button onClick={onEliminar} className="text-white/35 hover:text-red-400" aria-label="Eliminar">
               <Trash2 size={13} />
             </button>
           </div>
         )}
       </div>
-      {abierta && n.imagen_url && (
-        <img
-          src={n.imagen_url}
-          alt=""
-          className="w-full rounded-xl mt-2.5 max-h-64 object-cover"
-        />
-      )}
-      <p
-        className={`text-white/60 text-sm mt-1.5 whitespace-pre-line leading-relaxed ${
-          abierta ? '' : 'line-clamp-2'
-        }`}
-      >
+      {abierta && n.imagen_url && <img src={n.imagen_url} alt="" className="w-full rounded-xl mt-2.5 max-h-64 object-cover" />}
+      <p className={`text-white/60 text-sm mt-1.5 whitespace-pre-line leading-relaxed ${abierta ? '' : 'line-clamp-2'}`}>
         {renderizarContenido(n.contenido)}
       </p>
       {largo && (
-        <button
-          onClick={onAlternar}
-          className="text-cyan-brand/80 text-xs mt-1"
-        >
+        <button onClick={onAlternar} className="text-cyan-brand/80 text-xs mt-1">
           {abierta ? 'Ver menos' : 'Leer más'}
         </button>
       )}
@@ -713,9 +664,7 @@ export default function General() {
       <BannerHiit />
       {/* Muro de noticias */}
       <div className="flex items-center justify-between mb-2.5 mt-1">
-        <p className="text-white/40 text-xs uppercase tracking-wide">
-          Novedades del gym
-        </p>
+        <p className="text-white/40 text-xs uppercase tracking-wide">Novedades del gym</p>
         {esAdmin && (
           <button
             onClick={() => {
@@ -731,12 +680,7 @@ export default function General() {
 
       {mostrarForm && (
         <FormularioNoticia
-          valorInicial={{
-            titulo: '',
-            contenido: '',
-            imagen_url: '',
-            avisar: true,
-          }}
+          valorInicial={{ titulo: '', contenido: '', imagen_url: '', avisar: true }}
           onGuardar={handleCrearNoticia}
           onCancelar={() => setMostrarForm(false)}
           textoBoton="Publicar"
@@ -755,11 +699,7 @@ export default function General() {
             editandoId === n.id ? (
               <div key={n.id} className="p-3">
                 <FormularioNoticia
-                  valorInicial={{
-                    titulo: n.titulo,
-                    contenido: n.contenido,
-                    imagen_url: n.imagen_url || '',
-                  }}
+                  valorInicial={{ titulo: n.titulo, contenido: n.contenido, imagen_url: n.imagen_url || '' }}
                   onGuardar={handleGuardarEdicion}
                   onCancelar={() => setEditandoId(null)}
                   textoBoton="Guardar cambios"
@@ -783,22 +723,15 @@ export default function General() {
         </div>
       )}
       {noticias.length > 3 ? (
-        <button
-          onClick={() => setVerTodas(!verTodas)}
-          className="w-full text-center text-cyan-brand/80 text-xs py-2 mb-5"
-        >
-          {verTodas
-            ? 'Ver menos'
-            : `Ver ${noticias.length - 3} publicaciones anteriores`}
+        <button onClick={() => setVerTodas(!verTodas)} className="w-full text-center text-cyan-brand/80 text-xs py-2 mb-5">
+          {verTodas ? 'Ver menos' : `Ver ${noticias.length - 3} publicaciones anteriores`}
         </button>
       ) : (
         <div className="mb-5" />
       )}
 
       {/* Contacto rápido */}
-      <p className="text-white/40 text-xs uppercase tracking-wide mb-2.5">
-        Contacto
-      </p>
+      <p className="text-white/40 text-xs uppercase tracking-wide mb-2.5">Contacto</p>
       <div className="grid grid-cols-3 gap-2 mb-7">
         <a
           href={`https://wa.me/${WHATSAPP_NUMERO}`}
@@ -817,9 +750,7 @@ export default function General() {
           <AtSign size={15} className="text-pink-400" /> Instagram
         </a>
         <a
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-            DIRECCION
-          )}`}
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(DIRECCION)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-1.5 bg-white/[0.03] border border-white/[0.07] rounded-xl py-2.5 text-white/80 text-xs active:scale-95 transition-transform"
@@ -829,18 +760,13 @@ export default function General() {
       </div>
 
       {/* Preguntas frecuentes */}
-      <p className="text-white/40 text-xs uppercase tracking-wide mb-2.5">
-        Preguntas frecuentes
-      </p>
+      <p className="text-white/40 text-xs uppercase tracking-wide mb-2.5">Preguntas frecuentes</p>
       <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl divide-y divide-white/[0.06] mb-7">
         {PREGUNTAS_FRECUENTES.map((original, i) => {
           // Las horas de anticipación salen de Configuración → Políticas
           const item = {
             ...original,
-            respuesta: original.respuesta.replace(
-              '{HORAS}',
-              String(horasAnticipacion ?? 3)
-            ),
+            respuesta: original.respuesta.replace('{HORAS}', String(horasAnticipacion ?? 3)),
           };
           const ab = faqAbierta === i;
           return (
@@ -849,20 +775,14 @@ export default function General() {
                 onClick={() => setFaqAbierta(ab ? null : i)}
                 className="w-full flex items-center justify-between gap-3 px-4 py-3.5 text-left"
               >
-                <p className={`text-sm ${ab ? 'text-white' : 'text-white/80'}`}>
-                  {item.pregunta}
-                </p>
+                <p className={`text-sm ${ab ? 'text-white' : 'text-white/80'}`}>{item.pregunta}</p>
                 {ab ? (
                   <ChevronUp size={15} className="text-white/35 shrink-0" />
                 ) : (
                   <ChevronDown size={15} className="text-white/35 shrink-0" />
                 )}
               </button>
-              {ab && (
-                <p className="text-white/55 text-sm px-4 pb-4 -mt-1 leading-relaxed">
-                  {item.respuesta}
-                </p>
-              )}
+              {ab && <p className="text-white/55 text-sm px-4 pb-4 -mt-1 leading-relaxed">{item.respuesta}</p>}
             </div>
           );
         })}

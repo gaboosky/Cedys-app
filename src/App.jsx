@@ -65,22 +65,17 @@ const SeguimientoPersonal = lazySeguro(() =>
   import('./pages/SeguimientoPersonal')
 );
 
+
 // Protege las pantallas del equipo: un alumno que escriba la dirección a mano
 // vuelve a su inicio (los datos igual están protegidos en la base de datos).
 function SoloEquipo({ children }) {
   const { usuarioActual } = useAuth();
-  const ok =
-    usuarioActual &&
-    (usuarioActual.rol === 'coach' || usuarioActual.rol === 'head_coach');
+  const ok = usuarioActual && (usuarioActual.rol === 'coach' || usuarioActual.rol === 'head_coach');
   return ok ? children : <Navigate to="/general" replace />;
 }
 function SoloAdmin({ children }) {
   const { usuarioActual } = useAuth();
-  return usuarioActual?.rol === 'head_coach' ? (
-    children
-  ) : (
-    <Navigate to="/general" replace />
-  );
+  return usuarioActual?.rol === 'head_coach' ? children : <Navigate to="/general" replace />;
 }
 
 function CargandoPantalla() {
@@ -126,212 +121,40 @@ function AppShell() {
           <Route path="/reservas" element={<Reservas />} />
 
           {/* Coach */}
-          <Route
-            path="/mis-clases"
-            element={
-              <SoloEquipo>
-                <MisClases />
-              </SoloEquipo>
-            }
-          />
-          <Route
-            path="/alumnos"
-            element={
-              <SoloEquipo>
-                <Alumnos />
-              </SoloEquipo>
-            }
-          />
-          <Route
-            path="/mis-evaluaciones"
-            element={
-              <SoloEquipo>
-                <MisEvaluaciones />
-              </SoloEquipo>
-            }
-          />
+          <Route path="/mis-clases" element={<SoloEquipo><MisClases /></SoloEquipo>} />
+          <Route path="/alumnos" element={<SoloEquipo><Alumnos /></SoloEquipo>} />
+          <Route path="/mis-evaluaciones" element={<SoloEquipo><MisEvaluaciones /></SoloEquipo>} />
 
           {/* Head Coach / Admin */}
-          <Route
-            path="/dashboard"
-            element={
-              <SoloAdmin>
-                <Dashboard />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/usuarios"
-            element={
-              <SoloAdmin>
-                <Usuarios />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/usuarios/:usuarioId"
-            element={
-              <SoloAdmin>
-                <PerfilAlumno />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/ingreso-detalle"
-            element={
-              <SoloAdmin>
-                <IngresoDetalle />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/ingresos-graficos"
-            element={
-              <SoloAdmin>
-                <IngresosGraficos />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/finanzas"
-            element={
-              <SoloAdmin>
-                <Finanzas />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/renovaciones"
-            element={
-              <SoloAdmin>
-                <Renovaciones />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/gastos"
-            element={
-              <SoloAdmin>
-                <Gastos />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/avisos"
-            element={
-              <SoloAdmin>
-                <Avisos />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/actividad"
-            element={
-              <SoloAdmin>
-                <Actividad />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/pago-coaches"
-            element={
-              <SoloAdmin>
-                <PagoCoaches />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/clases-realizadas"
-            element={
-              <SoloAdmin>
-                <ClasesRealizadas />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/pruebas"
-            element={
-              <SoloAdmin>
-                <SolicitudesPrueba />
-              </SoloAdmin>
-            }
-          />
+          <Route path="/dashboard" element={<SoloAdmin><Dashboard /></SoloAdmin>} />
+          <Route path="/usuarios" element={<SoloAdmin><Usuarios /></SoloAdmin>} />
+          <Route path="/usuarios/:usuarioId" element={<SoloAdmin><PerfilAlumno /></SoloAdmin>} />
+          <Route path="/ingreso-detalle" element={<SoloAdmin><IngresoDetalle /></SoloAdmin>} />
+          <Route path="/ingresos-graficos" element={<SoloAdmin><IngresosGraficos /></SoloAdmin>} />
+          <Route path="/finanzas" element={<SoloAdmin><Finanzas /></SoloAdmin>} />
+          <Route path="/renovaciones" element={<SoloAdmin><Renovaciones /></SoloAdmin>} />
+          <Route path="/gastos" element={<SoloAdmin><Gastos /></SoloAdmin>} />
+          <Route path="/avisos" element={<SoloAdmin><Avisos /></SoloAdmin>} />
+          <Route path="/actividad" element={<SoloAdmin><Actividad /></SoloAdmin>} />
+          <Route path="/pago-coaches" element={<SoloAdmin><PagoCoaches /></SoloAdmin>} />
+          <Route path="/clases-realizadas" element={<SoloAdmin><ClasesRealizadas /></SoloAdmin>} />
+          <Route path="/pruebas" element={<SoloAdmin><SolicitudesPrueba /></SoloAdmin>} />
           <Route
             path="/seguimiento"
             element={<Navigate to="/renovaciones?tab=sin_venir" replace />}
           />
           <Route
             path="/seguimiento-personal/:usuarioId"
-            element={
-              <SoloEquipo>
-                <SeguimientoPersonal />
-              </SoloEquipo>
-            }
+            element={<SoloEquipo><SeguimientoPersonal /></SoloEquipo>}
           />
-          <Route
-            path="/clases-admin"
-            element={
-              <SoloAdmin>
-                <ClasesAdmin />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/planes"
-            element={
-              <SoloAdmin>
-                <Planes />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/coaches"
-            element={
-              <SoloAdmin>
-                <Coaches />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/configuracion"
-            element={
-              <SoloAdmin>
-                <Configuracion />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/reportes"
-            element={
-              <SoloAdmin>
-                <Reportes />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/notas-coach"
-            element={
-              <SoloAdmin>
-                <NotasCoach />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/reservas-activas"
-            element={
-              <SoloAdmin>
-                <ReservasActivas />
-              </SoloAdmin>
-            }
-          />
-          <Route
-            path="/mas"
-            element={
-              <SoloAdmin>
-                <Mas />
-              </SoloAdmin>
-            }
-          />
+          <Route path="/clases-admin" element={<SoloAdmin><ClasesAdmin /></SoloAdmin>} />
+          <Route path="/planes" element={<SoloAdmin><Planes /></SoloAdmin>} />
+          <Route path="/coaches" element={<SoloAdmin><Coaches /></SoloAdmin>} />
+          <Route path="/configuracion" element={<SoloAdmin><Configuracion /></SoloAdmin>} />
+          <Route path="/reportes" element={<SoloAdmin><Reportes /></SoloAdmin>} />
+          <Route path="/notas-coach" element={<SoloAdmin><NotasCoach /></SoloAdmin>} />
+          <Route path="/reservas-activas" element={<SoloAdmin><ReservasActivas /></SoloAdmin>} />
+          <Route path="/mas" element={<SoloAdmin><Mas /></SoloAdmin>} />
 
           {/* Compartida */}
           <Route path="/general" element={<General />} />

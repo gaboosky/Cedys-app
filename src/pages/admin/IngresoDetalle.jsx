@@ -876,8 +876,7 @@ export default function IngresoDetalle() {
                   <div className="mt-3 bg-red-500/10 border border-red-500/30 rounded-lg p-2.5">
                     <p className="text-red-200 text-xs mb-2">
                       ¿Borrar este pago de {formatearPesos(p.monto)}?
-                      {p.tipo !== 'manual' &&
-                        p.tipo !== 'hiit' &&
+                      {p.tipo !== 'manual' && p.tipo !== 'hiit' &&
                         ' El alumno volverá a quedar con el pago pendiente.'}
                     </p>
                     <div className="flex gap-2">

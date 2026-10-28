@@ -73,12 +73,7 @@ export function AuthProvider({ children }) {
   // Tarjetas de "Indicadores clave" (Finanzas) que el admin decidió esconder
   const [kpisOcultos, setKpisOcultos] = useState([]);
   // Configuración del módulo HIIT (editable por el admin)
-  const [hiitConfig, setHiitConfig] = useState({
-    tarifa: 11000,
-    descripcion: '',
-    cupo: 8,
-    pruebaActiva: true,
-  });
+  const [hiitConfig, setHiitConfig] = useState({ tarifa: 11000, descripcion: '', cupo: 8, pruebaActiva: true });
   // Datos del gimnasio que ve el alumno (dirección, WhatsApp, horario, reglamento)
   const [infoGimnasio, setInfoGimnasio] = useState({});
   const [noticias, setNoticias] = useState([]);
@@ -423,11 +418,15 @@ export function AuthProvider({ children }) {
   async function cargarDatosInterno(authUserId) {
     let yo = null;
     if (authUserId) {
-      const resYo = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('auth_user_id', authUserId)
-        .maybeSingle();
+      const buscarFicha = () =>
+        supabase.from('usuarios').select('*').eq('auth_user_id', authUserId).maybeSingle();
+      let resYo = await buscarFicha();
+      // Alumno que venía de AgendaPro: su ficha ya existe (con plan y pagos).
+      // La primera vez que entra se conecta con su cuenta usando su correo confirmado.
+      if (!resYo.data) {
+        const { data: vinculada } = await supabase.rpc('vincular_mi_ficha');
+        if (vinculada) resYo = await buscarFicha();
+      }
       yo = resYo.data || null;
     }
 
@@ -1482,12 +1481,7 @@ export function AuthProvider({ children }) {
     if (horario?.tipo === 'hiit') {
       const r = await cancelarHiit(reservaId);
       if (r.ok) {
-        crearNotificacion(
-          reserva.usuario_id,
-          `El gimnasio canceló tu reserva HIIT de las ${
-            horario.hora
-          } del ${fechaLarga(reserva.fecha)}. Se te devolvió la clase.`
-        );
+        crearNotificacion(reserva.usuario_id, `El gimnasio canceló tu reserva HIIT de las ${horario.hora} del ${fechaLarga(reserva.fecha)}. Se te devolvió la clase.`);
       }
       return r;
     }
@@ -1819,7 +1813,8 @@ export function AuthProvider({ children }) {
     await cerrarSesionLocal();
     return {
       ok: true,
-      mensaje: 'Solicitud enviada. Espera la aprobación del administrador.',
+      mensaje:
+        'Cuenta creada. Revisa tu correo para confirmarla. Si ya eras alumno de CED&S, al entrar verás tu plan y tus pagos; si eres nuevo, el gimnasio aprobará tu cuenta.',
     };
   }
 
@@ -3428,7 +3423,9 @@ export function AuthProvider({ children }) {
     // se actualizan también (así lo que se ve en Alumnos y Renovaciones calza).
     if (pagoAntes && esPagoDePlan(pagoAntes)) {
       const ultimo = pagos
-        .filter((p) => p.usuario_id === pagoAntes.usuario_id && esPagoDePlan(p))
+        .filter(
+          (p) => p.usuario_id === pagoAntes.usuario_id && esPagoDePlan(p)
+        )
         .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))[0];
       const usuario = usuarios.find((u) => u.id === pagoAntes.usuario_id);
       if (ultimo?.id === pagoId && usuario) {
@@ -3485,7 +3482,9 @@ export function AuthProvider({ children }) {
       const anteriores = pagos
         .filter(
           (p) =>
-            p.id !== pagoId && p.usuario_id === usuario.id && esPagoDePlan(p)
+            p.id !== pagoId &&
+            p.usuario_id === usuario.id &&
+            esPagoDePlan(p)
         )
         .sort((a, b) => b.fecha.localeCompare(a.fecha));
       const restaurar = {
@@ -3918,9 +3917,7 @@ export function AuthProvider({ children }) {
   }
 
   async function eliminarPlan(planId) {
-    const conPlan = usuarios.filter(
-      (u) => u.plan_id === planId || u.hiit_plan_id === planId
-    );
+    const conPlan = usuarios.filter((u) => u.plan_id === planId || u.hiit_plan_id === planId);
     if (conPlan.length > 0) {
       return {
         ok: false,
@@ -3948,6 +3945,7 @@ export function AuthProvider({ children }) {
     setPlanes((prev) => ({ ...prev, [planId]: { ...prev[planId], ...datos } }));
   }
 
+
   // ================= HIIT =================
   // Clases HIIT: van aparte de las normales, con su propio saldo de clases.
   // Reservar y cancelar pasa por funciones de la base de datos que revisan
@@ -3959,8 +3957,7 @@ export function AuthProvider({ children }) {
 
   // Saldo HIIT del alumno: clases disponibles, vencimiento y si puede usar la prueba
   function saldoHiitDe(usuario) {
-    if (!usuario)
-      return { saldo: 0, vence: null, vigente: false, prueba: false };
+    if (!usuario) return { saldo: 0, vence: null, vigente: false, prueba: false };
     const hoy = hoyLocalISO();
     const vence = usuario.hiit_vence || null;
     const vigente = (usuario.hiit_saldo || 0) > 0 && (!vence || hoy < vence);
@@ -3975,18 +3972,11 @@ export function AuthProvider({ children }) {
   }
 
   async function reservarHiit(horarioId, fecha) {
-    const { data, error } = await supabase.rpc('reservar_hiit', {
-      p_horario: horarioId,
-      p_fecha: fecha,
-    });
-    if (error)
-      return { ok: false, mensaje: 'No se pudo reservar: ' + error.message };
-    if (!data?.ok)
-      return data || { ok: false, mensaje: 'No se pudo reservar.' };
+    const { data, error } = await supabase.rpc('reservar_hiit', { p_horario: horarioId, p_fecha: fecha });
+    if (error) return { ok: false, mensaje: 'No se pudo reservar: ' + error.message };
+    if (!data?.ok) return data || { ok: false, mensaje: 'No se pudo reservar.' };
     const nueva = data.reserva;
-    setReservas((prev) =>
-      prev.some((r) => r.id === nueva.id) ? prev : [...prev, nueva]
-    );
+    setReservas((prev) => (prev.some((r) => r.id === nueva.id) ? prev : [...prev, nueva]));
     if (usuarioActual?.rol === 'usuario') {
       const cambios = data.prueba
         ? { hiit_prueba_usada: true }
@@ -3995,41 +3985,21 @@ export function AuthProvider({ children }) {
     }
     const h = horarios.find((x) => x.id === horarioId);
     if (h) {
-      const ocupados =
-        reservas.filter(
-          (r) =>
-            r.horario_id === horarioId &&
-            r.fecha === fecha &&
-            r.estado === 'confirmada'
-        ).length + 1;
-      avisarCoachReserva(
-        h,
-        fecha,
-        `${usuarioActual?.nombre || 'Un alumno'} reservó HIIT de las ${
-          h.hora
-        } del ${fechaLarga(fecha)}${
-          data.prueba ? ' (clase de prueba)' : ''
-        } (${ocupados}/${h.cupo_max}).`
-      );
+      const ocupados = reservas.filter((r) => r.horario_id === horarioId && r.fecha === fecha && r.estado === 'confirmada').length + 1;
+      avisarCoachReserva(h, fecha, `${usuarioActual?.nombre || 'Un alumno'} reservó HIIT de las ${h.hora} del ${fechaLarga(fecha)}${data.prueba ? ' (clase de prueba)' : ''} (${ocupados}/${h.cupo_max}).`);
     }
     return data;
   }
 
   async function cancelarHiit(reservaId) {
     const reserva = reservas.find((r) => r.id === reservaId);
-    const { data, error } = await supabase.rpc('cancelar_hiit', {
-      p_reserva: reservaId,
-    });
-    if (error)
-      return { ok: false, mensaje: 'No se pudo cancelar: ' + error.message };
-    if (!data?.ok)
-      return data || { ok: false, mensaje: 'No se pudo cancelar.' };
+    const { data, error } = await supabase.rpc('cancelar_hiit', { p_reserva: reservaId });
+    if (error) return { ok: false, mensaje: 'No se pudo cancelar: ' + error.message };
+    if (!data?.ok) return data || { ok: false, mensaje: 'No se pudo cancelar.' };
     setReservas((prev) => prev.filter((r) => r.id !== reservaId));
     // Ajustar el saldo en pantalla (la base de datos ya lo hizo)
     if (reserva && !data.tardia) {
-      const dueno =
-        usuarios.find((u) => u.id === reserva.usuario_id) ||
-        (usuarioActual?.id === reserva.usuario_id ? usuarioActual : null);
+      const dueno = usuarios.find((u) => u.id === reserva.usuario_id) || (usuarioActual?.id === reserva.usuario_id ? usuarioActual : null);
       if (dueno && dueno.rol === 'usuario') {
         syncUsuario(
           reserva.es_prueba
@@ -4038,56 +4008,30 @@ export function AuthProvider({ children }) {
         );
       }
     }
-    const h = reserva
-      ? horarios.find((x) => x.id === reserva.horario_id)
-      : null;
+    const h = reserva ? horarios.find((x) => x.id === reserva.horario_id) : null;
     if (h && reserva) {
       await avisarPrimeroEnListaEspera(h.id, reserva.fecha);
-      avisarCoachReserva(
-        h,
-        reserva.fecha,
-        `${usuarioActual?.nombre || 'Un alumno'} canceló HIIT de las ${
-          h.hora
-        } del ${fechaLarga(reserva.fecha)}.`
-      );
+      avisarCoachReserva(h, reserva.fecha, `${usuarioActual?.nombre || 'Un alumno'} canceló HIIT de las ${h.hora} del ${fechaLarga(reserva.fecha)}.`);
     }
     return data;
   }
 
   // El admin vende un plan HIIT: registra el pago y suma las clases al saldo HIIT.
-  async function venderPlanHiit(
-    usuarioId,
-    planId,
-    { monto, medio, fecha, nota } = {}
-  ) {
+  async function venderPlanHiit(usuarioId, planId, { monto, medio, fecha, nota } = {}) {
     const usuario = usuarios.find((u) => u.id === usuarioId);
     const plan = planes[planId];
-    if (!usuario || !plan)
-      return { ok: false, mensaje: 'Falta el alumno o el plan.' };
+    if (!usuario || !plan) return { ok: false, mensaje: 'Falta el alumno o el plan.' };
     if (plan.solo_socios && !usuario.plan_id) {
-      return {
-        ok: false,
-        mensaje: `"${plan.nombre}" es solo para socios con un plan normal vigente.`,
-      };
+      return { ok: false, mensaje: `"${plan.nombre}" es solo para socios con un plan normal vigente.` };
     }
     const fechaPago = fecha || hoyLocalISO();
     const dur = Number(plan.duracion_dias) || 30;
     const d = new Date(fechaPago + 'T12:00:00');
     d.setDate(d.getDate() + dur);
-    const venceNuevo = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-      2,
-      '0'
-    )}-${String(d.getDate()).padStart(2, '0')}`;
+    const venceNuevo = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const hoy = hoyLocalISO();
-    const saldoVigente =
-      (usuario.hiit_saldo || 0) > 0 &&
-      (!usuario.hiit_vence || usuario.hiit_vence > hoy)
-        ? usuario.hiit_saldo
-        : 0;
-    const vence =
-      usuario.hiit_vence && usuario.hiit_vence > venceNuevo && saldoVigente > 0
-        ? usuario.hiit_vence
-        : venceNuevo;
+    const saldoVigente = (usuario.hiit_saldo || 0) > 0 && (!usuario.hiit_vence || usuario.hiit_vence > hoy) ? usuario.hiit_saldo : 0;
+    const vence = usuario.hiit_vence && usuario.hiit_vence > venceNuevo && saldoVigente > 0 ? usuario.hiit_vence : venceNuevo;
     const cambios = {
       hiit_saldo: saldoVigente + (Number(plan.cantidad_sesiones) || 0),
       hiit_vence: vence,
@@ -4103,72 +4047,29 @@ export function AuthProvider({ children }) {
       planId,
     });
     if (!pago.ok) return pago;
-    const { error } = await supabase
-      .from('usuarios')
-      .update(cambios)
-      .eq('id', usuarioId);
-    if (error)
-      return {
-        ok: false,
-        mensaje:
-          'Se registró el pago, pero no se pudo sumar las clases: ' +
-          error.message,
-      };
+    const { error } = await supabase.from('usuarios').update(cambios).eq('id', usuarioId);
+    if (error) return { ok: false, mensaje: 'Se registró el pago, pero no se pudo sumar las clases: ' + error.message };
     syncUsuario({ ...usuario, ...cambios });
-    registrarActividad(
-      'Plan HIIT vendido',
-      `${usuario.nombre} · ${plan.nombre}`
-    );
-    crearNotificacion(
-      usuarioId,
-      `🔥 Se activó tu ${plan.nombre}. Tienes ${
-        cambios.hiit_saldo
-      } clase(s) HIIT hasta el ${fechaLarga(
-        vence
-      )}. Resérvalas en la pestaña HIIT.`
-    );
-    return {
-      ok: true,
-      mensaje: `${plan.nombre} activado: ${cambios.hiit_saldo} clase(s) HIIT disponibles.`,
-    };
+    registrarActividad('Plan HIIT vendido', `${usuario.nombre} · ${plan.nombre}`);
+    crearNotificacion(usuarioId, `🔥 Se activó tu ${plan.nombre}. Tienes ${cambios.hiit_saldo} clase(s) HIIT hasta el ${fechaLarga(vence)}. Resérvalas en la pestaña HIIT.`);
+    return { ok: true, mensaje: `${plan.nombre} activado: ${cambios.hiit_saldo} clase(s) HIIT disponibles.` };
   }
 
   // Cancela una clase HIIT completa: devuelve la clase a cada inscrito y les avisa
   async function cancelarClaseHiit(horarioId, fecha, mensaje) {
     const h = horarios.find((x) => x.id === horarioId);
-    const inscritas = reservas.filter(
-      (r) =>
-        r.horario_id === horarioId &&
-        r.fecha === fecha &&
-        r.estado === 'confirmada'
-    );
+    const inscritas = reservas.filter((r) => r.horario_id === horarioId && r.fecha === fecha && r.estado === 'confirmada');
     for (const r of inscritas) {
       const res = await cancelarHiit(r.id);
       if (res.ok) {
-        await crearNotificacion(
-          r.usuario_id,
-          `Se canceló la clase HIIT de las ${h?.hora || ''} del ${fechaLarga(
-            fecha
-          )}. Se te devolvió la clase.${mensaje ? ' ' + mensaje : ''}`
-        );
+        await crearNotificacion(r.usuario_id, `Se canceló la clase HIIT de las ${h?.hora || ''} del ${fechaLarga(fecha)}. Se te devolvió la clase.${mensaje ? ' ' + mensaje : ''}`);
       }
     }
-    const { error } = await supabase
-      .from('horarios_cancelados')
-      .insert({ horario_id: horarioId, fecha, mensaje: mensaje || null });
-    if (error)
-      return { ok: false, mensaje: 'No se pudo cancelar: ' + error.message };
-    setHorariosCancelados((prev) => [
-      ...prev,
-      { horario_id: horarioId, fecha, mensaje },
-    ]);
+    const { error } = await supabase.from('horarios_cancelados').insert({ horario_id: horarioId, fecha, mensaje: mensaje || null });
+    if (error) return { ok: false, mensaje: 'No se pudo cancelar: ' + error.message };
+    setHorariosCancelados((prev) => [...prev, { horario_id: horarioId, fecha, mensaje }]);
     registrarActividad('Clase HIIT cancelada', `${fecha} ${h?.hora || ''}`);
-    return {
-      ok: true,
-      mensaje: inscritas.length
-        ? `Clase cancelada. Se devolvió la clase a ${inscritas.length} alumno(s).`
-        : 'Clase cancelada.',
-    };
+    return { ok: true, mensaje: inscritas.length ? `Clase cancelada. Se devolvió la clase a ${inscritas.length} alumno(s).` : 'Clase cancelada.' };
   }
 
   // Ajuste manual del saldo HIIT (correcciones)
@@ -4176,18 +4077,11 @@ export function AuthProvider({ children }) {
     const usuario = usuarios.find((u) => u.id === usuarioId);
     if (!usuario) return { ok: false, mensaje: 'Alumno no encontrado.' };
     const limpio = {};
-    if (cambios.hiit_saldo !== undefined)
-      limpio.hiit_saldo = Math.max(0, parseInt(cambios.hiit_saldo, 10) || 0);
-    if (cambios.hiit_vence !== undefined)
-      limpio.hiit_vence = cambios.hiit_vence || null;
-    if (cambios.hiit_prueba_usada !== undefined)
-      limpio.hiit_prueba_usada = !!cambios.hiit_prueba_usada;
-    const { error } = await supabase
-      .from('usuarios')
-      .update(limpio)
-      .eq('id', usuarioId);
-    if (error)
-      return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+    if (cambios.hiit_saldo !== undefined) limpio.hiit_saldo = Math.max(0, parseInt(cambios.hiit_saldo, 10) || 0);
+    if (cambios.hiit_vence !== undefined) limpio.hiit_vence = cambios.hiit_vence || null;
+    if (cambios.hiit_prueba_usada !== undefined) limpio.hiit_prueba_usada = !!cambios.hiit_prueba_usada;
+    const { error } = await supabase.from('usuarios').update(limpio).eq('id', usuarioId);
+    if (error) return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
     syncUsuario({ ...usuario, ...limpio });
     return { ok: true, mensaje: 'Saldo HIIT actualizado.' };
   }
@@ -4195,18 +4089,8 @@ export function AuthProvider({ children }) {
   // Crea varias clases HIIT de una vez (una por cada fecha)
   async function crearClasesHiit(fechas, { hora, coach_id, cupo_max }) {
     const coach = usuarios.find((u) => u.id === coach_id);
-    const DIAS = [
-      'Domingo',
-      'Lunes',
-      'Martes',
-      'Miércoles',
-      'Jueves',
-      'Viernes',
-      'Sábado',
-    ];
-    const yaExisten = new Set(
-      horariosHiit.map((h) => `${h.fecha_unica}_${h.hora}`)
-    );
+    const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const yaExisten = new Set(horariosHiit.map((h) => `${h.fecha_unica}_${h.hora}`));
     const filas = fechas
       .filter((f) => !yaExisten.has(`${f}_${hora}`))
       .map((f) => ({
@@ -4218,59 +4102,32 @@ export function AuthProvider({ children }) {
         fecha_unica: f,
         tipo: 'hiit',
       }));
-    if (filas.length === 0)
-      return { ok: false, mensaje: 'Esas clases ya existen.' };
-    const { data, error } = await supabase
-      .from('horarios')
-      .insert(filas)
-      .select();
-    if (error)
-      return { ok: false, mensaje: 'No se pudieron crear: ' + error.message };
+    if (filas.length === 0) return { ok: false, mensaje: 'Esas clases ya existen.' };
+    const { data, error } = await supabase.from('horarios').insert(filas).select();
+    if (error) return { ok: false, mensaje: 'No se pudieron crear: ' + error.message };
     setHorarios((prev) => [...prev, ...data]);
-    registrarActividad(
-      'Clases HIIT creadas',
-      `${data.length} clase(s) a las ${hora}`
-    );
+    registrarActividad('Clases HIIT creadas', `${data.length} clase(s) a las ${hora}`);
     const omitidas = fechas.length - filas.length;
     return {
       ok: true,
-      mensaje: `Se crearon ${data.length} clase(s) HIIT.${
-        omitidas ? ` ${omitidas} ya existían y no se repitieron.` : ''
-      }`,
+      mensaje: `Se crearon ${data.length} clase(s) HIIT.${omitidas ? ` ${omitidas} ya existían y no se repitieron.` : ''}`,
     };
   }
 
   async function guardarConfigHiit(datos) {
     const fila = {};
-    if (datos.tarifa !== undefined)
-      fila.hiit_tarifa_coach = Math.max(
-        0,
-        parseInt(String(datos.tarifa).replace(/\D/g, ''), 10) || 0
-      );
-    if (datos.descripcion !== undefined)
-      fila.hiit_descripcion = datos.descripcion;
-    if (datos.cupo !== undefined)
-      fila.hiit_cupo = Math.max(1, parseInt(datos.cupo, 10) || 8);
-    if (datos.pruebaActiva !== undefined)
-      fila.hiit_prueba_activa = !!datos.pruebaActiva;
-    const { error } = await supabase
-      .from('configuracion_app')
-      .update(fila)
-      .eq('id', 'global');
-    if (error)
-      return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
+    if (datos.tarifa !== undefined) fila.hiit_tarifa_coach = Math.max(0, parseInt(String(datos.tarifa).replace(/\D/g, ''), 10) || 0);
+    if (datos.descripcion !== undefined) fila.hiit_descripcion = datos.descripcion;
+    if (datos.cupo !== undefined) fila.hiit_cupo = Math.max(1, parseInt(datos.cupo, 10) || 8);
+    if (datos.pruebaActiva !== undefined) fila.hiit_prueba_activa = !!datos.pruebaActiva;
+    const { error } = await supabase.from('configuracion_app').update(fila).eq('id', 'global');
+    if (error) return { ok: false, mensaje: 'No se pudo guardar: ' + error.message };
     setHiitConfig((prev) => ({
       ...prev,
-      ...(fila.hiit_tarifa_coach !== undefined
-        ? { tarifa: fila.hiit_tarifa_coach }
-        : {}),
-      ...(fila.hiit_descripcion !== undefined
-        ? { descripcion: fila.hiit_descripcion }
-        : {}),
+      ...(fila.hiit_tarifa_coach !== undefined ? { tarifa: fila.hiit_tarifa_coach } : {}),
+      ...(fila.hiit_descripcion !== undefined ? { descripcion: fila.hiit_descripcion } : {}),
       ...(fila.hiit_cupo !== undefined ? { cupo: fila.hiit_cupo } : {}),
-      ...(fila.hiit_prueba_activa !== undefined
-        ? { pruebaActiva: fila.hiit_prueba_activa }
-        : {}),
+      ...(fila.hiit_prueba_activa !== undefined ? { pruebaActiva: fila.hiit_prueba_activa } : {}),
     }));
     return { ok: true, mensaje: 'Guardado.' };
   }

@@ -8,6 +8,7 @@ export const MEDIOS_PAGO = [
 ];
 
 export function etiquetaMedio(valor) {
+  if (valor === 'agendapro') return 'AgendaPro';
   return MEDIOS_PAGO.find((m) => m.valor === valor)?.label || 'Otro';
 }
 
@@ -201,18 +202,20 @@ export function alumnosActivosPorMes(
   meses
 ) {
   const porUsuario = Object.fromEntries(usuarios.map((u) => [u.id, u]));
-  const periodos = pagos.filter(esPagoDePlan).map((p) => {
-    const dur = duracionPlanDe(
-      porUsuario[p.usuario_id],
-      planes,
-      diasRenovacion,
-      p.plan_id
-    );
-    const hasta = p.vence
-      ? sumarDias(p.vence, -1)
-      : sumarDias(p.fecha, dur - 1);
-    return { usuario: p.usuario_id, desde: p.fecha, hasta };
-  });
+  const periodos = pagos
+    .filter(esPagoDePlan)
+    .map((p) => {
+      const dur = duracionPlanDe(
+        porUsuario[p.usuario_id],
+        planes,
+        diasRenovacion,
+        p.plan_id
+      );
+      const hasta = p.vence
+        ? sumarDias(p.vence, -1)
+        : sumarDias(p.fecha, dur - 1);
+      return { usuario: p.usuario_id, desde: p.fecha, hasta };
+    });
   const resultado = {};
   for (const m of meses) {
     const [anio, mes] = m.split('-').map(Number);

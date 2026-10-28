@@ -17,13 +17,8 @@ import {
 
 // Vista de la semana: todas las clases de lunes a sábado de un vistazo
 function VistaSemana({ onElegirDia }) {
-  const {
-    horarios: todosHorarios,
-    reservas,
-    horarioEstaCancelado,
-    coachDeClase,
-    ausenciaDe,
-  } = useAuth();
+  const { horarios: todosHorarios, reservas, horarioEstaCancelado, coachDeClase, ausenciaDe } =
+    useAuth();
   // Las clases HIIT se manejan en su propia pestaña
   const horarios = todosHorarios.filter((h) => h.tipo !== 'hiit');
   const [offset, setOffset] = useState(0);

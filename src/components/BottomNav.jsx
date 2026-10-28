@@ -63,9 +63,7 @@ export default function BottomNav() {
             }
           >
             <Icon size={22} strokeWidth={2} />
-            <span className="text-[10.5px] font-medium whitespace-nowrap truncate max-w-full">
-              {label}
-            </span>
+            <span className="text-[10.5px] font-medium whitespace-nowrap truncate max-w-full">{label}</span>
           </NavLink>
         ))}
       </div>

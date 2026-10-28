@@ -133,9 +133,7 @@ export default function PagoCoaches() {
           a.horario.hora.localeCompare(b.horario.hora)
       );
       // Las clases HIIT tienen su propia tarifa
-      const clasesHiit = clases.filter(
-        (x) => x.horario?.tipo === 'hiit'
-      ).length;
+      const clasesHiit = clases.filter((x) => x.horario?.tipo === 'hiit').length;
       const clasesNormales = clases.length - clasesHiit;
       return {
         ...c,
@@ -456,23 +454,15 @@ export default function PagoCoaches() {
                       <>
                         {' '}
                         ={' '}
-                        <b className="text-white">
-                          {formatearPesos(c.clasesNormales * c.valorClase)}
-                        </b>
+                        <b className="text-white">{formatearPesos(c.clasesNormales * c.valorClase)}</b>
                       </>
                     ) : null}
                   </span>
                   {c.clasesHiit > 0 && (
                     <span className="text-white/70">
-                      <b className="text-white">{c.clasesHiit}</b> clase
-                      {c.clasesHiit !== 1 ? 's' : ''} HIIT ×{' '}
-                      <span className="text-orange-300 font-semibold">
-                        {formatearPesos(c.valorHiit)}
-                      </span>{' '}
-                      ={' '}
-                      <b className="text-white">
-                        {formatearPesos(c.clasesHiit * c.valorHiit)}
-                      </b>
+                      <b className="text-white">{c.clasesHiit}</b> clase{c.clasesHiit !== 1 ? 's' : ''} HIIT ×{' '}
+                      <span className="text-orange-300 font-semibold">{formatearPesos(c.valorHiit)}</span> ={' '}
+                      <b className="text-white">{formatearPesos(c.clasesHiit * c.valorHiit)}</b>
                     </span>
                   )}
                   <span className="text-white/50">
