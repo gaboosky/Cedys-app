@@ -80,7 +80,13 @@ export default function Dashboard() {
     hastaMes
   ).length;
 
-  const totalUsuarios = usuarios.filter((u) => u.estado === 'activo').length;
+  // Alumnos con el plan al día (los "Vigentes" de Usuarios): sin contar
+  // coaches, cuentas desactivadas ni planes vencidos.
+  const totalUsuarios = usuarios.filter((u) => {
+    if (u.rol !== 'usuario' || u.estado !== 'activo') return false;
+    const v = vencimientoDe(u, planes, diasRenovacion);
+    return v && v.dias > 0;
+  }).length;
   const totalCoaches = usuarios.filter(
     (u) => u.rol === 'coach' || u.rol === 'head_coach'
   ).length;

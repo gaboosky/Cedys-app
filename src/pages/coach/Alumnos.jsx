@@ -77,6 +77,8 @@ export default function Alumnos() {
     registrosPeso,
     planesSeguimiento,
     mediciones,
+    planes,
+    diasRenovacion,
   } = useAuth();
   const [abierto, setAbierto] = useState(null);
   const [alcance, setAlcance] = useState('mios'); // mios | todos
@@ -95,6 +97,7 @@ export default function Alumnos() {
     if (u) {
       setAlcance('todos');
       setBusqueda(u.nombre || '');
+      setForzado(u.id);
       setAbierto(u.id);
     }
   }, [location.search]);
@@ -120,12 +123,22 @@ export default function Alumnos() {
   // Alumnos = usuarios normales + coaches/admin que también entrenan (tienen alguna reserva). No me incluye a mí.
   const conReservas = new Set(reservas.map((r) => r.usuario_id));
   const esStaff = (u) => u.rol === 'coach' || u.rol === 'head_coach';
+  // Solo alumnos activos: cuenta activa y plan al día (sin vencer).
+  const planVigente = (u) => {
+    if (!u.plan_id || !planes?.[u.plan_id]) return false;
+    const vence = fechaVenceDe(u, planes, diasRenovacion);
+    return !!vence && vence > hoy;
+  };
   const todosLosAlumnos = usuarios.filter(
     (u) =>
       u.id !== usuarioActual.id &&
-      u.estado !== 'pendiente' &&
-      (u.rol === 'usuario' || (esStaff(u) && conReservas.has(u.id)))
+      u.estado === 'activo' &&
+      ((u.rol === 'usuario' && planVigente(u)) ||
+        (esStaff(u) && conReservas.has(u.id)))
   );
+  const idsActivos = new Set(todosLosAlumnos.map((u) => u.id));
+  const misActivos = [...misAlumnosIds].filter((id) => idsActivos.has(id))
+    .length;
   const enAlcance = todosLosAlumnos.filter((u) =>
     alcance === 'mios' ? misAlumnosIds.has(u.id) : true
   );
@@ -287,8 +300,8 @@ export default function Alumnos() {
 
       <div className="flex bg-white/[0.04] border border-white/10 rounded-xl p-1 mb-5">
         {[
-          { valor: 'mios', label: `Mis alumnos (${misAlumnosIds.size})` },
-          { valor: 'todos', label: 'Todos' },
+          { valor: 'mios', label: `Mis alumnos (${misActivos})` },
+          { valor: 'todos', label: `Todos (${todosLosAlumnos.length})` },
         ].map((op) => (
           <button
             key={op.valor}

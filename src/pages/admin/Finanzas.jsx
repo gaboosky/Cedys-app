@@ -307,9 +307,11 @@ export default function Finanzas() {
   }));
 
   // --- Distribución por plan (alumnos activos hoy) ---
-  const conPlan = usuarios.filter(
-    (u) => u.estado === 'activo' && u.plan_id && planes[u.plan_id]
-  );
+  const conPlan = usuarios.filter((u) => {
+    if (u.estado !== 'activo' || !u.plan_id || !planes[u.plan_id]) return false;
+    const v = vencimientoDe(u, planes, diasRenovacion);
+    return v && v.dias > 0;
+  });
   const distribucion = Object.values(
     conPlan.reduce((acc, u) => {
       const p = planes[u.plan_id];

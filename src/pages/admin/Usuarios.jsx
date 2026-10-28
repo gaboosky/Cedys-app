@@ -108,6 +108,61 @@ const FILTROS = [
 
 const PARA_RENOVAR = ['vencido', 'agotado', 'por_vencer'];
 
+// Días que pueden pasar desde que venció el plan (o desde la última clase)
+// antes de que el alumno pase a "Antiguos".
+const DIAS_ANTIGUO = 30;
+
+// Separa a los alumnos según qué tan relevantes son hoy:
+// vigentes (plan al día), por renovar (vencieron hace poco o siguen viniendo
+// sin plan) y antiguos (hace tiempo que no pagan ni vienen, o desactivados).
+function relevanciaDe(u, info, visita) {
+  if (u.estado === 'inactivo') return 'antiguos';
+  if (['activo', 'por_vencer', 'agotado'].includes(info.clave)) return 'vigentes';
+  const diasSinVenir = visita
+    ? Math.round(
+        (Date.parse(hoyISO() + 'T12:00:00') - Date.parse(visita + 'T12:00:00')) /
+          DIA_MS
+      )
+    : Infinity;
+  const vencioHace =
+    info.vence && info.diasRestantes !== null ? -info.diasRestantes : Infinity;
+  if (vencioHace <= DIAS_ANTIGUO || diasSinVenir <= DIAS_ANTIGUO) return 'renovar';
+  return 'antiguos';
+}
+
+const VISTAS = [
+  {
+    v: 'vigentes',
+    t: 'Vigentes',
+    d: 'Plan al día',
+    c: 'text-cyan-brand',
+    b: 'border-cyan-brand/40 bg-cyan-brand/10',
+  },
+  {
+    v: 'renovar',
+    t: 'Por renovar',
+    d: 'Vencidos hace poco',
+    c: 'text-yellow-200',
+    b: 'border-yellow-400/40 bg-yellow-400/10',
+  },
+  {
+    v: 'antiguos',
+    t: 'Antiguos',
+    d: `+${DIAS_ANTIGUO} días sin venir`,
+    c: 'text-white/60',
+    b: 'border-white/30 bg-white/[0.08]',
+  },
+];
+
+const ORDEN_ESTADO = {
+  por_vencer: 0,
+  agotado: 1,
+  activo: 2,
+  vencido: 3,
+  sin_plan: 4,
+  inactivo: 5,
+};
+
 function iniciales(nombre) {
   const partes = (nombre || '?').trim().split(/\s+/);
   return ((partes[0]?.[0] || '') + (partes[1]?.[0] || '')).toUpperCase() || '?';
@@ -163,6 +218,7 @@ const PUNTO = {
 
 const ORDENES = [
   { valor: 'nombre', label: 'Nombre (A-Z)' },
+  { valor: 'estado', label: 'Estado' },
   { valor: 'vence', label: 'Vence primero' },
   { valor: 'clases', label: 'Menos clases disponibles' },
   { valor: 'visita', label: 'Más tiempo sin venir' },
@@ -335,6 +391,7 @@ export default function Usuarios() {
   const [busqueda, setBusqueda] = useState('');
   const [planFiltro, setPlanFiltro] = useState('');
   const [filtro, setFiltro] = useState('todos');
+  const [vista, setVista] = useState('vigentes'); // vigentes | renovar | antiguos | todos
   const [grupo, setGrupo] = useState('alumnos'); // alumnos | equipo
   const [orden, setOrden] = useState('nombre');
   const [compacta, setCompacta] = useState(leerCompacta);
@@ -426,12 +483,18 @@ export default function Usuarios() {
     () =>
       usuarios
         .filter((u) => u.estado !== 'pendiente')
-        .map((u) => ({
-          u,
-          info: infoAlumno(u, planes, diasRenovacion),
-          visita: ultimaVisita[u.id] || null,
-        }))
-        .sort((a, b) => (a.u.nombre || '').localeCompare(b.u.nombre || '')),
+        .map((u) => {
+          const info = infoAlumno(u, planes, diasRenovacion);
+          const visita = ultimaVisita[u.id] || null;
+          return { u, info, visita, rel: relevanciaDe(u, info, visita) };
+        })
+        .sort((a, b) =>
+          (a.u.nombre || '')
+            .trim()
+            .localeCompare((b.u.nombre || '').trim(), 'es', {
+              sensitivity: 'base',
+            })
+        ),
     [usuarios, planes, diasRenovacion, ultimaVisita]
   );
   const esEquipo = (u) => u.rol === 'coach' || u.rol === 'head_coach';
@@ -452,9 +515,33 @@ export default function Usuarios() {
     0
   );
 
+  // Cuántos alumnos hay en cada grupo (vigentes / por renovar / antiguos)
+  const conteoVista = alumnos.reduce(
+    (acc, { rel }) => {
+      acc[rel] = (acc[rel] || 0) + 1;
+      return acc;
+    },
+    { todos: alumnos.length }
+  );
+  const enVista = (rel) =>
+    grupo === 'equipo' || vista === 'todos' || rel === vista;
+  // Estados presentes dentro del grupo elegido (para los chips de abajo)
+  const conteoEnVista = alumnos
+    .filter(({ rel }) => enVista(rel))
+    .reduce(
+      (acc, { info }) => {
+        acc[info.clave] = (acc[info.clave] || 0) + 1;
+        acc.todos += 1;
+        return acc;
+      },
+      { todos: 0 }
+    );
+
   const texto = busqueda.trim().toLowerCase();
   const textoDigitos = soloDigitos(texto);
-  const filtrados = alumnos.filter(({ u, info }) => {
+  const filtrados = alumnos.filter(({ u, info, rel }) => {
+    // Al buscar por nombre se busca en todos los grupos
+    if (!texto && filtro !== 'renovaciones' && !enVista(rel)) return false;
     if (
       filtro === 'renovaciones'
         ? !PARA_RENOVAR.includes(info.clave)
@@ -482,6 +569,10 @@ export default function Usuarios() {
       return lejos(a.info.restantes) - lejos(b.info.restantes);
     if (orden === 'visita')
       return (a.visita || '').localeCompare(b.visita || '');
+    if (orden === 'estado')
+      return (
+        (ORDEN_ESTADO[a.info.clave] ?? 9) - (ORDEN_ESTADO[b.info.clave] ?? 9)
+      );
     return 0; // ya vienen por nombre
   });
 
@@ -799,52 +890,54 @@ export default function Usuarios() {
           ))}
         </div>
 
-        {/* Resumen por estado (toca para filtrar) */}
+        {/* Grupos: vigentes / por renovar / antiguos (toca para cambiar) */}
         {grupo !== 'equipo' && (
-          <div className="grid grid-cols-4 gap-2 mb-3">
-            {[
-              {
-                v: 'activo',
-                t: 'Activos',
-                c: 'text-cyan-brand',
-                b: 'border-cyan-brand/40 bg-cyan-brand/10',
-              },
-              {
-                v: 'por_vencer',
-                t: 'Por vencer',
-                c: 'text-yellow-200',
-                b: 'border-yellow-400/40 bg-yellow-400/10',
-              },
-              {
-                v: 'agotado',
-                t: 'Agotados',
-                c: 'text-orange-300',
-                b: 'border-orange-400/40 bg-orange-400/10',
-              },
-              {
-                v: 'vencido',
-                t: 'Vencidos',
-                c: 'text-red-300',
-                b: 'border-red-500/40 bg-red-500/10',
-              },
-            ].map((x) => {
-              const activo = filtro === x.v;
-              return (
-                <button
-                  key={x.v}
-                  onClick={() => setFiltro(activo ? 'todos' : x.v)}
-                  className={`rounded-2xl border py-2.5 text-center transition-all active:scale-95 ${
-                    activo ? x.b : 'bg-white/[0.04] border-white/10'
-                  }`}
-                >
-                  <p className={`font-display text-2xl leading-none ${x.c}`}>
-                    {conteo[x.v] || 0}
-                  </p>
-                  <p className="text-white/50 text-[10px] mt-1">{x.t}</p>
-                </button>
-              );
-            })}
-          </div>
+          <>
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              {VISTAS.map((x) => {
+                const activo = vista === x.v;
+                return (
+                  <button
+                    key={x.v}
+                    onClick={() => {
+                      setVista(x.v);
+                      setFiltro('todos');
+                    }}
+                    className={`rounded-2xl border py-2.5 px-1 text-center transition-all active:scale-95 ${
+                      activo ? x.b : 'bg-white/[0.04] border-white/10'
+                    }`}
+                  >
+                    <p className={`font-display text-2xl leading-none ${x.c}`}>
+                      {conteoVista[x.v] || 0}
+                    </p>
+                    <p
+                      className={`text-[11px] mt-1 font-semibold ${
+                        activo ? 'text-white' : 'text-white/60'
+                      }`}
+                    >
+                      {x.t}
+                    </p>
+                    <p className="text-white/35 text-[9px] leading-tight">
+                      {x.d}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex justify-end mb-3">
+              <button
+                onClick={() => {
+                  setVista(vista === 'todos' ? 'vigentes' : 'todos');
+                  setFiltro('todos');
+                }}
+                className="text-[11px] text-white/45 hover:text-white/70 underline-offset-2 hover:underline"
+              >
+                {vista === 'todos'
+                  ? 'Ver solo vigentes'
+                  : `Ver todos (${conteoVista.todos})`}
+              </button>
+            </div>
+          </>
         )}
 
         {/* Búsqueda y filtros */}
@@ -919,11 +1012,12 @@ export default function Usuarios() {
             grupo === 'equipo' ? 'hidden' : 'flex'
           } gap-1.5 overflow-x-auto pb-1 mb-4 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap`}
         >
-          {FILTROS.filter((f) =>
-            ['todos', 'sin_plan', 'inactivo'].includes(f.valor)
-          )
-            .filter((f) => f.valor !== 'inactivo' || conteo.inactivo)
-            .map((f) => (
+          {FILTROS.filter(
+            (f) => f.valor === 'todos' || conteoEnVista[f.valor]
+          ).length > 2 &&
+            FILTROS.filter(
+              (f) => f.valor === 'todos' || conteoEnVista[f.valor]
+            ).map((f) => (
               <button
                 key={f.valor}
                 onClick={() => setFiltro(f.valor)}
@@ -939,17 +1033,10 @@ export default function Usuarios() {
                     filtro === f.valor ? 'text-ink/70' : 'text-white/35'
                   }
                 >
-                  {conteo[f.valor] || 0}
+                  {conteoEnVista[f.valor] || 0}
                 </span>
               </button>
             ))}
-          {filtro !== 'todos' && !['sin_plan', 'inactivo'].includes(filtro) && (
-            <span className="shrink-0 text-xs text-white/40 px-2 py-1.5">
-              Filtrando:{' '}
-              {(FILTROS.find((f) => f.valor === filtro) || {}).label ||
-                'Por contactar'}
-            </span>
-          )}
         </div>
 
         {filtro === 'renovaciones' && (
