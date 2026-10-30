@@ -11,9 +11,12 @@ import {
 // Formulario para registrar un pago.
 // - usuarioFijo: si viene, el alumno ya está elegido (ej. desde su tarjeta en Usuarios).
 // - soloRenovacion: el pago siempre renueva el plan (no muestra la opción).
+// - permitirCambioPlan: muestra el selector de plan; si se elige otro, el pago
+//   renueva con el plan nuevo (cambio de plan + pago en un solo paso).
 export default function FormularioPago({
   usuarioFijo,
   soloRenovacion = false,
+  permitirCambioPlan = false,
   onCancelar,
   onListo,
 }) {
@@ -26,7 +29,29 @@ export default function FormularioPago({
   } = useAuth();
 
   const [usuarioId, setUsuarioId] = useState(usuarioFijo?.id || '');
-  const usuario = usuarioFijo || usuarios.find((u) => u.id === usuarioId);
+  const usuarioReal = usuarioFijo || usuarios.find((u) => u.id === usuarioId);
+  // Plan con el que se renueva (por defecto, el que ya tiene)
+  const [planElegido, setPlanElegido] = useState(usuarioFijo?.plan_id || '');
+  const conPlan = (u, planId) =>
+    !u || (planId || '') === (u.plan_id || '')
+      ? u
+      : {
+          ...u,
+          plan_id: planId || null,
+          plan_dias_personalizado: null,
+          plan_monto_personalizado: null,
+          plan_sesiones_personalizado: null,
+          // Con plan nuevo, el período parte desde la fecha del pago
+          fecha_vencimiento: null,
+          fecha_ultima_renovacion: null,
+        };
+  const usuario = permitirCambioPlan
+    ? conPlan(usuarioReal, planElegido)
+    : usuarioReal;
+  const cambiaPlan =
+    permitirCambioPlan &&
+    !!usuarioReal &&
+    (planElegido || '') !== (usuarioReal.plan_id || '');
   const [monto, setMonto] = useState(
     usuarioFijo ? String(montoPlanDe(usuarioFijo, planes) || '') : ''
   );
@@ -59,6 +84,15 @@ export default function FormularioPago({
     setVenceEditado(false);
   }
 
+  function elegirPlan(planId) {
+    setPlanElegido(planId);
+    const u = conPlan(usuarioReal, planId);
+    setMonto(u?.plan_id ? String(montoPlanDe(u, planes) || '') : '');
+    setRenueva(!!planId || soloRenovacion);
+    if (!venceEditado)
+      setVence(u?.plan_id ? venceSugerido(u, planes, diasRenovacion, fecha) : '');
+  }
+
   function cambiarFecha(valor) {
     setFecha(valor);
     if (!venceEditado && usuario?.plan_id && valor)
@@ -87,7 +121,9 @@ export default function FormularioPago({
     if (!monto || Number(monto) <= 0) return setError('Ingresa el monto.');
     if (renueva && !usuario.plan_id)
       return setError(
-        'Este alumno no tiene plan asignado; desmarca "Renueva su plan".'
+        permitirCambioPlan
+          ? 'Elige el plan que está pagando.'
+          : 'Este alumno no tiene plan asignado; desmarca "Renueva su plan".'
       );
     if (renueva && (!vence || vence <= fecha))
       return setError(
@@ -102,6 +138,7 @@ export default function FormularioPago({
           fecha,
           nota,
           vence,
+          ...(cambiaPlan ? { planId: planElegido } : {}),
         })
       : await registrarPago({
           usuarioId: usuario.id,
@@ -141,6 +178,41 @@ export default function FormularioPago({
               </option>
             ))}
           </select>
+        </div>
+      )}
+
+      {permitirCambioPlan && usuarioReal && (
+        <div>
+          <label className="text-white/40 text-xs mb-1 block">
+            Plan que paga
+          </label>
+          <select
+            value={planElegido}
+            onChange={(e) => elegirPlan(e.target.value)}
+            className={inputClase}
+          >
+            {!usuarioReal.plan_id && <option value="">Elige un plan…</option>}
+            {Object.values(planes)
+              .filter((p) => p.tipo !== 'hiit')
+              .sort(
+                (a, b) =>
+                  (a.duracion_dias || 30) - (b.duracion_dias || 30) ||
+                  (a.valor_con_iva || 0) - (b.valor_con_iva || 0)
+              )
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nombre} · ${(p.valor_con_iva || 0).toLocaleString('es-CL')}
+                  {p.id === usuarioReal.plan_id ? ' (actual)' : ''}
+                </option>
+              ))}
+          </select>
+          {cambiaPlan && (
+            <p className="text-yellow-200/80 text-[11px] mt-1">
+              Cambia de {planes[usuarioReal.plan_id]?.nombre || 'sin plan'} a{' '}
+              {planes[planElegido]?.nombre}. Sus clases parten de cero con el
+              plan nuevo.
+            </p>
+          )}
         </div>
       )}
 

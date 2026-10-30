@@ -1473,6 +1473,78 @@ export function AuthProvider({ children }) {
 
   // Cancela la reserva de un alumno específico desde la vista de admin (Clases).
   // No penaliza al alumno (fue el gimnasio quien lo sacó) y le avisa por notificación.
+  // El admin/coach inscribe a un alumno en una clase (sin que el alumno reserve).
+  // Se salta el límite de horas de anticipación; descuenta la clase del alumno.
+  async function reservarParaAlumno(horarioId, fecha, usuarioId, opciones = {}) {
+    const horario = horarios.find((h) => h.id === horarioId);
+    const alumno = usuarios.find((u) => u.id === usuarioId);
+    if (!horario || !alumno)
+      return { ok: false, mensaje: 'No se encontró la clase o el alumno.' };
+    if (horarioEstaCancelado(horarioId, fecha))
+      return { ok: false, mensaje: 'Esta clase está cancelada ese día.' };
+
+    const inscritos = reservas.filter(
+      (r) =>
+        r.horario_id === horarioId &&
+        r.fecha === fecha &&
+        r.estado === 'confirmada'
+    );
+    if (inscritos.some((r) => r.usuario_id === usuarioId))
+      return { ok: false, mensaje: `${alumno.nombre} ya está en esta clase.` };
+    if (inscritos.length >= horario.cupo_max && !opciones.sobrecupo)
+      return { ok: false, lleno: true, mensaje: 'La clase está llena.' };
+
+    const { data: nuevaReserva, error } = await supabase
+      .from('reservas')
+      .insert({
+        horario_id: horarioId,
+        usuario_id: usuarioId,
+        fecha,
+        estado: 'confirmada',
+      })
+      .select()
+      .single();
+    if (error)
+      return { ok: false, mensaje: 'No se pudo inscribir: ' + error.message };
+
+    const restantesAntes = sesionesRestantes(alumno);
+    const nuevasSesiones = (alumno.sesiones_usadas || 0) + 1;
+    await supabase
+      .from('usuarios')
+      .update({ sesiones_usadas: nuevasSesiones })
+      .eq('id', usuarioId);
+    setUsuarios((prev) =>
+      prev.map((u) =>
+        u.id === usuarioId ? { ...u, sesiones_usadas: nuevasSesiones } : u
+      )
+    );
+    setReservas((prev) =>
+      prev.some((r) => r.id === nuevaReserva.id) ? prev : [...prev, nuevaReserva]
+    );
+    registrarActividad(
+      'Alumno inscrito por el gimnasio',
+      `${alumno.nombre} · ${horario.hora} ${fecha}`
+    );
+    await crearNotificacion(
+      usuarioId,
+      `El gimnasio te inscribió en la clase de las ${horario.hora} del ${fechaLarga(
+        fecha
+      )}.`
+    );
+    avisarCoachReserva(
+      horario,
+      fecha,
+      `${alumno.nombre} fue inscrito/a en tu clase de las ${
+        horario.hora
+      } del ${fechaLarga(fecha)} (${inscritos.length + 1}/${horario.cupo_max}).`
+    );
+    const aviso =
+      restantesAntes !== null && restantesAntes <= 0
+        ? ' Ojo: ya no le quedaban clases en su plan.'
+        : '';
+    return { ok: true, mensaje: `${alumno.nombre} quedó inscrito/a.${aviso}` };
+  }
+
   async function cancelarReservaAdmin(reservaId) {
     const reserva = reservas.find((r) => r.id === reservaId);
     if (!reserva) return { ok: false, mensaje: 'Reserva no encontrada.' };
@@ -1782,6 +1854,25 @@ export function AuthProvider({ children }) {
         mensaje: 'Error al crear la cuenta: ' + errorAuth.message,
       };
 
+    // Alumno que ya venía de AgendaPro: su ficha ya existe con plan y pagos.
+    // Si la cuenta quedó con sesión abierta, se conecta al tiro y entra directo,
+    // sin pasar por la aprobación del admin.
+    if (authData.session) {
+      const { data: vinculada } = await supabase.rpc('vincular_mi_ficha');
+      if (vinculada) {
+        const yo = await cargarDatos(authData.user.id);
+        if (yo && yo.estado !== 'pendiente') {
+          return {
+            ok: true,
+            vinculado: true,
+            mensaje: `¡Bienvenido/a de vuelta${
+              yo.nombre ? ', ' + yo.nombre.split(' ')[0] : ''
+            }! Encontramos tu ficha de CED&S con tu plan y tus pagos.`,
+          };
+        }
+      }
+    }
+
     // Sin .select(): con la seguridad activada, quien se registra aún no puede leer fichas.
     const fila = {
       ...datos,
@@ -1814,7 +1905,7 @@ export function AuthProvider({ children }) {
     return {
       ok: true,
       mensaje:
-        'Cuenta creada. Revisa tu correo para confirmarla. Si ya eras alumno de CED&S, al entrar verás tu plan y tus pagos; si eres nuevo, el gimnasio aprobará tu cuenta.',
+        'Cuenta creada. Si ya eras alumno de CED&S, no necesitas aprobación: entra con tu correo y contraseña y verás tu plan y tus pagos. Si eres nuevo, el gimnasio aprobará tu cuenta.',
     };
   }
 
@@ -3348,9 +3439,17 @@ export function AuthProvider({ children }) {
   async function confirmarRenovacion(usuarioId, opciones = {}) {
     const usuario = usuarios.find((u) => u.id === usuarioId);
     const fechaPago = opciones.fecha || hoyLocalISO();
-    const tipo = usuario?.fecha_ultima_renovacion
-      ? 'renovacion'
-      : 'primer_pago';
+    // Es renovación si ya tenía un pago de plan antes (incluye los importados de AgendaPro)
+    const tipo =
+      usuario?.fecha_ultima_renovacion ||
+      pagos.some((p) => p.usuario_id === usuarioId && esPagoDePlan(p))
+        ? 'renovacion'
+        : 'primer_pago';
+
+    // Si viene opciones.planId distinto al actual, el pago también cambia el plan.
+    const cambiaPlan =
+      opciones.planId !== undefined &&
+      (opciones.planId || null) !== (usuario?.plan_id || null);
 
     const resultadoPago = await registrarPago({
       usuarioId,
@@ -3360,6 +3459,7 @@ export function AuthProvider({ children }) {
       tipo,
       nota: opciones.nota,
       vence: opciones.vence,
+      planId: cambiaPlan ? opciones.planId : undefined,
     });
     if (!resultadoPago.ok) return resultadoPago;
 
@@ -3368,6 +3468,17 @@ export function AuthProvider({ children }) {
       fecha_ultima_renovacion: fechaPago,
     };
     if (opciones.vence) cambiosUsuario.fecha_vencimiento = opciones.vence;
+    if (cambiaPlan) {
+      // Los ajustes personalizados eran del plan anterior
+      cambiosUsuario.plan_id = opciones.planId;
+      cambiosUsuario.plan_dias_personalizado = null;
+      cambiosUsuario.plan_monto_personalizado = null;
+      cambiosUsuario.plan_sesiones_personalizado = null;
+      registrarActividad(
+        'Plan cambiado',
+        `${usuario?.nombre || ''} → ${planes[opciones.planId]?.nombre || ''}`
+      );
+    }
 
     const { error } = await supabase
       .from('usuarios')
@@ -3390,7 +3501,11 @@ export function AuthProvider({ children }) {
     );
     await crearNotificacion(
       usuarioId,
-      'Tu plan fue renovado. ¡Ya tienes tus sesiones disponibles de nuevo!'
+      cambiaPlan
+        ? `Tu plan ahora es ${
+            planes[opciones.planId]?.nombre || 'nuevo'
+          }. ¡Ya tienes tus sesiones disponibles!`
+        : 'Tu plan fue renovado. ¡Ya tienes tus sesiones disponibles de nuevo!'
     );
     return { ok: true, mensaje: 'Pago confirmado.' };
   }
@@ -4168,6 +4283,7 @@ export function AuthProvider({ children }) {
         reservarClase,
         cancelarReserva,
         cancelarReservaAdmin,
+        reservarParaAlumno,
         sesionesRestantes,
         asignarPlan,
         confirmarRenovacion,

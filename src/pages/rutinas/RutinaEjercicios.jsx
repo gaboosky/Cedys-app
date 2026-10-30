@@ -33,6 +33,31 @@ const SECCIONES = [
   { key: 'cierre', label: 'Cierre', icono: Wind },
 ];
 
+// Un "método" (ej. TABATA) se importa como una fila "X (método)" seguida de
+// sus ejercicios. Se muestra y se marca como un solo bloque.
+const esMetodo = (e) => /\(m[ée]todo\)\s*$/i.test(e.ejercicio || '');
+const nombreMetodo = (e) =>
+  (e.ejercicio || '').replace(/\s*\(m[ée]todo\)\s*$/i, '').trim();
+
+// Agrupa los ejercicios de una sección: los que van después de un método
+// quedan dentro de ese bloque.
+function agruparSeccion(items) {
+  const grupos = [];
+  let actual = null;
+  for (const e of items) {
+    if (esMetodo(e)) {
+      actual = { tipo: 'metodo', metodo: e, ejercicios: [], ids: [e.id] };
+      grupos.push(actual);
+    } else if (actual) {
+      actual.ejercicios.push(e);
+      actual.ids.push(e.id);
+    } else {
+      grupos.push({ tipo: 'ejercicio', ej: e, ids: [e.id] });
+    }
+  }
+  return grupos;
+}
+
 // Lo que marca el alumno se guarda en este celular y se reinicia cada día.
 function hoyISO() {
   const d = new Date();
@@ -124,11 +149,14 @@ export default function RutinaEjercicios() {
     );
   }
 
-  function alternarHecho(id) {
+  // Recibe un id o una lista de ids (un bloque como TABATA se marca entero)
+  function alternarHecho(idOIds) {
+    const ids = Array.isArray(idOIds) ? idOIds : [idOIds];
     const antes = hechos;
-    const nuevos = antes.includes(id)
-      ? antes.filter((x) => x !== id)
-      : [...antes, id];
+    const todosMarcados = ids.every((x) => antes.includes(x));
+    const nuevos = todosMarcados
+      ? antes.filter((x) => !ids.includes(x))
+      : [...antes, ...ids.filter((x) => !antes.includes(x))];
     setHechos(nuevos);
     guardarLocal('cedys_rutina_hechos_' + diaId, {
       fecha: hoyISO(),
@@ -172,10 +200,16 @@ export default function RutinaEjercicios() {
   const ultimaVez = vecesHecho.find((d) => d.fecha !== hoyISO()) || null;
   const registradoHoy = vecesHecho.some((d) => d.fecha === hoyISO());
 
-  const total = ejercicios?.length || 0;
-  const listos = ejercicios
-    ? ejercicios.filter((e) => hechos.includes(e.id)).length
-    : 0;
+  // Cada ejercicio cuenta 1; un bloque (TABATA) también cuenta 1
+  const gruposPorSeccion = {};
+  for (const { key } of SECCIONES)
+    gruposPorSeccion[key] = agruparSeccion(
+      (ejercicios || []).filter((e) => e.seccion === key)
+    );
+  const todosLosGrupos = Object.values(gruposPorSeccion).flat();
+  const grupoListo = (g) => g.ids.every((id) => hechos.includes(id));
+  const total = todosLosGrupos.length;
+  const listos = todosLosGrupos.filter(grupoListo).length;
   const completo = total > 0 && listos === total;
   let numero = 0;
 
@@ -241,11 +275,9 @@ export default function RutinaEjercicios() {
 
       {ejercicios &&
         SECCIONES.map(({ key, label, icono: Icono }) => {
-          const items = ejercicios.filter((e) => e.seccion === key);
-          if (items.length === 0) return null;
-          const listosSeccion = items.filter((e) =>
-            hechos.includes(e.id)
-          ).length;
+          const grupos = gruposPorSeccion[key];
+          if (grupos.length === 0) return null;
+          const listosSeccion = grupos.filter(grupoListo).length;
           return (
             <div key={key} className="mb-7">
               <div className="flex items-center justify-between mb-3">
@@ -253,12 +285,24 @@ export default function RutinaEjercicios() {
                   <Icono size={14} /> {label}
                 </p>
                 <p className="text-white/30 text-[11px]">
-                  {listosSeccion}/{items.length}
+                  {listosSeccion}/{grupos.length}
                 </p>
               </div>
               <div className="flex flex-col gap-2">
-                {items.map((ej) => {
+                {grupos.map((g) => {
                   numero += 1;
+                  if (g.tipo === 'metodo')
+                    return (
+                      <TarjetaMetodo
+                        key={g.metodo.id}
+                        grupo={g}
+                        numero={numero}
+                        hecho={grupoListo(g)}
+                        onHecho={() => alternarHecho(g.ids)}
+                        onEditar={(ej) => setEditando(ej)}
+                      />
+                    );
+                  const ej = g.ej;
                   return (
                     <TarjetaEjercicio
                       key={ej.id}
@@ -340,6 +384,116 @@ export default function RutinaEjercicios() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+// Bloque tipo TABATA: un solo círculo marca el método y todos sus ejercicios
+function TarjetaMetodo({ grupo, numero, hecho, onHecho, onEditar }) {
+  const { registrosPeso } = useAuth();
+  const m = grupo.metodo;
+  const detalles = [
+    m.series && `${m.series} rondas`,
+    m.repeticiones && `${m.repeticiones} trabajo`,
+    m.rir && m.rir !== '-' && `${m.rir} descanso`,
+    m.descanso && `${m.descanso} entre rondas`,
+  ].filter(Boolean);
+
+  return (
+    <div
+      className={`rounded-2xl border px-3 py-3 transition-colors ${
+        hecho
+          ? 'bg-cyan-brand/[0.06] border-cyan-brand/25'
+          : 'bg-amber-300/[0.04] border-amber-300/20'
+      }`}
+    >
+      <div className="flex items-start gap-2.5">
+        <button
+          onClick={onHecho}
+          aria-label={hecho ? 'Marcar como pendiente' : 'Marcar como hecho'}
+          className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border transition-all active:scale-90 ${
+            hecho
+              ? 'bg-cyan-brand border-cyan-brand text-ink'
+              : 'border-white/25 text-white/50'
+          }`}
+        >
+          {hecho ? (
+            <Check size={15} strokeWidth={3} />
+          ) : (
+            <span className="text-xs font-semibold">{numero}</span>
+          )}
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-[15px] font-semibold leading-snug pt-0.5">
+            <span
+              className={
+                hecho
+                  ? 'text-white/50 line-through decoration-white/30'
+                  : 'text-amber-200'
+              }
+            >
+              {nombreMetodo(m)}
+            </span>
+            <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-white/40">
+              {grupo.ejercicios.length} ejercicios · se marca entero
+            </span>
+          </p>
+          {detalles.length > 0 && (
+            <p className="text-white/55 text-xs mt-0.5">
+              {detalles.join(' · ')}
+            </p>
+          )}
+
+          <div className="mt-2 flex flex-col divide-y divide-white/[0.06] border-t border-white/[0.06]">
+            {grupo.ejercicios.map((ej) => {
+              const peso = pesoVigente(ej, registrosPeso);
+              const pesoTexto = peso.texto
+                ? /^[\d.,]+$/.test(String(peso.texto).trim())
+                  ? `${peso.texto} kg`
+                  : peso.texto
+                : null;
+              const nota = ej.notas && ej.notas.trim() !== '-' ? ej.notas : null;
+              return (
+                <div key={ej.id} className="py-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-300/70 shrink-0" />
+                    <p
+                      className={`flex-1 text-sm ${
+                        hecho ? 'text-white/45' : 'text-white/85'
+                      }`}
+                    >
+                      {ej.ejercicio}
+                    </p>
+                    {ej.referencia_url && (
+                      <a
+                        href={ej.referencia_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyan-brand/80 shrink-0 p-0.5"
+                        aria-label="Ver video"
+                      >
+                        <ExternalLink size={13} />
+                      </a>
+                    )}
+                    <button
+                      onClick={() => onEditar(ej)}
+                      className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold text-cyan-brand/80 bg-cyan-brand/10 shrink-0"
+                    >
+                      {pesoTexto || 'Peso'} <Pencil size={9} />
+                    </button>
+                  </div>
+                  {nota && (
+                    <p className="text-white/40 text-[11px] italic ml-3.5 mt-0.5">
+                      {nota}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

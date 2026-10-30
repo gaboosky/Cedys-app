@@ -1299,24 +1299,16 @@ export default function Usuarios() {
                       >
                         Acceso: correo y contraseña
                       </ItemMenu>
-                      {info.plan && (
-                        <ItemMenu
-                          icono={CreditCard}
-                          onClick={() => abrir('cobrar', u)}
-                        >
-                          {info.vence
-                            ? 'Registrar pago / renovar'
-                            : 'Cobrar primer pago'}
-                        </ItemMenu>
-                      )}
-                      <ItemMenu icono={Layers} onClick={() => abrir('plan', u)}>
-                        Cambiar o ajustar plan
-                      </ItemMenu>
                       <ItemMenu
-                        icono={Zap}
-                        onClick={() => abrir('sesiones', u)}
+                        icono={CreditCard}
+                        onClick={() => abrir('cobrar', u)}
                       >
-                        Agregar o restar clases
+                        <span>
+                          Plan y pagos
+                          <span className="block text-white/35 text-[10px]">
+                            Renovar, cambiar, extender o clases
+                          </span>
+                        </span>
                       </ItemMenu>
                       {!esYo && (
                         <>
@@ -1354,39 +1346,24 @@ export default function Usuarios() {
       </div>
 
       {/* Diálogos */}
-      {dialogo?.tipo === 'cobrar' && (
-        <Modal
-          titulo={
-            dialogo.usuario.fecha_ultima_renovacion
-              ? 'Renovar plan'
-              : 'Cobrar primer pago'
+      {['cobrar', 'plan', 'sesiones'].includes(dialogo?.tipo) && (
+        <DialogoPlanYPagos
+          usuario={
+            usuarios.find((x) => x.id === dialogo.usuario.id) || dialogo.usuario
           }
-          subtitulo={dialogo.usuario.nombre}
-          onCerrar={() => setDialogo(null)}
-        >
-          <FormularioPago
-            usuarioFijo={dialogo.usuario}
-            soloRenovacion
-            onCancelar={() => setDialogo(null)}
-            onListo={() => setDialogo(null)}
-          />
-        </Modal>
-      )}
-
-      {dialogo?.tipo === 'plan' && (
-        <DialogoPlan
-          usuario={dialogo.usuario}
+          info={infoAlumno(
+            usuarios.find((x) => x.id === dialogo.usuario.id) ||
+              dialogo.usuario,
+            planes,
+            diasRenovacion
+          )}
+          seccionInicial={
+            dialogo.tipo === 'sesiones' ? 'extender' : 'pago'
+          }
           planes={planesOrdenados}
           diasRenovacion={diasRenovacion}
           asignarPlan={asignarPlan}
           actualizarPerfil={actualizarPerfil}
-          onCerrar={() => setDialogo(null)}
-        />
-      )}
-
-      {dialogo?.tipo === 'sesiones' && (
-        <DialogoSesiones
-          usuario={dialogo.usuario}
           agregarSesionesExtra={agregarSesionesExtra}
           onCerrar={() => setDialogo(null)}
         />
@@ -1804,6 +1781,309 @@ function DialogoDatos({ usuario, actualizarPerfil, onCerrar }) {
   );
 }
 
+// Todo lo del plan en un solo lugar: pagar/renovar (con cambio de plan),
+// corregir el plan sin cobrar y agregar o restar clases.
+function DialogoPlanYPagos({
+  usuario,
+  info,
+  seccionInicial = 'pago',
+  planes,
+  diasRenovacion,
+  asignarPlan,
+  actualizarPerfil,
+  agregarSesionesExtra,
+  onCerrar,
+}) {
+  const [seccion, setSeccion] = useState(seccionInicial);
+  const SECCIONES = [
+    { v: 'pago', t: info.plan ? 'Pagar o cambiar' : 'Primer pago' },
+    { v: 'extender', t: 'Extender' },
+    { v: 'ajustar', t: 'Corregir' },
+  ];
+  const fecha = (d) =>
+    d.toLocaleDateString('es-CL', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  return (
+    <Modal titulo="Plan y pagos" subtitulo={usuario.nombre} onCerrar={onCerrar}>
+      {/* Resumen del plan actual */}
+      <div className="bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2.5 mb-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-white/40 text-[10px] uppercase tracking-wide">
+            Plan actual
+          </p>
+          <p className="text-white text-sm font-medium truncate">
+            {info.plan?.nombre || 'Sin plan'}
+          </p>
+          {info.plan && (
+            <p className="text-white/45 text-[11px]">
+              {info.total === null
+                ? 'Clases ilimitadas'
+                : `${Math.max(0, info.restantes)} de ${info.total} clases`}
+              {info.vence
+                ? ` · ${info.diasRestantes <= 0 ? 'venció' : 'vence'} ${fecha(
+                    info.vence
+                  )}`
+                : ' · sin pago registrado'}
+            </p>
+          )}
+        </div>
+        <BadgeEstado clave={info.clave} sinPago={!info.vence} />
+      </div>
+
+      <div className="flex bg-white/[0.04] border border-white/10 rounded-xl p-1 mb-3">
+        {SECCIONES.map((x) => (
+          <button
+            key={x.v}
+            onClick={() => setSeccion(x.v)}
+            className={`flex-1 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${
+              seccion === x.v ? 'bg-cyan-brand text-ink' : 'text-white/50'
+            }`}
+          >
+            {x.t}
+          </button>
+        ))}
+      </div>
+
+      {seccion === 'pago' && (
+        <>
+          <p className="text-white/40 text-xs mb-2">
+            Registra el pago. Si cambia de plan, elige el nuevo aquí mismo y
+            queda todo hecho de una vez.
+          </p>
+          <FormularioPago
+            usuarioFijo={usuario}
+            soloRenovacion
+            permitirCambioPlan
+            onCancelar={onCerrar}
+            onListo={onCerrar}
+          />
+        </>
+      )}
+      {seccion === 'ajustar' && (
+        <DialogoPlan
+          sinModal
+          usuario={usuario}
+          planes={planes}
+          diasRenovacion={diasRenovacion}
+          asignarPlan={asignarPlan}
+          actualizarPerfil={actualizarPerfil}
+          onCerrar={onCerrar}
+        />
+      )}
+      {seccion === 'extender' && (
+        <ExtenderPlan
+          usuario={usuario}
+          info={info}
+          actualizarPerfil={actualizarPerfil}
+          agregarSesionesExtra={agregarSesionesExtra}
+          onCerrar={onCerrar}
+        />
+      )}
+    </Modal>
+  );
+}
+
+// Extender el vencimiento y/o sumar clases, sin registrar un pago
+// (ej. compensar una semana de vacaciones, una clase regalada).
+function ExtenderPlan({
+  usuario,
+  info,
+  actualizarPerfil,
+  agregarSesionesExtra,
+  onCerrar,
+}) {
+  const iso = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+      d.getDate()
+    ).padStart(2, '0')}`;
+  const venceActualISO = info.vence ? iso(info.vence) : null;
+  const sumarDias = (baseISO, n) => {
+    const d = new Date((baseISO || hoyISO()) + 'T12:00:00');
+    d.setDate(d.getDate() + n);
+    return iso(d);
+  };
+  const [nuevaFecha, setNuevaFecha] = useState(venceActualISO || '');
+  const [clases, setClases] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [mensaje, setMensaje] = useState(null);
+
+  const texto = (s) =>
+    new Date(s + 'T12:00:00').toLocaleDateString('es-CL', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  const diasExtra =
+    nuevaFecha && venceActualISO
+      ? Math.round(
+          (Date.parse(nuevaFecha + 'T12:00:00') -
+            Date.parse(venceActualISO + 'T12:00:00')) /
+            DIA_MS
+        )
+      : null;
+  const cambiaFecha = !!nuevaFecha && nuevaFecha !== venceActualISO;
+  const nClases = Number(clases) || 0;
+  const hayCambios = cambiaFecha || nClases !== 0;
+
+  async function guardar() {
+    if (!hayCambios) return;
+    setGuardando(true);
+    setMensaje(null);
+    const partes = [];
+    if (cambiaFecha) {
+      const r = await actualizarPerfil(usuario.id, {
+        fecha_vencimiento: nuevaFecha,
+      });
+      if (!r.ok) {
+        setGuardando(false);
+        return setMensaje(r);
+      }
+      partes.push(`vence el ${texto(nuevaFecha)}`);
+    }
+    if (nClases !== 0) {
+      const r = await agregarSesionesExtra(usuario.id, nClases);
+      if (!r.ok) {
+        setGuardando(false);
+        return setMensaje(r);
+      }
+      partes.push(
+        `${nClases > 0 ? '+' : ''}${nClases} clase${
+          Math.abs(nClases) === 1 ? '' : 's'
+        }`
+      );
+    }
+    setGuardando(false);
+    setMensaje({ ok: true, mensaje: 'Listo: ' + partes.join(' y ') + '.' });
+    setTimeout(onCerrar, 1300);
+  }
+
+  const chip =
+    'px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors';
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-white/40 text-xs">
+        Sin registrar pago. Útil para compensar vacaciones, una lesión o regalar
+        clases.
+      </p>
+
+      {/* Vencimiento */}
+      <div>
+        <p className="text-white/70 text-sm font-medium mb-1">
+          Extender vencimiento
+        </p>
+        <p className="text-white/40 text-[11px] mb-2">
+          {venceActualISO
+            ? `Actualmente vence el ${texto(venceActualISO)}.`
+            : 'No tiene fecha de vencimiento. Elige una.'}
+        </p>
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {[7, 15, 30].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setNuevaFecha(sumarDias(venceActualISO, n))}
+              className={`${chip} ${
+                nuevaFecha === sumarDias(venceActualISO, n)
+                  ? 'bg-cyan-brand text-ink border-cyan-brand'
+                  : 'bg-white/[0.04] text-white/70 border-white/10'
+              }`}
+            >
+              +{n} días
+            </button>
+          ))}
+        </div>
+        <input
+          type="date"
+          value={nuevaFecha}
+          onChange={(e) => setNuevaFecha(e.target.value)}
+          className={inputClase}
+        />
+        {cambiaFecha && diasExtra !== null && (
+          <p
+            className={`text-[11px] mt-1 ${
+              diasExtra > 0 ? 'text-cyan-brand' : 'text-yellow-200/80'
+            }`}
+          >
+            {diasExtra > 0
+              ? `Se extiende ${diasExtra} día${diasExtra === 1 ? '' : 's'}.`
+              : `Ojo: acorta el plan ${Math.abs(diasExtra)} día${
+                  Math.abs(diasExtra) === 1 ? '' : 's'
+                }.`}
+          </p>
+        )}
+      </div>
+
+      {/* Clases */}
+      <div>
+        <p className="text-white/70 text-sm font-medium mb-1">
+          Agregar o restar clases
+        </p>
+        <p className="text-white/40 text-[11px] mb-2">
+          {info.total === null
+            ? 'Su plan es ilimitado.'
+            : `Le quedan ${Math.max(0, info.restantes ?? 0)} de ${
+                info.total
+              } clases.`}
+        </p>
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {[1, 2, 4].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => setClases(String(n))}
+              className={`${chip} ${
+                clases === String(n)
+                  ? 'bg-cyan-brand text-ink border-cyan-brand'
+                  : 'bg-white/[0.04] text-white/70 border-white/10'
+              }`}
+            >
+              +{n}
+            </button>
+          ))}
+        </div>
+        <input
+          type="number"
+          value={clases}
+          onChange={(e) => setClases(e.target.value)}
+          placeholder="Otra cantidad (negativo para restar, ej: -1)"
+          className={inputClase}
+        />
+      </div>
+
+      {mensaje && (
+        <p
+          className={`text-xs ${
+            mensaje.ok ? 'text-cyan-brand' : 'text-red-400'
+          }`}
+        >
+          {mensaje.mensaje}
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          onClick={guardar}
+          disabled={!hayCambios || guardando}
+          className="flex-1 bg-cyan-brand text-ink font-semibold rounded-lg py-2.5 text-sm disabled:opacity-40"
+        >
+          {guardando ? 'Guardando...' : 'Guardar cambios'}
+        </button>
+        <button
+          onClick={onCerrar}
+          className="flex-1 bg-white/10 text-white rounded-lg py-2.5 text-sm"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DialogoPlan({
   usuario,
   planes,
@@ -1811,6 +2091,7 @@ function DialogoPlan({
   asignarPlan,
   actualizarPerfil,
   onCerrar,
+  sinModal = false,
 }) {
   const [planId, setPlanId] = useState(usuario.plan_id || '');
   const [dias, setDias] = useState(usuario.plan_dias_personalizado ?? '');
@@ -1834,12 +2115,19 @@ function DialogoPlan({
     onCerrar();
   }
 
+  const Envoltura = sinModal ? SinMarco : Modal;
   return (
-    <Modal
+    <Envoltura
       titulo="Plan del alumno"
       subtitulo={usuario.nombre}
       onCerrar={onCerrar}
     >
+      {sinModal && (
+        <p className="text-white/40 text-xs mb-3">
+          Para corregir el plan o darle condiciones especiales sin registrar un
+          pago (ej. se equivocó de plan, precio o duración distinta).
+        </p>
+      )}
       <label className="text-white/40 text-xs mb-1 block">Plan</label>
       <select
         value={planId}
@@ -1920,11 +2208,21 @@ function DialogoPlan({
           Cancelar
         </button>
       </div>
-    </Modal>
+    </Envoltura>
   );
 }
 
-function DialogoSesiones({ usuario, agregarSesionesExtra, onCerrar }) {
+// Para mostrar el contenido de un diálogo dentro de otro (sin su propio marco)
+function SinMarco({ children }) {
+  return <>{children}</>;
+}
+
+function DialogoSesiones({
+  usuario,
+  agregarSesionesExtra,
+  onCerrar,
+  sinModal = false,
+}) {
   const [cantidad, setCantidad] = useState('');
   const [mensaje, setMensaje] = useState(null);
 
@@ -1935,8 +2233,9 @@ function DialogoSesiones({ usuario, agregarSesionesExtra, onCerrar }) {
     if (resultado.ok) setTimeout(onCerrar, 1200);
   }
 
+  const Envoltura = sinModal ? SinMarco : Modal;
   return (
-    <Modal
+    <Envoltura
       titulo="Agregar o restar clases"
       subtitulo={usuario.nombre}
       onCerrar={onCerrar}
@@ -1979,7 +2278,7 @@ function DialogoSesiones({ usuario, agregarSesionesExtra, onCerrar }) {
           Cancelar
         </button>
       </div>
-    </Modal>
+    </Envoltura>
   );
 }
 

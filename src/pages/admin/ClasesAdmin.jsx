@@ -13,6 +13,8 @@ import {
   UserMinus,
   UserCog,
   AlertTriangle,
+  UserPlus,
+  Search,
 } from 'lucide-react';
 
 // Vista de la semana: todas las clases de lunes a sábado de un vistazo
@@ -366,6 +368,181 @@ function proximosDiasHabiles(cantidad = 14) {
 function horarioAplicaEnFecha(h, diaClave, diaNombre) {
   if (h.fecha_unica) return h.fecha_unica === diaClave;
   return h.dia === diaNombre;
+}
+
+// El admin inscribe a un alumno en la clase (el alumno no tiene que reservar)
+function AgregarAlumno({ horario, fecha }) {
+  const { usuarios, reservas, planes, sesionesRestantes, reservarParaAlumno } =
+    useAuth();
+  const [abierto, setAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const [enviandoId, setEnviandoId] = useState(null);
+  const [lleno, setLleno] = useState(null); // alumno a inscribir con sobrecupo
+  const [mensaje, setMensaje] = useState(null);
+
+  const yaInscritos = new Set(
+    reservas
+      .filter(
+        (r) =>
+          r.horario_id === horario.id &&
+          r.fecha === fecha &&
+          r.estado === 'confirmada'
+      )
+      .map((r) => r.usuario_id)
+  );
+  const d = new Date();
+  const hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}-${String(d.getDate()).padStart(2, '0')}`;
+  const vigente = (u) =>
+    !!u.plan_id && (!u.fecha_vencimiento || u.fecha_vencimiento >= hoy);
+  const texto = busqueda.trim().toLowerCase();
+  const candidatos = usuarios
+    .filter(
+      (u) =>
+        u.estado === 'activo' &&
+        !yaInscritos.has(u.id) &&
+        (!texto || (u.nombre || '').toLowerCase().includes(texto))
+    )
+    .sort(
+      (a, b) =>
+        Number(vigente(b)) - Number(vigente(a)) ||
+        (a.nombre || '').localeCompare(b.nombre || '', 'es')
+    )
+    .slice(0, texto ? 30 : 12);
+
+  async function inscribir(u, sobrecupo = false) {
+    setEnviandoId(u.id);
+    setMensaje(null);
+    const r = await reservarParaAlumno(horario.id, fecha, u.id, { sobrecupo });
+    setEnviandoId(null);
+    if (r.lleno) return setLleno(u);
+    setLleno(null);
+    setMensaje(r);
+    if (r.ok) setBusqueda('');
+  }
+
+  if (!abierto)
+    return (
+      <button
+        onClick={() => setAbierto(true)}
+        className="mt-2 w-full flex items-center justify-center gap-1.5 border border-dashed border-cyan-brand/40 text-cyan-brand text-xs font-semibold rounded-lg py-2 hover:bg-cyan-brand/5"
+      >
+        <UserPlus size={14} /> Agregar alumno a esta clase
+      </button>
+    );
+
+  return (
+    <div className="mt-2 bg-black/20 border border-white/10 rounded-xl p-2.5">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-white/70 text-xs font-medium flex items-center gap-1.5">
+          <UserPlus size={13} className="text-cyan-brand" /> Agregar alumno
+        </p>
+        <button
+          onClick={() => {
+            setAbierto(false);
+            setMensaje(null);
+            setLleno(null);
+          }}
+          className="text-white/30 hover:text-white/60"
+        >
+          <X size={14} />
+        </button>
+      </div>
+      <div className="relative mb-2">
+        <Search
+          size={14}
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30"
+        />
+        <input
+          autoFocus
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar alumno por nombre"
+          className="w-full bg-black/30 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-white text-sm outline-none focus:border-cyan-brand"
+        />
+      </div>
+
+      {mensaje && (
+        <p
+          className={`text-xs mb-2 ${
+            mensaje.ok ? 'text-cyan-brand' : 'text-red-400'
+          }`}
+        >
+          {mensaje.mensaje}
+        </p>
+      )}
+
+      {lleno && (
+        <div className="bg-yellow-400/10 border border-yellow-400/30 rounded-lg p-2 mb-2">
+          <p className="text-yellow-100 text-xs mb-1.5">
+            La clase está llena ({horario.cupo_max}/{horario.cupo_max}). ¿Agregar
+            a {lleno.nombre} igual, sobre el cupo?
+          </p>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => inscribir(lleno, true)}
+              className="bg-yellow-400/80 text-ink text-[11px] font-semibold px-2.5 py-1 rounded-md"
+            >
+              Sí, agregar
+            </button>
+            <button
+              onClick={() => setLleno(null)}
+              className="bg-white/10 text-white text-[11px] px-2.5 py-1 rounded-md"
+            >
+              No
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
+        {candidatos.length === 0 && (
+          <p className="text-white/30 text-xs py-2 text-center">
+            No hay alumnos con ese nombre.
+          </p>
+        )}
+        {candidatos.map((u) => {
+          const plan = u.plan_id ? planes[u.plan_id] : null;
+          const resto = sesionesRestantes(u);
+          const ok = vigente(u);
+          const detalle = !plan
+            ? 'Sin plan'
+            : !ok
+            ? `${plan.nombre} · vencido`
+            : resto === null
+            ? `${plan.nombre} · ilimitado`
+            : `${plan.nombre} · ${Math.max(0, resto)} clases`;
+          const alerta = !ok || (resto !== null && resto <= 0);
+          return (
+            <button
+              key={u.id}
+              disabled={enviandoId === u.id}
+              onClick={() => inscribir(u)}
+              className="flex items-center justify-between gap-2 text-left bg-white/[0.04] hover:bg-white/[0.07] border border-white/10 rounded-lg px-2.5 py-1.5 disabled:opacity-50"
+            >
+              <span className="min-w-0">
+                <span className="block text-white text-sm truncate">
+                  {u.nombre}
+                </span>
+                <span
+                  className={`block text-[11px] ${
+                    alerta ? 'text-orange-300' : 'text-white/40'
+                  }`}
+                >
+                  {detalle}
+                </span>
+              </span>
+              <span className="text-cyan-brand text-xs font-semibold shrink-0">
+                {enviandoId === u.id ? '...' : '+ Agregar'}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function ClasesAdmin() {
@@ -1216,6 +1393,7 @@ export default function ClasesAdmin() {
                                   )}
                                 </div>
                               )}
+                              <AgregarAlumno horario={h} fecha={dia.key} />
                             </div>
                           )}
 
