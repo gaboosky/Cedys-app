@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import PruebasEnClase, { pruebasDeClase } from '../../components/PruebasEnClase';
 import {
   Trash2,
   Plus,
@@ -559,6 +560,7 @@ export default function ClasesAdmin() {
     cancelarHorarioFecha,
     reactivarHorarioFecha,
     cancelarReservaAdmin,
+    solicitudesPrueba,
   } = useAuth();
   // Las clases HIIT se manejan en su propia pestaña
   const horarios = todosHorarios.filter((h) => h.tipo !== 'hiit');
@@ -583,6 +585,7 @@ export default function ClasesAdmin() {
     cupo_max: 6,
   });
   const [mensajeCrear, setMensajeCrear] = useState(null);
+  const [avisoClases, setAvisoClases] = useState(null); // errores al editar/eliminar
   const [guardando, setGuardando] = useState(false);
 
   const [diaAbierto, setDiaAbierto] = useState(0);
@@ -744,13 +747,14 @@ export default function ClasesAdmin() {
 
   async function guardarEdicion(horarioId) {
     const coach = coaches.find((c) => c.id === formEdicion.coach_id);
-    await editarClase(horarioId, {
+    const r = await editarClase(horarioId, {
       dia: formEdicion.dia,
       hora: formEdicion.hora,
       coach_id: formEdicion.coach_id || null,
       coach_nombre: coach?.nombre || null,
       cupo_max: Number(formEdicion.cupo_max),
     });
+    if (r && !r.ok) return setAvisoClases(r);
     setEditandoId(null);
   }
 
@@ -768,8 +772,9 @@ export default function ClasesAdmin() {
   }
 
   async function confirmarEliminar(horarioId) {
-    await eliminarClase(horarioId);
+    const r = await eliminarClase(horarioId);
     setEliminandoId(null);
+    setAvisoClases(r && !r.ok ? r : null);
   }
 
   return (
@@ -778,6 +783,18 @@ export default function ClasesAdmin() {
       <p className="text-white/40 text-xs mt-1 mb-4">
         Horarios, cupos, reemplazos y cancelaciones
       </p>
+      {avisoClases && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2.5 mb-4 flex items-start gap-2">
+          <AlertTriangle size={15} className="text-red-400 shrink-0 mt-0.5" />
+          <p className="text-red-200 text-xs flex-1">{avisoClases.mensaje}</p>
+          <button
+            onClick={() => setAvisoClases(null)}
+            className="text-white/40"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
       <div className="flex bg-white/[0.04] border border-white/10 rounded-xl p-1 mb-4">
         {[
           { valor: 'lista', label: 'Por día' },
@@ -1214,7 +1231,11 @@ export default function ClasesAdmin() {
                               </p>
                               {!cancelada &&
                                 (() => {
-                                  const n = inscritosDe(h.id, dia.key).length;
+                                  const n =
+                                    inscritosDe(h.id, dia.key).length +
+                                    pruebasDeClase(solicitudesPrueba, h.id, dia.key, {
+                                      conEvaluaciones: false,
+                                    }).length;
                                   const lleno = n >= h.cupo_max;
                                   return (
                                     <div className="flex items-center gap-2 mt-1.5">
@@ -1393,6 +1414,7 @@ export default function ClasesAdmin() {
                                   )}
                                 </div>
                               )}
+                              <PruebasEnClase horarioId={h.id} fecha={dia.key} />
                               <AgregarAlumno horario={h} fecha={dia.key} />
                             </div>
                           )}

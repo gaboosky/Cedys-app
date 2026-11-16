@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 import {
   MessageCircle,
   Phone,
@@ -14,6 +15,10 @@ import {
   UserCheck,
   X,
   MessageSquareText,
+  ExternalLink,
+  Settings2,
+  ChevronDown,
+  CalendarDays,
 } from 'lucide-react';
 
 const ESTADOS = [
@@ -31,6 +36,16 @@ const ESTADOS = [
     valor: 'agendada',
     etiqueta: 'Agendada',
     clase: 'bg-cyan-brand/15 text-cyan-brand border-cyan-brand/40',
+  },
+  {
+    valor: 'asistio',
+    etiqueta: 'Vino',
+    clase: 'bg-cyan-brand/15 text-cyan-brand border-cyan-brand/40',
+  },
+  {
+    valor: 'no_asistio',
+    etiqueta: 'No vino',
+    clase: 'bg-orange-400/10 text-orange-200 border-orange-400/30',
   },
   {
     valor: 'descartada',
@@ -64,6 +79,23 @@ function inscritoDe(s, usuarios) {
   );
 }
 
+const SERVICIO = {
+  small_group: 'Clase de prueba',
+  hiit: 'Prueba HIIT',
+  bioimpedancia: 'Bioimpedancia',
+};
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+function hoyISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
+  ).padStart(2, '0')}`;
+}
+function diaCita(s) {
+  const d = new Date(s.fecha + 'T12:00:00');
+  return `${DIAS[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
+}
+
 function fechaHora(ts) {
   return new Date(ts).toLocaleString('es-CL', {
     day: 'numeric',
@@ -84,17 +116,30 @@ export default function SolicitudesPrueba() {
   } = useAuth();
   const [regalando, setRegalando] = useState(null);
   const [mensajeRegalo, setMensajeRegalo] = useState(null);
-  const [filtro, setFiltro] = useState('activas'); // activas | todas | estado
+  const [filtro, setFiltro] = useState('proximas'); // proximas | activas | todas | estado
+  const [editor, setEditor] = useState(false);
   const [borrando, setBorrando] = useState(null);
   const [copiado, setCopiado] = useState(false);
 
-  const lista = (solicitudesPrueba || []).filter((s) =>
-    filtro === 'activas'
-      ? s.estado === 'pendiente' || s.estado === 'contactado'
-      : filtro === 'todas'
-      ? true
-      : s.estado === filtro
-  );
+  const hoy = hoyISO();
+  const esProxima = (s) =>
+    s.fecha && s.fecha >= hoy && ['pendiente', 'contactado', 'agendada'].includes(s.estado);
+  const lista = (solicitudesPrueba || [])
+    .filter((s) =>
+      filtro === 'proximas'
+        ? esProxima(s)
+        : filtro === 'activas'
+        ? (s.estado === 'pendiente' || s.estado === 'contactado') && !esProxima(s)
+        : filtro === 'todas'
+        ? true
+        : s.estado === filtro
+    )
+    .sort((a, b) =>
+      filtro === 'proximas'
+        ? `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`)
+        : 0
+    );
+  const proximas = (solicitudesPrueba || []).filter(esProxima).length;
   const cuenta = (estado) =>
     (solicitudesPrueba || []).filter((s) => s.estado === estado).length;
   const total = (solicitudesPrueba || []).length;
@@ -131,9 +176,17 @@ export default function SolicitudesPrueba() {
 
   function mensajeWhatsapp(s) {
     const nombre = (s.nombre || '').split(' ')[0];
-    const texto = `Hola ${nombre}! Te escribimos de ${
-      infoGimnasio?.nombre || 'CED&S'
-    } 💪 Recibimos tu solicitud de sesión de prueba. ¿Qué día y horario te acomoda para agendarla?`;
+    const texto = s.fecha
+      ? `Hola ${nombre}! Te escribimos de ${
+          infoGimnasio?.nombre || 'CED&S'
+        } 💪 Te confirmamos tu ${(
+          SERVICIO[s.servicio] || 'sesión de prueba'
+        ).toLowerCase()} el ${diaCita(s)} a las ${s.hora} hrs${
+          infoGimnasio?.direccion ? ` en ${infoGimnasio.direccion}` : ''
+        }. Llega 5 minutos antes con ropa cómoda y agua. ¡Te esperamos!`
+      : `Hola ${nombre}! Te escribimos de ${
+          infoGimnasio?.nombre || 'CED&S'
+        } 💪 Recibimos tu solicitud de sesión de prueba. ¿Qué día y horario te acomoda para agendarla?`;
     return `https://wa.me/${numeroWhatsapp(
       s.telefono
     )}?text=${encodeURIComponent(texto)}`;
@@ -141,7 +194,7 @@ export default function SolicitudesPrueba() {
 
   async function copiarLink() {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/prueba`);
+      await navigator.clipboard.writeText(`${window.location.origin}/conoce`);
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2000);
     } catch (e) {
@@ -212,14 +265,44 @@ export default function SolicitudesPrueba() {
             </p>
           </div>
         </div>
-        <button
-          onClick={copiarLink}
-          className="relative mt-4 w-full flex items-center justify-center gap-1.5 bg-white/[0.07] border border-white/10 rounded-xl py-2.5 text-cyan-brand text-xs font-semibold"
-        >
-          {copiado ? <Check size={14} /> : <Copy size={14} />}
-          {copiado ? 'Link copiado' : 'Copiar link del formulario de prueba'}
-        </button>
+        <p className="relative mt-4 text-white/50 text-[11px]">
+          Link para historias y bio de Instagram (se ve sin crear cuenta):
+        </p>
+        <p className="relative text-white font-semibold text-sm break-all">
+          {window.location.host}/conoce
+        </p>
+        <div className="relative mt-2 flex gap-2">
+          <button
+            onClick={copiarLink}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-cyan-brand text-ink rounded-xl py-2.5 text-xs font-semibold"
+          >
+            {copiado ? <Check size={14} /> : <Copy size={14} />}
+            {copiado ? 'Link copiado' : 'Copiar link'}
+          </button>
+          <a
+            href="/conoce"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 flex items-center justify-center gap-1.5 bg-white/[0.07] border border-white/10 rounded-xl py-2.5 text-white text-xs font-semibold"
+          >
+            <ExternalLink size={14} /> Ver página
+          </a>
+        </div>
       </div>
+
+      <button
+        onClick={() => setEditor(!editor)}
+        className="w-full flex items-center justify-between bg-white/[0.04] border border-white/10 rounded-2xl px-4 py-3 mb-4"
+      >
+        <span className="flex items-center gap-2 text-white text-sm font-medium">
+          <Settings2 size={16} className="text-cyan-brand" /> Editar página de venta
+        </span>
+        <ChevronDown
+          size={16}
+          className={`text-white/40 transition-transform ${editor ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {editor && <EditorVitrina />}
       {mensajeRegalo && (
         <p className="text-cyan-brand text-sm mb-3">{mensajeRegalo}</p>
       )}
@@ -228,24 +311,28 @@ export default function SolicitudesPrueba() {
       <div className="grid grid-cols-4 gap-2 mb-4">
         {[
           {
-            v: 'activas',
-            t: 'Por gestionar',
-            n: cuenta('pendiente') + cuenta('contactado'),
-            c: 'text-yellow-200',
-            on: 'border-yellow-400/50 bg-yellow-400/10',
-          },
-          {
-            v: 'agendada',
-            t: 'Agendadas',
-            n: cuenta('agendada'),
+            v: 'proximas',
+            t: 'Próximas',
+            n: proximas,
             c: 'text-cyan-brand',
             on: 'border-cyan-brand/50 bg-cyan-brand/10',
           },
           {
-            v: 'descartada',
-            t: 'Descartadas',
-            n: cuenta('descartada'),
-            c: 'text-white/60',
+            v: 'activas',
+            t: 'Por contactar',
+            n: (solicitudesPrueba || []).filter(
+              (s) =>
+                (s.estado === 'pendiente' || s.estado === 'contactado') &&
+                !esProxima(s)
+            ).length,
+            c: 'text-yellow-200',
+            on: 'border-yellow-400/50 bg-yellow-400/10',
+          },
+          {
+            v: 'asistio',
+            t: 'Vinieron',
+            n: cuenta('asistio'),
+            c: 'text-white/80',
             on: 'border-white/30 bg-white/10',
           },
           {
@@ -334,6 +421,19 @@ export default function SolicitudesPrueba() {
                       </span>
                     ) : null}
                   </div>
+                  {s.fecha && (
+                    <p
+                      className={`mt-1 inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-2 py-1 ${
+                        s.fecha >= hoy
+                          ? 'bg-cyan-brand/15 text-cyan-brand'
+                          : 'bg-white/[0.06] text-white/60'
+                      }`}
+                    >
+                      <CalendarDays size={12} />
+                      {SERVICIO[s.servicio] || 'Prueba'} · {diaCita(s)} ·{' '}
+                      {s.hora}
+                    </p>
+                  )}
                   <p className="text-white/40 text-[11px] flex items-center gap-1 mt-0.5">
                     <Clock size={11} /> Pedida el {fechaHora(s.creado_en)}
                   </p>
@@ -347,7 +447,7 @@ export default function SolicitudesPrueba() {
                         {s.correo}
                       </p>
                     )}
-                    {s.preferencia && (
+                    {s.preferencia && !s.fecha && (
                       <p className="text-white/70 flex items-center gap-1.5">
                         <CalendarCheck
                           size={12}
@@ -399,8 +499,39 @@ export default function SolicitudesPrueba() {
                 </div>
               )}
 
+              {s.fecha &&
+                s.fecha <= hoy &&
+                !inscrito &&
+                !['descartada', 'asistio', 'no_asistio'].includes(s.estado) && (
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() =>
+                        actualizarSolicitudPrueba(s.id, { estado: 'asistio' })
+                      }
+                      className="flex-1 bg-cyan-brand/15 border border-cyan-brand/40 text-cyan-brand rounded-xl py-2 text-xs font-semibold"
+                    >
+                      ✓ Vino
+                    </button>
+                    <button
+                      onClick={() =>
+                        actualizarSolicitudPrueba(s.id, { estado: 'no_asistio' })
+                      }
+                      className="flex-1 bg-white/[0.05] border border-white/10 text-white/70 rounded-xl py-2 text-xs font-semibold"
+                    >
+                      No vino
+                    </button>
+                  </div>
+                )}
+              {['asistio', 'no_asistio'].includes(s.estado) && !inscrito && (
+                <p
+                  className={`mt-3 inline-block text-[11px] px-2 py-0.5 rounded-full border ${est.clase}`}
+                >
+                  {est.etiqueta}
+                </p>
+              )}
+
               {/* Avance: toca un paso para marcarlo */}
-              {!inscrito && !descartada && (
+              {!inscrito && !descartada && !s.fecha && (
                 <div className="mt-3 flex items-center gap-1">
                   {PASOS.map((p, i) => {
                     const hecho = i <= idxPaso;
@@ -528,6 +659,170 @@ export default function SolicitudesPrueba() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// Editor de la página pública (cedys.cl/conoce): textos, servicios y planes visibles
+function EditorVitrina() {
+  const { planes } = useAuth();
+  const [vitrina, setVitrina] = useState(null);
+  const [ocultos, setOcultos] = useState({});
+  const [guardando, setGuardando] = useState(false);
+  const [mensaje, setMensaje] = useState(null);
+
+  useEffect(() => {
+    supabase
+      .from('configuracion_app')
+      .select('vitrina')
+      .eq('id', 'global')
+      .single()
+      .then(({ data }) => setVitrina(data?.vitrina || { servicios: [] }));
+    setOcultos(
+      Object.fromEntries(
+        Object.values(planes || {}).map((p) => [p.id, !!p.ocultar_vitrina])
+      )
+    );
+  }, [planes]);
+
+  if (!vitrina)
+    return <p className="text-white/40 text-sm mb-4">Cargando…</p>;
+
+  const cambiarServicio = (i, cambios) =>
+    setVitrina({
+      ...vitrina,
+      servicios: vitrina.servicios.map((s, j) => (j === i ? { ...s, ...cambios } : s)),
+    });
+
+  async function guardar() {
+    setGuardando(true);
+    setMensaje(null);
+    const { error } = await supabase
+      .from('configuracion_app')
+      .update({ vitrina })
+      .eq('id', 'global');
+    let errorPlanes = null;
+    for (const p of Object.values(planes || {})) {
+      if (!!p.ocultar_vitrina !== !!ocultos[p.id]) {
+        const r = await supabase
+          .from('planes')
+          .update({ ocultar_vitrina: !!ocultos[p.id] })
+          .eq('id', p.id);
+        if (r.error) errorPlanes = r.error;
+        else p.ocultar_vitrina = !!ocultos[p.id];
+      }
+    }
+    setGuardando(false);
+    setMensaje(
+      error || errorPlanes
+        ? { ok: false, t: 'No se pudo guardar: ' + (error || errorPlanes).message }
+        : { ok: true, t: 'Guardado. La página ya muestra los cambios.' }
+    );
+  }
+
+  const input =
+    'w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-cyan-brand';
+  const listaPlanes = Object.values(planes || {})
+    .filter((p) => (p.valor_con_iva || 0) > 0 && !p.solo_socios)
+    .sort(
+      (a, b) =>
+        (a.tipo || '').localeCompare(b.tipo || '') ||
+        (a.valor_con_iva || 0) - (b.valor_con_iva || 0)
+    );
+
+  return (
+    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 mb-4 flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <p className="text-white/50 text-xs font-semibold uppercase tracking-wide">Portada</p>
+        <input
+          className={input}
+          value={vitrina.titulo || ''}
+          placeholder="Título"
+          onChange={(e) => setVitrina({ ...vitrina, titulo: e.target.value })}
+        />
+        <textarea
+          className={input + ' min-h-[64px]'}
+          value={vitrina.subtitulo || ''}
+          placeholder="Texto bajo el título"
+          onChange={(e) => setVitrina({ ...vitrina, subtitulo: e.target.value })}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-white/50 text-xs font-semibold uppercase tracking-wide">
+          Servicios que se pueden agendar
+        </p>
+        {vitrina.servicios.map((s, i) => (
+          <div key={s.id} className="bg-black/20 rounded-xl p-3 flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-sm text-white">
+              <input
+                type="checkbox"
+                checked={s.activo !== false}
+                onChange={(e) => cambiarServicio(i, { activo: e.target.checked })}
+              />
+              Mostrar en la página
+            </label>
+            <input
+              className={input}
+              value={s.nombre || ''}
+              onChange={(e) => cambiarServicio(i, { nombre: e.target.value })}
+            />
+            <textarea
+              className={input + ' min-h-[56px]'}
+              value={s.descripcion || ''}
+              onChange={(e) => cambiarServicio(i, { descripcion: e.target.value })}
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-white/50 text-xs shrink-0">Precio $</span>
+              <input
+                className={input}
+                type="number"
+                min="0"
+                value={s.precio ?? ''}
+                placeholder="Vacío = Consultar · 0 = Gratis"
+                onChange={(e) =>
+                  cambiarServicio(i, {
+                    precio: e.target.value === '' ? null : Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <p className="text-white/50 text-xs font-semibold uppercase tracking-wide">
+          Planes que se muestran
+        </p>
+        {listaPlanes.map((p) => (
+          <label key={p.id} className="flex items-center gap-2 text-sm text-white/85">
+            <input
+              type="checkbox"
+              checked={!ocultos[p.id]}
+              onChange={(e) => setOcultos({ ...ocultos, [p.id]: !e.target.checked })}
+            />
+            <span className="flex-1">{p.nombre}</span>
+            <span className="text-white/40 text-xs">
+              ${(p.valor_con_iva || 0).toLocaleString('es-CL')}
+            </span>
+          </label>
+        ))}
+        <p className="text-white/35 text-[11px]">
+          Los planes "solo socios" y los de $0 nunca se muestran.
+        </p>
+      </div>
+
+      {mensaje && (
+        <p className={`text-xs ${mensaje.ok ? 'text-cyan-brand' : 'text-red-400'}`}>{mensaje.t}</p>
+      )}
+      <button
+        onClick={guardar}
+        disabled={guardando}
+        className="w-full bg-cyan-brand text-ink font-semibold rounded-xl py-2.5 text-sm disabled:opacity-50"
+      >
+        {guardando ? 'Guardando…' : 'Guardar cambios'}
+      </button>
     </div>
   );
 }

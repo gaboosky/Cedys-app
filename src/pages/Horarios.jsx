@@ -65,6 +65,7 @@ export default function Horarios() {
     solicitudFueraPlazoDe,
     motivoNoPuedeReservar,
     coachDeClase,
+    pruebasEn,
   } = useAuth();
   // Las clases HIIT tienen su propia pestaña
   const horarios = todosHorarios.filter((h) => h.tipo !== 'hiit');
@@ -78,12 +79,14 @@ export default function Horarios() {
   const avisoPlan = motivoNoPuedeReservar(usuarioActual, null, dias[0]?.key);
 
   function contarInscritos(horarioId, fecha) {
-    return reservas.filter(
-      (r) =>
-        r.horario_id === horarioId &&
-        r.fecha === fecha &&
-        r.estado === 'confirmada'
-    ).length;
+    return (
+      reservas.filter(
+        (r) =>
+          r.horario_id === horarioId &&
+          r.fecha === fecha &&
+          r.estado === 'confirmada'
+      ).length + (pruebasEn ? pruebasEn(horarioId, fecha) : 0)
+    );
   }
 
   function estaReservada(horarioId, fecha) {

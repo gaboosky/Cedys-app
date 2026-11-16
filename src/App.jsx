@@ -61,6 +61,7 @@ const ClasesRealizadas = lazySeguro(() =>
 const SolicitudesPrueba = lazySeguro(() =>
   import('./pages/admin/SolicitudesPrueba')
 );
+const Vitrina = lazySeguro(() => import('./pages/Vitrina'));
 const SeguimientoPersonal = lazySeguro(() =>
   import('./pages/SeguimientoPersonal')
 );
@@ -203,21 +204,18 @@ function Root() {
   // El link de "Olvidé mi contraseña" abre esta pantalla, haya o no sesión.
   if (window.location.pathname === '/nueva-contrasena')
     return <NuevaContrasena />;
-  if (iniciando) return <Arrancando />;
-  // cedys.cl/prueba abre directo el formulario de sesión de prueba y cedys.cl/registro el de registro
-  if (!usuarioActual) {
-    const ruta = window.location.pathname;
+  // Página pública de venta (cedys.cl/conoce o /prueba): se ve sin cuenta.
+  const ruta = window.location.pathname;
+  if (ruta === '/conoce' || ruta === '/prueba')
     return (
-      <Login
-        inicial={
-          ruta === '/prueba'
-            ? 'prueba'
-            : ruta === '/registro'
-            ? 'registro'
-            : 'login'
-        }
-      />
+      <Suspense fallback={<Arrancando />}>
+        <Vitrina conSesion={!!usuarioActual} />
+      </Suspense>
     );
+  if (iniciando) return <Arrancando />;
+  // cedys.cl/registro abre directo el formulario de registro
+  if (!usuarioActual) {
+    return <Login inicial={ruta === '/registro' ? 'registro' : 'login'} />;
   }
   return <AppShell />;
 }

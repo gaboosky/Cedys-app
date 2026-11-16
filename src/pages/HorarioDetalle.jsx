@@ -56,6 +56,7 @@ export default function HorarioDetalle() {
     reservarVarias,
     infoGimnasio,
     coachDeClase,
+    pruebasEn,
   } = useAuth();
   const [semanasRepetir, setSemanasRepetir] = useState(4);
   const [resultadoRepetir, setResultadoRepetir] = useState(null);
@@ -92,8 +93,12 @@ export default function HorarioDetalle() {
   );
   const reservada = !!miReserva;
   const motivoPlan = motivoNoPuedeReservar(usuarioActual, horarioId, fecha);
-  const lleno = inscritos.length >= horario.cupo_max;
-  const cuposDisponibles = Math.max(0, horario.cupo_max - inscritos.length);
+  const dePrueba = pruebasEn ? pruebasEn(horarioId, fecha) : 0;
+  const lleno = inscritos.length + dePrueba >= horario.cupo_max;
+  const cuposDisponibles = Math.max(
+    0,
+    horario.cupo_max - inscritos.length - dePrueba
+  );
   const cancelada = horarioEstaCancelado(horarioId, fecha);
   const mensajeCancelacion = mensajeCancelacionDe(horarioId, fecha);
   const bloqueada =

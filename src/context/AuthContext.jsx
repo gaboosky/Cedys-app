@@ -96,6 +96,8 @@ export function AuthProvider({ children }) {
   const [tarifasCoach, setTarifasCoach] = useState({});
   const [evaluaciones, setEvaluaciones] = useState([]);
   const [solicitudesPrueba, setSolicitudesPrueba] = useState([]);
+  // Personas de prueba (cedys.cl/conoce) por clase: ocupan cupo igual que una reserva
+  const [pruebasCupo, setPruebasCupo] = useState({});
   const [planesSeguimiento, setPlanesSeguimiento] = useState([]);
   const [mediciones, setMediciones] = useState([]);
   // Días de rutina que el alumno completó (con la clase de ese día, si tenía)
@@ -657,7 +659,7 @@ export function AuthProvider({ children }) {
               .from('evaluaciones_clase')
               .select('*')
               .eq('usuario_id', yo.id),
-        esAdmin
+        esStaff
           ? supabase
               .from('solicitudes_prueba')
               .select('*')
@@ -1062,12 +1064,13 @@ export function AuthProvider({ children }) {
       };
     }
 
-    const inscritosActuales = reservas.filter(
-      (r) =>
-        r.horario_id === horarioId &&
-        r.fecha === fecha &&
-        r.estado === 'confirmada'
-    ).length;
+    const inscritosActuales =
+      reservas.filter(
+        (r) =>
+          r.horario_id === horarioId &&
+          r.fecha === fecha &&
+          r.estado === 'confirmada'
+      ).length + pruebasEn(horarioId, fecha);
 
     if (inscritosActuales >= horario.cupo_max) {
       return { ok: false, mensaje: 'No quedan cupos en este horario.' };
@@ -1102,11 +1105,16 @@ export function AuthProvider({ children }) {
       .select()
       .single();
 
-    if (errorReserva)
+    if (errorReserva) {
+      if (String(errorReserva.message).includes('CUPO_LLENO')) {
+        cargarPruebasCupo();
+        return { ok: false, mensaje: 'No quedan cupos en este horario.' };
+      }
       return {
         ok: false,
         mensaje: 'Error al reservar: ' + errorReserva.message,
       };
+    }
 
     const nuevasSesiones = (usuarioActual.sesiones_usadas || 0) + 1;
     const { error: errorUsuario } = await supabase
@@ -1173,12 +1181,13 @@ export function AuthProvider({ children }) {
         detalle.push({ fecha, ok: true, motivo: 'Ya la tenías' });
         continue;
       }
-      const inscritos = reservas.filter(
-        (r) =>
-          r.horario_id === horarioId &&
-          r.fecha === fecha &&
-          r.estado === 'confirmada'
-      ).length;
+      const inscritos =
+        reservas.filter(
+          (r) =>
+            r.horario_id === horarioId &&
+            r.fecha === fecha &&
+            r.estado === 'confirmada'
+        ).length + pruebasEn(horarioId, fecha);
       if (inscritos >= horario.cupo_max) {
         detalle.push({ fecha, ok: false, motivo: 'Clase llena' });
         continue;
@@ -1198,7 +1207,13 @@ export function AuthProvider({ children }) {
         .select()
         .single();
       if (error) {
-        detalle.push({ fecha, ok: false, motivo: 'Error al reservar' });
+        detalle.push({
+          fecha,
+          ok: false,
+          motivo: String(error.message).includes('CUPO_LLENO')
+            ? 'Clase llena'
+            : 'Error al reservar',
+        });
         continue;
       }
       nuevas.push(data);
@@ -3729,7 +3744,18 @@ export function AuthProvider({ children }) {
       );
     }
     const antes = horarios.find((h) => h.id === horarioId);
-    await supabase.from('horarios').update(datos).eq('id', horarioId);
+    const { data: guardada, error: errorEditar } = await supabase
+      .from('horarios')
+      .update(datos)
+      .eq('id', horarioId)
+      .select();
+    if (errorEditar || !guardada?.length)
+      return {
+        ok: false,
+        mensaje:
+          'No se pudo guardar el cambio' +
+          (errorEditar ? ': ' + errorEditar.message : '. Vuelve a iniciar sesión e intenta de nuevo.'),
+      };
     setHorarios((prev) =>
       prev.map((h) => (h.id === horarioId ? { ...h, ...datos } : h))
     );
@@ -3764,6 +3790,7 @@ export function AuthProvider({ children }) {
         `Tu clase cambió: ahora es ${desc}.`
       );
     }
+    return { ok: true };
   }
 
   function horarioEstaCancelado(horarioId, fecha) {
@@ -4016,8 +4043,61 @@ export function AuthProvider({ children }) {
         h ? `${h.fecha_unica || h.dia} ${h.hora}` : ''
       );
     }
-    await supabase.from('horarios').delete().eq('id', horarioId);
-    setHorarios((prev) => prev.filter((h) => h.id !== horarioId));
+    // Lo hace la base de datos: cancela las reservas futuras (devolviendo la
+    // clase), y si la clase tiene historial la archiva en vez de borrarla.
+    const { data, error } = await supabase.rpc('eliminar_clase', {
+      p_horario: horarioId,
+    });
+    if (error || !data?.ok)
+      return {
+        ok: false,
+        mensaje:
+          'No se pudo eliminar la clase: ' +
+          (error?.message || data?.mensaje || 'error desconocido'),
+      };
+    const hoy = isoLocal(new Date());
+    if (data.modo === 'archivada') {
+      // Queda solo en el historial (en su última fecha), ya no en el horario
+      await recargarHorarios();
+    } else {
+      setHorarios((prev) => prev.filter((h) => h.id !== horarioId));
+    }
+    setReservas((prev) =>
+      prev.filter((r) => !(r.horario_id === horarioId && r.fecha >= hoy))
+    );
+    const h = horarios.find((x) => x.id === horarioId);
+    for (const uid of data.afectados || []) {
+      await crearNotificacion(
+        uid,
+        `La clase de los ${String(h?.dia || '').toLowerCase()} a las ${
+          h?.hora || ''
+        } ya no se dicta. Cancelamos tu reserva y te devolvimos la clase.`
+      );
+    }
+    return { ok: true, mensaje: 'Clase eliminada.' };
+  }
+
+  async function cargarPruebasCupo() {
+    const { data, error } = await supabase.rpc('pruebas_por_clase');
+    if (error || !Array.isArray(data)) return;
+    setPruebasCupo(
+      Object.fromEntries(data.map((x) => [`${x.horario_id}_${x.fecha}`, Number(x.n) || 0]))
+    );
+  }
+  function pruebasEn(horarioId, fecha) {
+    return pruebasCupo[`${horarioId}_${fecha}`] || 0;
+  }
+  useEffect(() => {
+    if (!usuarioActual?.id) return;
+    cargarPruebasCupo();
+    const t = setInterval(cargarPruebasCupo, 2 * 60 * 1000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioActual?.id]);
+
+  async function recargarHorarios() {
+    const { data } = await supabase.from('horarios').select('*');
+    if (data) setHorarios(data);
   }
 
   async function crearPlan(datos) {
@@ -4284,6 +4364,7 @@ export function AuthProvider({ children }) {
         cancelarReserva,
         cancelarReservaAdmin,
         reservarParaAlumno,
+        pruebasEn,
         sesionesRestantes,
         asignarPlan,
         confirmarRenovacion,

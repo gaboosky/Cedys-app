@@ -171,10 +171,15 @@ export function fechaVenceDe(usuario, planes, diasRenovacion = 30) {
 
 // Vencimiento sugerido para un pago nuevo: mismo día del mes que el vencimiento anterior
 // (así el alumno mantiene su día de pago). Si no tenía, o quedaría antes del pago, cuenta desde la fecha del pago.
+// Solo se mantiene el día de pago si renueva a tiempo o con pocos días de atraso.
+// Si el plan llevaba más de DIAS_GRACIA días vencido, el período nuevo parte el día
+// del pago (antes partía del vencimiento viejo y el alumno perdía los días que estuvo
+// vencido; en planes de 3 meses se notaba mucho: daba ~60 días en vez de 90).
+const DIAS_GRACIA = 7;
 export function venceSugerido(usuario, planes, diasRenovacion, fechaPagoISO) {
   const duracion = duracionPlanDe(usuario, planes, diasRenovacion);
   const anterior = fechaVenceDe(usuario, planes, diasRenovacion);
-  if (anterior) {
+  if (anterior && anterior >= sumarDias(fechaPagoISO, -DIAS_GRACIA)) {
     const desdeAnterior = sumarDuracion(anterior, duracion);
     if (desdeAnterior > fechaPagoISO) return desdeAnterior;
   }

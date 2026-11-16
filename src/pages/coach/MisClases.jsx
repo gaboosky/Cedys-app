@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import PruebasEnClase from '../../components/PruebasEnClase';
 import { horaAFecha } from '../../lib/horarioUtils';
 import {
   Users,
@@ -718,6 +719,9 @@ function TarjetaClase({ h, fecha, abierta, setAbierta, inscritosDe, modo }) {
                 bloqueada={!!fin || !empezo}
               />
             ))}
+            <div className="px-3 pb-2">
+              <PruebasEnClase horarioId={h.id} fecha={fecha} />
+            </div>
           </div>
 
           {empezo && !fin && sinMarcar.length > 0 && (

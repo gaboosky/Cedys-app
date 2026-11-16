@@ -52,7 +52,7 @@ const iniciales = (n) =>
 
 // Clases HIIT con su estado (inscritos, cancelada, etc.)
 function useClasesHiit() {
-  const { horariosHiit = [], reservas, horarioEstaCancelado, usuarios } = useAuth();
+  const { horariosHiit = [], reservas, horarioEstaCancelado, usuarios, pruebasEn } = useAuth();
   return useMemo(() => {
     const nombreDe = Object.fromEntries((usuarios || []).map((u) => [u.id, u]));
     return horariosHiit
@@ -67,11 +67,12 @@ function useClasesHiit() {
           fecha,
           cancelada: horarioEstaCancelado(h.id, fecha),
           inscritos,
+          pruebas: pruebasEn ? pruebasEn(h.id, fecha) : 0,
           alumnos: inscritos.map((r) => ({ r, u: nombreDe[r.usuario_id] })),
         };
       })
       .sort((a, b) => (a.fecha + a.h.hora).localeCompare(b.fecha + b.h.hora));
-  }, [horariosHiit, reservas, horarioEstaCancelado, usuarios]);
+  }, [horariosHiit, reservas, horarioEstaCancelado, usuarios, pruebasEn]);
 }
 
 function Cupos({ ocupados, cupo, chico }) {
@@ -314,7 +315,7 @@ function HiitAlumno() {
             <div className="flex flex-col gap-2">
               {g.clases.map((c) => {
                 const clave = c.h.id + c.fecha;
-                const ocupados = c.inscritos.length;
+                const ocupados = c.inscritos.length + (c.pruebas || 0);
                 const llena = ocupados >= c.h.cupo_max;
                 const mia = c.inscritos.some((r) => r.usuario_id === usuarioActual?.id);
                 const cerrada = reservaBloqueada(c.fecha, c.h.hora, horasAnticipacion);
@@ -462,7 +463,7 @@ function ListaClases({ clases, pasadas, vacio, acciones }) {
       {clases.map((c) => {
         const clave = c.h.id + c.fecha;
         const ab = abierta === clave;
-        const ocupados = c.inscritos.length;
+        const ocupados = c.inscritos.length + (c.pruebas || 0);
         const pruebas = c.inscritos.filter((r) => r.es_prueba).length;
         const asistieron = c.inscritos.filter((r) => r.asistio === true).length;
         return (

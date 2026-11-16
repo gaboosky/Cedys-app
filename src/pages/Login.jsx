@@ -201,7 +201,7 @@ export default function Login({ inicial = 'login' }) {
       {modo === 'login' && (
         <button
           type="button"
-          onClick={() => cambiarModo('prueba')}
+          onClick={() => (window.location.href = '/conoce')}
           className="mb-6 w-full flex items-center gap-3 bg-cyan-brand/10 border border-cyan-brand/40 rounded-2xl px-4 py-3.5 text-left hover:bg-cyan-brand/15 transition-colors"
         >
           <span className="w-10 h-10 rounded-full bg-cyan-brand/20 flex items-center justify-center shrink-0">
@@ -212,7 +212,7 @@ export default function Login({ inicial = 'login' }) {
               Pide tu sesión de prueba
             </span>
             <span className="block text-white/50 text-xs">
-              ¿Primera vez en CED&amp;S? Déjanos tus datos y te contactamos.
+              ¿Primera vez en CED&amp;S? Elige día y hora, sin crear cuenta.
             </span>
           </span>
           <ChevronRight size={18} className="text-cyan-brand shrink-0" />
