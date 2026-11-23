@@ -517,17 +517,21 @@ export default function Usuarios() {
 
   // Cuántos alumnos hay en cada grupo (vigentes / por renovar / antiguos)
   const conteoVista = alumnos.reduce(
-    (acc, { rel }) => {
+    (acc, { rel, u }) => {
       acc[rel] = (acc[rel] || 0) + 1;
+      if (u.estado === 'inactivo') acc.desactivados += 1;
       return acc;
     },
-    { todos: alumnos.length }
+    { todos: alumnos.length, desactivados: 0 }
   );
-  const enVista = (rel) =>
-    grupo === 'equipo' || vista === 'todos' || rel === vista;
+  // "desactivados" muestra solo las cuentas desactivadas (para reactivarlas)
+  const enVista = (rel, u) =>
+    grupo === 'equipo' ||
+    vista === 'todos' ||
+    (vista === 'desactivados' ? u?.estado === 'inactivo' : rel === vista);
   // Estados presentes dentro del grupo elegido (para los chips de abajo)
   const conteoEnVista = alumnos
-    .filter(({ rel }) => enVista(rel))
+    .filter(({ rel, u }) => enVista(rel, u))
     .reduce(
       (acc, { info }) => {
         acc[info.clave] = (acc[info.clave] || 0) + 1;
@@ -541,7 +545,7 @@ export default function Usuarios() {
   const textoDigitos = soloDigitos(texto);
   const filtrados = alumnos.filter(({ u, info, rel }) => {
     // Al buscar por nombre se busca en todos los grupos
-    if (!texto && filtro !== 'renovaciones' && !enVista(rel)) return false;
+    if (!texto && filtro !== 'renovaciones' && !enVista(rel, u)) return false;
     if (
       filtro === 'renovaciones'
         ? !PARA_RENOVAR.includes(info.clave)
@@ -924,7 +928,22 @@ export default function Usuarios() {
                 );
               })}
             </div>
-            <div className="flex justify-end mb-3">
+            <div className="flex justify-end gap-4 mb-3">
+              {conteoVista.desactivados > 0 && (
+                <button
+                  onClick={() => {
+                    setVista(vista === 'desactivados' ? 'vigentes' : 'desactivados');
+                    setFiltro('todos');
+                  }}
+                  className={`text-[11px] underline-offset-2 hover:underline ${
+                    vista === 'desactivados' ? 'text-red-300 font-semibold' : 'text-white/45'
+                  }`}
+                >
+                  {vista === 'desactivados'
+                    ? 'Ver solo vigentes'
+                    : `Desactivados (${conteoVista.desactivados})`}
+                </button>
+              )}
               <button
                 onClick={() => {
                   setVista(vista === 'todos' ? 'vigentes' : 'todos');

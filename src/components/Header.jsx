@@ -21,6 +21,7 @@ import {
   CalendarCheck,
   UserX,
   Search,
+  ShoppingBag,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { LOGO_CEDS_WORDMARK } from '../assets/logoWordmark';
@@ -59,6 +60,8 @@ const TITULOS = {
   '/general': 'General',
   '/mi-rutina': 'Mi Rutina',
   '/hiit': 'HIIT',
+  '/tienda': 'Tienda',
+  '/planificar': 'Planificar rutinas',
   '/progreso': 'Progreso',
   '/mis-evaluaciones': 'Mis evaluaciones',
 };
@@ -90,6 +93,8 @@ const SUBTITULOS = {
   '/general': 'Noticias y novedades del gym',
   '/mi-rutina': 'Tu plan de entrenamiento',
   '/hiit': 'Alta intensidad en grupos pequeños',
+  '/tienda': 'Productos y servicios',
+  '/planificar': 'Semanas, días y ejercicios',
   '/progreso': 'Tu evolución en el tiempo',
   '/mis-evaluaciones': 'Lo que opinan de tus clases',
 };
@@ -111,12 +116,14 @@ const MENU_ADMIN = [
     items: [
       { to: '/renovaciones', label: 'Por contactar', icon: RefreshCw },
       { to: '/pruebas', label: 'Sesiones de prueba', icon: CalendarCheck },
+      { to: '/planificar', label: 'Planificar rutinas', icon: Dumbbell },
     ],
   },
   {
     titulo: 'Dinero',
     items: [
       { to: '/finanzas', label: 'Finanzas', icon: Wallet },
+      { to: '/tienda', label: 'Tienda', icon: ShoppingBag },
       { to: '/gastos', label: 'Gastos', icon: Receipt },
       { to: '/pago-coaches', label: 'Pago a coaches', icon: HandCoins },
       { to: '/reportes', label: 'Reportes', icon: FileBarChart },
@@ -163,6 +170,8 @@ export default function Header() {
     ? 'Seguimiento personal'
     : esRutina
     ? 'Mi Rutina'
+    : location.pathname.startsWith('/planificar/')
+    ? 'Planificar rutina'
     : TITULOS[location.pathname] || 'CED&S';
 
   const subtitulo = esDetalleHorario
@@ -171,6 +180,8 @@ export default function Header() {
     ? 'Objetivo, mediciones y avance'
     : esRutina
     ? 'Tu plan de entrenamiento'
+    : location.pathname.startsWith('/planificar/')
+    ? 'Semanas, días y ejercicios'
     : SUBTITULOS[location.pathname];
 
   const misNotificaciones = notificaciones.filter(

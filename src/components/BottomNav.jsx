@@ -11,6 +11,7 @@ import {
   Dumbbell,
   TrendingUp,
   Flame,
+  ShoppingBag,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -21,6 +22,7 @@ export const TABS_USUARIO = [
   { to: '/hiit', label: 'HIIT', icon: Flame },
   { to: '/mi-rutina', label: 'Rutina', icon: Dumbbell },
   { to: '/progreso', label: 'Progreso', icon: TrendingUp },
+  { to: '/tienda', label: 'Tienda', icon: ShoppingBag },
 ];
 
 export const TABS_COACH = [

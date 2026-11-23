@@ -228,7 +228,7 @@ function EditarPago({ pago, venceInicial, onListo }) {
           ))}
         </div>
       </div>
-      {pago.tipo !== 'manual' && pago.tipo !== 'hiit' && (
+      {pago.tipo !== 'manual' && pago.tipo !== 'hiit' && pago.tipo !== 'producto' && (
         <div>
           <label className="text-white/40 text-xs mb-1 block">Vence el</label>
           <input

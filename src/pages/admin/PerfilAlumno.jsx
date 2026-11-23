@@ -438,6 +438,22 @@ export default function PerfilAlumno() {
             Sin rutina asignada todavía.
           </p>
         )}
+        <div className="flex gap-2 mb-4 -mt-2">
+          {rutinaActiva && (
+            <button
+              onClick={() => navigate(`/planificar/${rutinaActiva.id}`)}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-white/[0.06] border border-white/10 text-white rounded-lg py-2 text-xs font-semibold"
+            >
+              <Dumbbell size={13} /> Editar en el planificador
+            </button>
+          )}
+          <button
+            onClick={() => navigate('/planificar')}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-white/[0.06] border border-white/10 text-cyan-brand rounded-lg py-2 text-xs font-semibold"
+          >
+            <Dumbbell size={13} /> Planificar nueva rutina
+          </button>
+        </div>
 
         <p className="text-white/40 text-xs uppercase tracking-wide mb-2">
           {rutinaActiva

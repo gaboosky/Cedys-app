@@ -17,11 +17,12 @@ export const TIPOS_PAGO = {
   renovacion: 'Renovación',
   manual: 'Pago manual',
   hiit: 'Plan HIIT',
+  producto: 'Tienda',
 };
 
 // Pagos que renuevan el plan normal (los pagos manuales y los de HIIT no cuentan)
 export function esPagoDePlan(p) {
-  return p && p.tipo !== 'manual' && p.tipo !== 'hiit';
+  return p && p.tipo !== 'manual' && p.tipo !== 'hiit' && p.tipo !== 'producto';
 }
 
 const pad = (n) => String(n).padStart(2, '0');

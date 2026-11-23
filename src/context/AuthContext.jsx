@@ -3046,6 +3046,19 @@ export function AuthProvider({ children }) {
     return data;
   }
 
+  // Vuelve a leer la lista de rutinas y asignaciones (lo usa el planificador)
+  async function recargarRutinas() {
+    const [r, ur] = await Promise.all([
+      supabase.from('rutinas').select('*'),
+      supabase
+        .from('usuario_rutina')
+        .select('*')
+        .order('fecha_asignacion', { ascending: false }),
+    ]);
+    if (r.data) setRutinas(r.data);
+    if (ur.data) setUsuarioRutinas(ur.data);
+  }
+
   async function importarContenidoRutina(rutinaId, datosSemanas) {
     for (const numero of Object.keys(datosSemanas)) {
       const dias = datosSemanas[numero];
@@ -3424,7 +3437,7 @@ export function AuthProvider({ children }) {
     const usuario = usuarios.find((u) => u.id === usuarioId);
     const fila = {
       usuario_id: usuarioId,
-      plan_id: planId ?? usuario?.plan_id ?? null,
+      plan_id: tipo === 'producto' ? null : planId ?? usuario?.plan_id ?? null,
       monto: Number(monto) || 0,
       medio: medio || 'transferencia',
       fecha: fecha || hoyLocalISO(),
@@ -4398,6 +4411,7 @@ export function AuthProvider({ children }) {
         rutinas,
         usuarioRutinas,
         crearRutina,
+        recargarRutinas,
         importarContenidoRutina,
         asignarRutina,
         rutinaActivaDe,

@@ -24,6 +24,8 @@ const RutinaEjercicios = lazySeguro(() =>
 );
 const MiRutina = lazySeguro(() => import('./pages/MiRutina'));
 const Hiit = lazySeguro(() => import('./pages/Hiit'));
+const Tienda = lazySeguro(() => import('./pages/Tienda'));
+const Planificador = lazySeguro(() => import('./pages/rutinas/Planificador'));
 const MisEvaluaciones = lazySeguro(() =>
   import('./pages/coach/MisEvaluaciones')
 );
@@ -170,6 +172,9 @@ function AppShell() {
           />
           <Route path="/mi-rutina" element={<MiRutina />} />
           <Route path="/hiit" element={<Hiit />} />
+          <Route path="/tienda" element={<Tienda />} />
+          <Route path="/planificar" element={<SoloEquipo><Planificador /></SoloEquipo>} />
+          <Route path="/planificar/:rutinaId" element={<SoloEquipo><Planificador /></SoloEquipo>} />
           <Route path="/progreso" element={<Progreso />} />
           <Route path="/privacidad" element={<Privacidad />} />
           <Route path="/terminos" element={<Terminos />} />
